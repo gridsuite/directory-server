@@ -1,0 +1,89 @@
+/**
+ * Copyright (c) 2020, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.gridsuite.directory.server;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import org.gridsuite.directory.server.dto.AccessRightsAttributes;
+import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
+import org.gridsuite.directory.server.dto.DirectoryAttributes;
+import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
+ */
+@RestController
+@RequestMapping(value = "/" + DirectoryApi.API_VERSION)
+@Api(tags = "directory-server")
+@ComponentScan(basePackageClasses = DirectoryService.class)
+public class DirectoryController {
+
+    private final DirectoryService service;
+
+    public DirectoryController(DirectoryService service) {
+        this.service = service;
+    }
+
+    @PostMapping(value = "/directories/create")
+    @ApiOperation(value = "Create directory")
+    @ApiResponses(@ApiResponse(code = 200, message = "Successfully created directory"))
+    public ResponseEntity<DirectoryAttributes> createDirectory(@RequestBody CreateDirectoryAttributes createDirectoryAttributes) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createDirectory(createDirectoryAttributes));
+    }
+
+    @PutMapping(value = "/directories/{directoryUuid}/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ApiOperation(value = "Add element/directory to directory")
+    @ApiResponses(@ApiResponse(code = 200, message = "Successfully added element/directory to directory"))
+    public ResponseEntity<Void> addElementToDirectory(@PathVariable("directoryUuid") String directoryUuid,
+                                                      @RequestBody ElementAttributes elementAttributes) {
+        service.addElementToDirectory(directoryUuid, elementAttributes);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/directories/{directoryUuid}/content", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Get directory content")
+    @ApiResponses(@ApiResponse(code = 200, message = "Successfully get content of directory"))
+    public ResponseEntity<List<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
+    }
+
+    @PutMapping(value = "/directories/{directoryUuid}/rename/{elementUuid}/{newElementName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ApiOperation(value = "Rename element/directory")
+    @ApiResponses(@ApiResponse(code = 200, message = "Successfully renamed element/directory"))
+    public ResponseEntity<Void> renameElement(@PathVariable("directoryUuid") String directoryUuid,
+                                              @PathVariable("elementUuid") String elementUuid,
+                                              @PathVariable("newElementName") String newElementName) {
+        service.renameElement(directoryUuid, elementUuid, newElementName);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/directories/{directoryUuid}/rights", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ApiOperation(value = "Modify directory access rights")
+    @ApiResponses(@ApiResponse(code = 200, message = "Successfully modified directory access rights"))
+    public ResponseEntity<Void> setDirectoryAccessRights(@PathVariable("directoryUuid") String directoryUuid,
+                                                         @RequestBody AccessRightsAttributes accessRightsAttributes) {
+        service.setDirectoryAccessRights(directoryUuid, accessRightsAttributes);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/directories/{directoryUuid}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ApiOperation(value = "Remove directory")
+    @ApiResponses(@ApiResponse(code = 200, message = "Successfully removed directory"))
+    public ResponseEntity<Void> deleteDirectory(@PathVariable("directoryUuid") String directoryUuid) {
+        service.deleteDirectory(directoryUuid);
+        return ResponseEntity.ok().build();
+    }
+
+}
