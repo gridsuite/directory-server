@@ -30,6 +30,7 @@ import static org.junit.Assert.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -86,6 +87,17 @@ public class DirectoryTest extends AbstractEmbeddedCassandraSetup {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
                 .andExpect(content().json("[{\"elementUuid\":" + uuid + ",\"elementName\":\"subDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\": false}}]"));
+
+        String newSubDirName = "newSubDir";
+        mvc.perform(put("/v1/directories/" + directoryUuid + "/rename/" + uuid + "/" + newSubDirName)
+                .contentType(APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/v1/directories/" + directoryUuid + "/content")
+                .contentType(APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
+                .andExpect(content().json("[{\"elementUuid\":" + uuid + ",\"elementName\":\"" + newSubDirName + "\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\": false}}]"));
     }
 
 }

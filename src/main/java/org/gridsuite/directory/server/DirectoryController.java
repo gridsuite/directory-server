@@ -43,7 +43,7 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createDirectory(createDirectoryAttributes));
     }
 
-    @PutMapping(value = "/directories/{directoryUuid}/add", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/directories/{directoryUuid}/add", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Add element/directory to directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully added element/directory to directory"))
     public ResponseEntity<Void> addElementToDirectory(@PathVariable("directoryUuid") String directoryUuid,
@@ -59,7 +59,7 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
     }
 
-    @PutMapping(value = "/directories/{directoryUuid}/rename/{elementUuid}/{newElementName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/directories/{directoryUuid}/rename/{elementUuid}/{newElementName}")
     @ApiOperation(value = "Rename element/directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully renamed element/directory"))
     public ResponseEntity<Void> renameElement(@PathVariable("directoryUuid") String directoryUuid,
@@ -69,7 +69,7 @@ public class DirectoryController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/directories/{directoryUuid}/rights", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/directories/{directoryUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Modify directory access rights")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully modified directory access rights"))
     public ResponseEntity<Void> setDirectoryAccessRights(@PathVariable("directoryUuid") String directoryUuid,
@@ -78,7 +78,7 @@ public class DirectoryController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/directories/{directoryUuid}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @DeleteMapping(value = "/directories/{directoryUuid}")
     @ApiOperation(value = "Remove directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully removed directory"))
     public ResponseEntity<Void> deleteDirectory(@PathVariable("directoryUuid") String directoryUuid) {

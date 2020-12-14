@@ -7,6 +7,7 @@
 package org.gridsuite.directory.server.repository;
 
 import org.springframework.data.cassandra.repository.CassandraRepository;
+import org.springframework.data.cassandra.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,6 +19,9 @@ import java.util.UUID;
 @Repository
 public interface DirectoryElementRepository extends CassandraRepository<DirectoryElementEntity, DirectoryElementKey> {
     List<DirectoryElementEntity> findByDirectoryElementKeyId(UUID directoryId);
+
+    @Query("UPDATE element SET child_name = :newElementName WHERE id = :directoryUuid and child_id = :elementUuid IF EXISTS")
+    boolean updateElementChildName(UUID directoryUuid, UUID elementUuid, String newElementName);
 
     void deleteByDirectoryElementKeyId(UUID directoryId);
 }

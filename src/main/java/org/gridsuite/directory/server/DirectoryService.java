@@ -64,6 +64,7 @@ class DirectoryService {
     }
 
     public void renameElement(String directoryUuid, String elementUuid, String newElementName) {
+        directoryElementRepository.updateElementChildName(UUID.fromString(directoryUuid), UUID.fromString(elementUuid), newElementName);
     }
 
     public void setDirectoryAccessRights(String directoryUuid, AccessRightsAttributes accessRightsAttributes) {

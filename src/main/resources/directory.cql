@@ -1,3 +1,8 @@
+CREATE TABLE IF NOT EXISTS directory.root (
+    id timeuuid,
+    PRIMARY KEY ( id )
+);
+
 CREATE TABLE IF NOT EXISTS directory.element (
     id timeuuid,
     name text static,
