@@ -64,16 +64,19 @@ public class DirectoryTest extends AbstractEmbeddedCassandraSetup {
         UUID directoryUuid = UUIDs.timeBased();
 
         mvc.perform(post("/v1/directories/create")
+                .header("userId", "userId")
                 .content(objectMapper.writeValueAsString(new CreateDirectoryAttributes(rootDirectoryUuid, "newDir", new AccessRightsAttributes(false))))
                 .contentType(APPLICATION_JSON));
 
         mvc.perform(get("/v1/directories/" + directoryUuid + "/content")
+                .header("userId", "userId")
                 .contentType(APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
                 .andExpect(content().json("[]"));
 
         MvcResult result = mvc.perform(post("/v1/directories/create")
+                .header("userId", "userId")
                 .content(objectMapper.writeValueAsString(new CreateDirectoryAttributes(directoryUuid, "subDir", new AccessRightsAttributes(false))))
                 .contentType(APPLICATION_JSON))
                 .andReturn();
@@ -83,6 +86,7 @@ public class DirectoryTest extends AbstractEmbeddedCassandraSetup {
         assertTrue(jsonTree.get("directoryName").asText().equals("subDir"));
         assertFalse(jsonTree.get("directoryAccessRights").get("private").asBoolean());
         mvc.perform(get("/v1/directories/" + directoryUuid + "/content")
+                .header("userId", "userId")
                 .contentType(APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
@@ -90,10 +94,12 @@ public class DirectoryTest extends AbstractEmbeddedCassandraSetup {
 
         String newSubDirName = "newSubDir";
         mvc.perform(put("/v1/directories/" + directoryUuid + "/rename/" + uuid + "/" + newSubDirName)
+                .header("userId", "userId")
                 .contentType(APPLICATION_JSON))
                 .andExpect(status().isOk());
 
         mvc.perform(get("/v1/directories/" + directoryUuid + "/content")
+                .header("userId", "userId")
                 .contentType(APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))

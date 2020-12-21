@@ -10,10 +10,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
-import org.gridsuite.directory.server.dto.AccessRightsAttributes;
-import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
-import org.gridsuite.directory.server.dto.DirectoryAttributes;
-import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.*;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -36,10 +33,18 @@ public class DirectoryController {
         this.service = service;
     }
 
+    @GetMapping(value = "/directories/root", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Get root directory id")
+    @ApiResponses(@ApiResponse(code = 200, message = "Successfully get root directory id"))
+    public ResponseEntity<RootDirectoryAttributes> getRootDirectoryId(@RequestHeader("userId") String headerUserId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getRootDirectory());
+    }
+
     @PostMapping(value = "/directories/create")
     @ApiOperation(value = "Create directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully created directory"))
-    public ResponseEntity<DirectoryAttributes> createDirectory(@RequestBody CreateDirectoryAttributes createDirectoryAttributes) {
+    public ResponseEntity<DirectoryAttributes> createDirectory(@RequestBody CreateDirectoryAttributes createDirectoryAttributes,
+                                                               @RequestHeader("userId") String headerUserId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createDirectory(createDirectoryAttributes));
     }
 
@@ -47,7 +52,8 @@ public class DirectoryController {
     @ApiOperation(value = "Add element/directory to directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully added element/directory to directory"))
     public ResponseEntity<Void> addElementToDirectory(@PathVariable("directoryUuid") String directoryUuid,
-                                                      @RequestBody ElementAttributes elementAttributes) {
+                                                      @RequestBody ElementAttributes elementAttributes,
+                                                      @RequestHeader("userId") String headerUserId) {
         service.addElementToDirectory(directoryUuid, elementAttributes);
         return ResponseEntity.ok().build();
     }
@@ -55,7 +61,8 @@ public class DirectoryController {
     @GetMapping(value = "/directories/{directoryUuid}/content", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully get content of directory"))
-    public ResponseEntity<List<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid) {
+    public ResponseEntity<List<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid,
+                                                                        @RequestHeader("userId") String headerUserId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
     }
 
@@ -64,7 +71,8 @@ public class DirectoryController {
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully renamed element/directory"))
     public ResponseEntity<Void> renameElement(@PathVariable("directoryUuid") String directoryUuid,
                                               @PathVariable("elementUuid") String elementUuid,
-                                              @PathVariable("newElementName") String newElementName) {
+                                              @PathVariable("newElementName") String newElementName,
+                                              @RequestHeader("userId") String headerUserId) {
         service.renameElement(directoryUuid, elementUuid, newElementName);
         return ResponseEntity.ok().build();
     }
@@ -73,7 +81,8 @@ public class DirectoryController {
     @ApiOperation(value = "Modify directory access rights")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully modified directory access rights"))
     public ResponseEntity<Void> setDirectoryAccessRights(@PathVariable("directoryUuid") String directoryUuid,
-                                                         @RequestBody AccessRightsAttributes accessRightsAttributes) {
+                                                         @RequestBody AccessRightsAttributes accessRightsAttributes,
+                                                         @RequestHeader("userId") String headerUserId) {
         service.setDirectoryAccessRights(directoryUuid, accessRightsAttributes);
         return ResponseEntity.ok().build();
     }
@@ -81,7 +90,8 @@ public class DirectoryController {
     @DeleteMapping(value = "/directories/{directoryUuid}")
     @ApiOperation(value = "Remove directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully removed directory"))
-    public ResponseEntity<Void> deleteDirectory(@PathVariable("directoryUuid") String directoryUuid) {
+    public ResponseEntity<Void> deleteDirectory(@PathVariable("directoryUuid") String directoryUuid,
+                                                @RequestHeader("userId") String headerUserId) {
         service.deleteDirectory(directoryUuid);
         return ResponseEntity.ok().build();
     }

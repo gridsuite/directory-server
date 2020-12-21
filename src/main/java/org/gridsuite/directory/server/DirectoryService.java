@@ -7,13 +7,8 @@
 package org.gridsuite.directory.server;
 
 import com.datastax.driver.core.utils.UUIDs;
-import org.gridsuite.directory.server.dto.AccessRightsAttributes;
-import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
-import org.gridsuite.directory.server.dto.DirectoryAttributes;
-import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.repository.DirectoryElementKey;
-import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.ComponentScan;
@@ -34,12 +29,23 @@ class DirectoryService {
 
     private final DirectoryElementRepository directoryElementRepository;
 
-    DirectoryService(DirectoryElementRepository directoryElementRepository) {
+    private final DirectoryRootRepository directoryRootRepository;
+
+    DirectoryService(DirectoryElementRepository directoryElementRepository, DirectoryRootRepository directoryRootRepository) {
         this.directoryElementRepository = directoryElementRepository;
+        this.directoryRootRepository = directoryRootRepository;
     }
 
     private static ElementAttributes fromEntity(DirectoryElementEntity entity) {
         return new ElementAttributes(entity.getDirectoryElementKey().getChildId().toString(), entity.getChildName(), ElementType.valueOf(entity.getChildType()), new AccessRightsAttributes(entity.isPrivate()));
+    }
+
+    private static RootDirectoryAttributes fromEntity(DirectoryRootEntity entity) {
+        return new RootDirectoryAttributes(entity.getRootDirectoryId());
+    }
+
+    public RootDirectoryAttributes getRootDirectory() {
+        return directoryRootRepository.findAll().stream().findFirst().map(DirectoryService::fromEntity).orElse(null);
     }
 
     public DirectoryAttributes createDirectory(CreateDirectoryAttributes createDirectoryAttributes) {
