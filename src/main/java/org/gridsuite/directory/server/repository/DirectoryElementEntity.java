@@ -9,11 +9,12 @@ package org.gridsuite.directory.server.repository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.cassandra.core.mapping.Column;
-import org.springframework.data.cassandra.core.mapping.PrimaryKey;
-import org.springframework.data.cassandra.core.mapping.Table;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -25,14 +26,22 @@ import java.io.Serializable;
 @Table("element")
 public class DirectoryElementEntity implements Serializable {
 
-    @PrimaryKey private DirectoryElementKey directoryElementKey;
+    @Id
+    @Column("id")
+    private UUID id;
 
-    @Column("child_name")
-    private String childName;
+    @Column("parentId")
+    private UUID parentId;
 
-    @Column("child_type")
-    private String childType;
+    @Column("name")
+    private String name;
 
-    @Column("child_isPrivate")
+    @Column("type")
+    private String type;
+
+    @Column("isPrivate")
     private boolean isPrivate;
+
+    @Column("owner")
+    private String owner;
 }

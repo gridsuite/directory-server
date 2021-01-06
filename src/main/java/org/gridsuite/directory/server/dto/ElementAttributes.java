@@ -28,4 +28,6 @@ public class ElementAttributes {
     private ElementType type;
 
     private AccessRightsAttributes accessRights;
+
+    private String owner;
 }

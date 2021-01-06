@@ -6,22 +6,25 @@
  */
 package org.gridsuite.directory.server.repository;
 
-import org.springframework.data.cassandra.repository.CassandraRepository;
-import org.springframework.data.cassandra.repository.Query;
+import org.springframework.data.r2dbc.repository.Query;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Repository
-public interface DirectoryElementRepository extends CassandraRepository<DirectoryElementEntity, DirectoryElementKey> {
-    List<DirectoryElementEntity> findByDirectoryElementKeyId(UUID directoryId);
+public interface DirectoryElementRepository extends ReactiveCrudRepository<DirectoryElementEntity, UUID> {
 
-    @Query("UPDATE element SET child_name = :newElementName WHERE id = :directoryUuid and child_id = :elementUuid IF EXISTS")
-    boolean updateElementChildName(UUID directoryUuid, UUID elementUuid, String newElementName);
+    Flux<DirectoryElementEntity> findByParentId(UUID parentId);
 
-    void deleteByDirectoryElementKeyId(UUID directoryId);
+    @Query("UPDATE element SET name = :newElementName WHERE id = :elementUuid IF EXISTS")
+    boolean updateElementName(UUID elementUuid, String newElementName);
+
+    Mono<Void> deleteByParentId(UUID parentId);
+
 }

@@ -6,12 +6,13 @@
  */
 package org.gridsuite.directory.server;
 
-import com.datastax.driver.core.utils.UUIDs;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.test.PostgreSQLServer;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -28,9 +29,7 @@ import java.util.UUID;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @WebMvcTest(DirectoryController.class)
 @ContextConfiguration(classes = {DirectoryApplication.class})
-public class DirectoryTest extends AbstractEmbeddedCassandraSetup {
+public class DirectoryTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryTest.class);
 
@@ -57,15 +56,18 @@ public class DirectoryTest extends AbstractEmbeddedCassandraSetup {
     @Autowired
     ObjectMapper objectMapper;
 
+    @ClassRule
+    public static final PostgreSQLServer DATABASE_SERVER = new PostgreSQLServer();
+
     @Test
     public void test() throws Exception {
 
-        UUID rootDirectoryUuid = UUIDs.timeBased();
-        UUID directoryUuid = UUIDs.timeBased();
+        UUID rootDirectoryUuid = UUID.randomUUID();
+        UUID directoryUuid = UUID.randomUUID();
 
         mvc.perform(post("/v1/directories/create")
                 .header("userId", "userId")
-                .content(objectMapper.writeValueAsString(new CreateDirectoryAttributes(rootDirectoryUuid, "newDir", new AccessRightsAttributes(false))))
+                .content(objectMapper.writeValueAsString(new CreateDirectoryAttributes(rootDirectoryUuid, "newDir", new AccessRightsAttributes(false), "owner")))
                 .contentType(APPLICATION_JSON));
 
         mvc.perform(get("/v1/directories/" + directoryUuid + "/content")
@@ -77,7 +79,7 @@ public class DirectoryTest extends AbstractEmbeddedCassandraSetup {
 
         MvcResult result = mvc.perform(post("/v1/directories/create")
                 .header("userId", "userId")
-                .content(objectMapper.writeValueAsString(new CreateDirectoryAttributes(directoryUuid, "subDir", new AccessRightsAttributes(false))))
+                .content(objectMapper.writeValueAsString(new CreateDirectoryAttributes(directoryUuid, "subDir", new AccessRightsAttributes(false), "owner")))
                 .contentType(APPLICATION_JSON))
                 .andReturn();
 

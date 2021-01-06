@@ -29,4 +29,6 @@ public class CreateDirectoryAttributes {
 
     private AccessRightsAttributes accessRights = new AccessRightsAttributes(true);
 
+    private String owner;
+
 }

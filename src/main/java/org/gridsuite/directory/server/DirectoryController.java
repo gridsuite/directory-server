@@ -15,8 +15,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import reactor.core.publisher.Flux;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -61,7 +60,7 @@ public class DirectoryController {
     @GetMapping(value = "/directories/{directoryUuid}/content", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully get content of directory"))
-    public ResponseEntity<List<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid,
+    public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid,
                                                                         @RequestHeader("userId") String headerUserId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
     }
@@ -73,7 +72,7 @@ public class DirectoryController {
                                               @PathVariable("elementUuid") String elementUuid,
                                               @PathVariable("newElementName") String newElementName,
                                               @RequestHeader("userId") String headerUserId) {
-        service.renameElement(directoryUuid, elementUuid, newElementName);
+        service.renameElement(elementUuid, newElementName);
         return ResponseEntity.ok().build();
     }
 

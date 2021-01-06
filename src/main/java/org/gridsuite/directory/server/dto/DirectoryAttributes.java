@@ -25,4 +25,6 @@ public class DirectoryAttributes {
     private String directoryName;
 
     private AccessRightsAttributes directoryAccessRights;
+
+    private String owner;
 }
