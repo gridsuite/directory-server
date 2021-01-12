@@ -11,12 +11,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.r2dbc.core.DatabaseClient;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -52,7 +54,15 @@ public class DirectoryTest {
     private DirectoryService directoryService;
 
     @Autowired
+    private DatabaseClient databaseClient;
+
+    @Autowired
     ObjectMapper objectMapper;
+
+    @Before
+    public void initDatabaseSchema() {
+        databaseClient.execute("CREATE TABLE ELEMENT (parentId uuid,id uuid,name varchar(80),type varchar(20),isPrivate boolean,owner varchar(30));").fetch();
+    }
 
     @Test
     public void test() throws Exception {
