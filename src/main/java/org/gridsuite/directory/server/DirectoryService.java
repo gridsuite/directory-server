@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
@@ -40,18 +41,19 @@ class DirectoryService {
         return null;
     }
 
-    public DirectoryAttributes createDirectory(CreateDirectoryAttributes createDirectoryAttributes) {
+    public Mono<DirectoryElementEntity> createDirectory(CreateDirectoryAttributes createDirectoryAttributes) {
         UUID createdDirectoryUuid = UUID.randomUUID();
-        directoryElementRepository.save(new DirectoryElementEntity(createdDirectoryUuid, createDirectoryAttributes.getParentId(),
+        Mono<DirectoryElementEntity> createdDirectory = directoryElementRepository.save(new DirectoryElementEntity(createdDirectoryUuid, createDirectoryAttributes.getParentId(),
                                                                    createDirectoryAttributes.getDirectoryName(),
                                                                    ElementType.DIRECTORY.toString(),
                                                                    createDirectoryAttributes.getAccessRights() != null ? createDirectoryAttributes.getAccessRights().isPrivate() : true,
                                                                    createDirectoryAttributes.getOwner()));
-        return new DirectoryAttributes(createdDirectoryUuid.toString(), createDirectoryAttributes.getDirectoryName(), createDirectoryAttributes.getAccessRights(), createDirectoryAttributes.getOwner());
+
+        return createdDirectory;
     }
 
-    public void addElementToDirectory(String directoryUuid, ElementAttributes elementAttributes) {
-        directoryElementRepository.save(new DirectoryElementEntity(UUID.fromString(elementAttributes.getElementUuid()), UUID.fromString(directoryUuid),
+    public Mono<DirectoryElementEntity> addElementToDirectory(String directoryUuid, ElementAttributes elementAttributes) {
+        return directoryElementRepository.save(new DirectoryElementEntity(UUID.fromString(elementAttributes.getElementUuid()), UUID.fromString(directoryUuid),
                                                                    elementAttributes.getElementName(),
                                                                    elementAttributes.getType().toString(),
                                                                    elementAttributes.getAccessRights().isPrivate(),

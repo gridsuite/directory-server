@@ -11,8 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.gridsuite.directory.test.PostgreSQLServer;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -55,9 +53,6 @@ public class DirectoryTest {
 
     @Autowired
     ObjectMapper objectMapper;
-
-    @ClassRule
-    public static final PostgreSQLServer DATABASE_SERVER = new PostgreSQLServer();
 
     @Test
     public void test() throws Exception {

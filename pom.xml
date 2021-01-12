@@ -45,8 +45,8 @@
 
     <properties>
         <java.version>11</java.version>
-
-        <gridsuite-dependencies.version>3</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>4</gridsuite-dependencies.version>
+        <springboot.version>2.3.0.RELEASE</springboot.version>
     </properties>
 
     <build>
@@ -86,6 +86,13 @@
     <dependencyManagement>
         <dependencies>
             <!-- overrides of imports -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${springboot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
 
             <!-- imports -->
             <dependency>
@@ -121,7 +128,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-r2dbc</artifactId>
-            <version>2.3.0.RELEASE</version>
         </dependency>
         <dependency>
             <groupId>io.r2dbc</groupId>
@@ -131,7 +137,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <version>2.3.0.RELEASE</version>
         </dependency>
 
         <!-- Runtime dependencies -->
@@ -148,7 +153,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
-            <version>2.3.0.RELEASE</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -159,9 +163,14 @@
 
         <!-- Test dependencies -->
         <dependency>
-            <groupId>ru.yandex.qatools.embed</groupId>
-            <artifactId>postgresql-embedded</artifactId>
-            <version>2.10</version>
+            <groupId>io.r2dbc</groupId>
+            <artifactId>r2dbc-h2</artifactId>
+            <version>0.8.4.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>1.4.200</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -177,7 +186,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>2.3.0.RELEASE</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

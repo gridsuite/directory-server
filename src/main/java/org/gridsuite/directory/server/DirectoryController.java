@@ -11,11 +11,13 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -42,8 +44,8 @@ public class DirectoryController {
     @PostMapping(value = "/directories/create")
     @ApiOperation(value = "Create directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully created directory"))
-    public ResponseEntity<DirectoryAttributes> createDirectory(@RequestBody CreateDirectoryAttributes createDirectoryAttributes,
-                                                               @RequestHeader("userId") String headerUserId) {
+    public ResponseEntity<Mono<DirectoryElementEntity>> createDirectory(@RequestBody CreateDirectoryAttributes createDirectoryAttributes,
+                                                                        @RequestHeader("userId") String headerUserId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createDirectory(createDirectoryAttributes));
     }
 
