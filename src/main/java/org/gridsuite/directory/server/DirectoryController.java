@@ -10,9 +10,11 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
-import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.AccessRightsAttributes;
+import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
+import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +27,6 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping(value = "/" + DirectoryApi.API_VERSION)
 @Api(tags = "directory-server")
-@ComponentScan(basePackageClasses = DirectoryService.class)
 public class DirectoryController {
 
     private final DirectoryService service;

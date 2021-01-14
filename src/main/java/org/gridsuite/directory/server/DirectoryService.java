@@ -42,8 +42,7 @@ class DirectoryService {
     }
 
     public Mono<DirectoryElementEntity> createDirectory(CreateDirectoryAttributes createDirectoryAttributes) {
-        UUID createdDirectoryUuid = UUID.randomUUID();
-        Mono<DirectoryElementEntity> createdDirectory = directoryElementRepository.save(new DirectoryElementEntity(createdDirectoryUuid, createDirectoryAttributes.getParentId(),
+        Mono<DirectoryElementEntity> createdDirectory = directoryElementRepository.save(new DirectoryElementEntity(null, createDirectoryAttributes.getParentId(),
                                                                    createDirectoryAttributes.getDirectoryName(),
                                                                    ElementType.DIRECTORY.toString(),
                                                                    createDirectoryAttributes.getAccessRights() != null ? createDirectoryAttributes.getAccessRights().isPrivate() : true,

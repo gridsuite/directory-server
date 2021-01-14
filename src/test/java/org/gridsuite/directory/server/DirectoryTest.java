@@ -10,48 +10,42 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
-import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.r2dbc.core.DatabaseClient;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.reactive.config.EnableWebFlux;
 
 import java.util.UUID;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 
 @RunWith(SpringRunner.class)
-@WebMvcTest(DirectoryController.class)
+@AutoConfigureWebTestClient
+@EnableWebFlux
+@SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class})
 public class DirectoryTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryTest.class);
 
     @Autowired
-    private MockMvc mvc;
-
-    @Autowired
-    private DirectoryElementRepository directoryElementRepository;
-
-    @Autowired
-    private DirectoryService directoryService;
+    private WebTestClient webTestClient;
 
     @Autowired
     private DatabaseClient databaseClient;
@@ -61,56 +55,46 @@ public class DirectoryTest {
 
     @Before
     public void initDatabaseSchema() {
-        databaseClient.execute("CREATE TABLE ELEMENT (parentId uuid,id uuid,name varchar(80),type varchar(20),isPrivate boolean,owner varchar(30));").fetch();
+        databaseClient.execute("CREATE TABLE ELEMENT (parentId uuid,id uuid,name varchar(80),type varchar(20),isPrivate boolean,owner varchar(30));").fetch().first().block();
     }
 
     @Test
     public void test() throws Exception {
 
         UUID rootDirectoryUuid = UUID.randomUUID();
-        UUID directoryUuid = UUID.randomUUID();
 
-        mvc.perform(post("/v1/directories/create")
+        webTestClient.get()
+                .uri("/v1/directories/" + rootDirectoryUuid + "/content")
                 .header("userId", "userId")
-                .content(objectMapper.writeValueAsString(new CreateDirectoryAttributes(rootDirectoryUuid, "newDir", new AccessRightsAttributes(false), "owner")))
-                .contentType(APPLICATION_JSON));
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[]");
 
-        mvc.perform(get("/v1/directories/" + directoryUuid + "/content")
+        EntityExchangeResult result = webTestClient.post()
+                .uri("/v1/directories/create")
                 .header("userId", "userId")
-                .contentType(APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
-                .andExpect(content().json("[]"));
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(objectMapper.writeValueAsString(new CreateDirectoryAttributes(rootDirectoryUuid, "newDir", new AccessRightsAttributes(false), "owner")))
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .returnResult();
 
-        MvcResult result = mvc.perform(post("/v1/directories/create")
+        JsonNode jsonTree = objectMapper.readTree(result.getResponseBody().toString());
+        String uuid = jsonTree.get("id").asText();
+        assertTrue(jsonTree.get("name").asText().equals("newDir"));
+        assertFalse(jsonTree.get("private").asBoolean());
+        webTestClient.get()
+                .uri("/v1/directories/" + rootDirectoryUuid + "/content")
                 .header("userId", "userId")
-                .content(objectMapper.writeValueAsString(new CreateDirectoryAttributes(directoryUuid, "subDir", new AccessRightsAttributes(false), "owner")))
-                .contentType(APPLICATION_JSON))
-                .andReturn();
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[{\"elementUuid\":\"" + uuid + "\",\"elementName\":\"newDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"owner\"}]");
 
-        JsonNode jsonTree = objectMapper.readTree(result.getResponse().getContentAsString());
-        String uuid = jsonTree.get("directoryUuid").asText();
-        assertTrue(jsonTree.get("directoryName").asText().equals("subDir"));
-        assertFalse(jsonTree.get("directoryAccessRights").get("private").asBoolean());
-        mvc.perform(get("/v1/directories/" + directoryUuid + "/content")
-                .header("userId", "userId")
-                .contentType(APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
-                .andExpect(content().json("[{\"elementUuid\":" + uuid + ",\"elementName\":\"subDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\": false}}]"));
-
-        String newSubDirName = "newSubDir";
-        mvc.perform(put("/v1/directories/" + directoryUuid + "/rename/" + uuid + "/" + newSubDirName)
-                .header("userId", "userId")
-                .contentType(APPLICATION_JSON))
-                .andExpect(status().isOk());
-
-        mvc.perform(get("/v1/directories/" + directoryUuid + "/content")
-                .header("userId", "userId")
-                .contentType(APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
-                .andExpect(content().json("[{\"elementUuid\":" + uuid + ",\"elementName\":\"" + newSubDirName + "\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\": false}}]"));
     }
-
 }

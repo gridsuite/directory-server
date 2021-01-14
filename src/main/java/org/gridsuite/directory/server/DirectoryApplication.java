@@ -8,12 +8,14 @@ package org.gridsuite.directory.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.reactive.config.EnableWebFlux;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @SpringBootApplication
+@EnableWebFlux
 public class DirectoryApplication {
 
     public static void main(String[] args) {

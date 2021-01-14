@@ -6,9 +6,11 @@
  */
 package org.gridsuite.directory.server;
 
-import io.r2dbc.spi.ConnectionFactories;
+import io.r2dbc.h2.H2ConnectionConfiguration;
+import io.r2dbc.h2.H2ConnectionFactory;
+import io.r2dbc.postgresql.PostgresqlConnectionConfiguration;
+import io.r2dbc.postgresql.PostgresqlConnectionFactory;
 import io.r2dbc.spi.ConnectionFactory;
-import io.r2dbc.spi.ConnectionFactoryOptions;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -34,22 +36,22 @@ public class R2DBCConfig extends AbstractR2dbcConfiguration {
     @Bean
     @Override
     public ConnectionFactory connectionFactory() {
-        ConnectionFactoryOptions.Builder optionsBuilder = ConnectionFactoryOptions.builder();
-        optionsBuilder.option(ConnectionFactoryOptions.DRIVER, env.getRequiredProperty("driver"))
-            .option(ConnectionFactoryOptions.DATABASE, env.getRequiredProperty("database"))
-            .option(ConnectionFactoryOptions.USER, env.getRequiredProperty("login"))
-            .option(ConnectionFactoryOptions.PASSWORD, env.getRequiredProperty("password"));
-
-        if (env.containsProperty("host")) {
-            optionsBuilder.option(ConnectionFactoryOptions.HOST, env.getProperty("host"));
+        String driver = env.getRequiredProperty("driver");
+        if (driver.equals("h2")) {
+            return new H2ConnectionFactory(H2ConnectionConfiguration.builder()
+                    .inMemory(env.getRequiredProperty("database"))
+                    .option("DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+                    .build());
+        } else if (driver.equals("postgresql")) {
+            return new PostgresqlConnectionFactory(PostgresqlConnectionConfiguration.builder()
+                    .host(env.getRequiredProperty("host"))
+                    .port(Integer.valueOf(env.getRequiredProperty("port")))
+                    .database(env.getRequiredProperty("database"))
+                    .username(env.getRequiredProperty("login"))
+                    .password(env.getRequiredProperty("password"))
+                    .build());
+        } else {
+            return null;
         }
-        if (env.containsProperty("protocol")) {
-            optionsBuilder.option(ConnectionFactoryOptions.PROTOCOL, env.getProperty("protocol"));
-        }
-        if (env.containsProperty("port")) {
-            optionsBuilder.option(ConnectionFactoryOptions.PORT, Integer.valueOf(env.getProperty("port")));
-        }
-
-        return ConnectionFactories.get(optionsBuilder.build());
     }
 }
