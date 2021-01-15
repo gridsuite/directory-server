@@ -68,15 +68,13 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
     }
 
-    @PutMapping(value = "/directories/{directoryUuid}/rename/{elementUuid}/{newElementName}")
+    @PutMapping(value = "/directories/{elementUuid}/rename/{newElementName}")
     @ApiOperation(value = "Rename element/directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully renamed element/directory"))
-    public ResponseEntity<Void> renameElement(@PathVariable("directoryUuid") String directoryUuid,
-                                              @PathVariable("elementUuid") String elementUuid,
+    public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") String elementUuid,
                                               @PathVariable("newElementName") String newElementName,
                                               @RequestHeader("userId") String headerUserId) {
-        service.renameElement(elementUuid, newElementName);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName));
     }
 
     @PutMapping(value = "/directories/{directoryUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -89,13 +87,12 @@ public class DirectoryController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/directories/{directoryUuid}")
-    @ApiOperation(value = "Remove directory")
-    @ApiResponses(@ApiResponse(code = 200, message = "Successfully removed directory"))
-    public ResponseEntity<Void> deleteDirectory(@PathVariable("directoryUuid") String directoryUuid,
-                                                @RequestHeader("userId") String headerUserId) {
-        service.deleteDirectory(directoryUuid);
-        return ResponseEntity.ok().build();
+    @DeleteMapping(value = "/directories/{elementUuid}")
+    @ApiOperation(value = "Remove directory/element")
+    @ApiResponses(@ApiResponse(code = 200, message = "Successfully removed directory/element"))
+    public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") String elementUuid,
+                                                    @RequestHeader("userId") String headerUserId) {
+        return ResponseEntity.ok().body(service.deleteElement(elementUuid));
     }
 
 }

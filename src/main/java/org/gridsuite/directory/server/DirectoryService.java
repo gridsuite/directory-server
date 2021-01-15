@@ -6,7 +6,10 @@
  */
 package org.gridsuite.directory.server;
 
-import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.AccessRightsAttributes;
+import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
+import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.slf4j.Logger;
@@ -63,15 +66,15 @@ class DirectoryService {
         return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).map(DirectoryService::fromEntity);
     }
 
-    public void renameElement(String elementUuid, String newElementName) {
-        directoryElementRepository.updateElementName(UUID.fromString(elementUuid), newElementName);
+    public Mono<Void> renameElement(String elementUuid, String newElementName) {
+        return directoryElementRepository.updateElementName(UUID.fromString(elementUuid), newElementName);
     }
 
     public void setDirectoryAccessRights(String directoryUuid, AccessRightsAttributes accessRightsAttributes) {
     }
 
-    public void deleteDirectory(String directoryUuid) {
-        directoryElementRepository.deleteByParentId(UUID.fromString(directoryUuid));
+    public Mono<Void> deleteElement(String elementUuid) {
+        return directoryElementRepository.deleteById(UUID.fromString(elementUuid));
     }
 
 }

@@ -96,5 +96,35 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[{\"elementUuid\":\"" + uuid + "\",\"elementName\":\"newDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"owner\"}]");
 
+        webTestClient.put().uri("/v1//directories/" + uuid + "/rename/newName")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get()
+                .uri("/v1/directories/" + rootDirectoryUuid + "/content")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[{\"elementUuid\":\"" + uuid + "\",\"elementName\":\"newName\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"owner\"}]");
+
+        webTestClient.delete()
+                .uri("/v1/directories/" + uuid)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get()
+                .uri("/v1/directories/" + rootDirectoryUuid + "/content")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[]");
+
     }
+
 }

@@ -22,9 +22,9 @@ public interface DirectoryElementRepository extends ReactiveCrudRepository<Direc
 
     Flux<DirectoryElementEntity> findByParentId(UUID parentId);
 
-    @Query("UPDATE element SET name = :newElementName WHERE id = :elementUuid IF EXISTS")
-    boolean updateElementName(UUID elementUuid, String newElementName);
+    @Query("UPDATE element SET name = :newElementName WHERE id = :elementUuid")
+    Mono<Void> updateElementName(UUID elementUuid, String newElementName);
 
-    Mono<Void> deleteByParentId(UUID parentId);
+    Mono<Void> deleteById(UUID id);
 
 }
