@@ -28,7 +28,7 @@ import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 @PropertySource(value = {"classpath:database.properties"})
 @PropertySource(value = {"file:/config/database.properties"}, ignoreResourceNotFound = true)
 @EnableR2dbcRepositories(basePackageClasses = {DirectoryElementRepository.class})
-public class R2DBCConfig extends AbstractR2dbcConfiguration {
+public class DatabaseConfig extends AbstractR2dbcConfiguration {
 
     @Autowired
     Environment env;

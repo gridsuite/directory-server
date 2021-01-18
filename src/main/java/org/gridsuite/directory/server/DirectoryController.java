@@ -53,11 +53,10 @@ public class DirectoryController {
     @PutMapping(value = "/directories/{directoryUuid}/add", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Add element/directory to directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully added element/directory to directory"))
-    public ResponseEntity<Void> addElementToDirectory(@PathVariable("directoryUuid") String directoryUuid,
+    public ResponseEntity<Mono<DirectoryElementEntity>> addElementToDirectory(@PathVariable("directoryUuid") String directoryUuid,
                                                       @RequestBody ElementAttributes elementAttributes,
                                                       @RequestHeader("userId") String headerUserId) {
-        service.addElementToDirectory(directoryUuid, elementAttributes);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.addElementToDirectory(directoryUuid, elementAttributes));
     }
 
     @GetMapping(value = "/directories/{directoryUuid}/content", produces = MediaType.APPLICATION_JSON_VALUE)

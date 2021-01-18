@@ -55,7 +55,8 @@ class DirectoryService {
     }
 
     public Mono<DirectoryElementEntity> addElementToDirectory(String directoryUuid, ElementAttributes elementAttributes) {
-        return directoryElementRepository.save(new DirectoryElementEntity(UUID.fromString(elementAttributes.getElementUuid()), UUID.fromString(directoryUuid),
+        return directoryElementRepository.save(new DirectoryElementEntity(null,
+                                                                   directoryUuid != null ? UUID.fromString(directoryUuid) : null,
                                                                    elementAttributes.getElementName(),
                                                                    elementAttributes.getType().toString(),
                                                                    elementAttributes.getAccessRights().isPrivate(),
@@ -63,7 +64,7 @@ class DirectoryService {
     }
 
     public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {
-        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).map(DirectoryService::fromEntity);
+        return directoryElementRepository.findByParentId(directoryUuid != null ? UUID.fromString(directoryUuid) : null).map(DirectoryService::fromEntity);
     }
 
     public Mono<Void> renameElement(String elementUuid, String newElementName) {
