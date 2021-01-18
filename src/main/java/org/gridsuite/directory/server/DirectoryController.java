@@ -13,8 +13,8 @@ import io.swagger.annotations.ApiResponses;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.DirectoryRootEntity;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,7 +38,7 @@ public class DirectoryController {
     @GetMapping(value = "/directories/root", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get root directory id")
     @ApiResponses(@ApiResponse(code = 200, message = "Successfully get root directory id"))
-    public ResponseEntity<RootDirectoryAttributes> getRootDirectoryId(@RequestHeader("userId") String headerUserId) {
+    public ResponseEntity<Mono<DirectoryRootEntity>> getRootDirectoryId(@RequestHeader("userId") String headerUserId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getRootDirectory());
     }
 

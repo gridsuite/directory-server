@@ -1,4 +1,7 @@
-CREATE ROLE postgres WITH LOGIN;
+CREATE TABLE root (
+    id uuid
+);
+
 CREATE TABLE element (
     parentId uuid,
     id uuid,
@@ -7,4 +10,3 @@ CREATE TABLE element (
     isPrivate boolean,
     owner varchar(30)
 );
-GRANT ALL PRIVILEGES ON element TO postgres;

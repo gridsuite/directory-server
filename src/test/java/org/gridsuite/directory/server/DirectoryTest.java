@@ -59,15 +59,29 @@ public class DirectoryTest {
     ObjectMapper objectMapper;
 
     @Before
-    public void initDatabaseSchema() throws IOException {
+    public void initDatabase() throws IOException {
+        // Init schema
         File schemaFile = new File(getClass().getClassLoader().getResource("schema.sql").getFile());
         databaseClient.execute(Files.readString(Path.of(schemaFile.toURI()))).fetch().first().block();
+        // Init values (here, a root directory)
+        File testValuesFile = new File(getClass().getClassLoader().getResource("test_values.sql").getFile());
+        databaseClient.execute(Files.readString(Path.of(testValuesFile.toURI()))).fetch().first().block();
     }
 
     @Test
     public void test() throws Exception {
 
-        UUID rootDirectoryUuid = UUID.randomUUID();
+        EntityExchangeResult result = webTestClient.get()
+                .uri("/v1/directories/root")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .returnResult();
+
+        JsonNode jsonTree = objectMapper.readTree(result.getResponseBody().toString());
+        UUID rootDirectoryUuid = UUID.fromString(jsonTree.get("id").asText());
 
         webTestClient.get()
                 .uri("/v1/directories/" + rootDirectoryUuid + "/content")
@@ -78,7 +92,7 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[]");
 
-        EntityExchangeResult result = webTestClient.post()
+        result = webTestClient.post()
                 .uri("/v1/directories/create")
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -89,7 +103,7 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .returnResult();
 
-        JsonNode jsonTree = objectMapper.readTree(result.getResponseBody().toString());
+        jsonTree = objectMapper.readTree(result.getResponseBody().toString());
         String uuidNewDirectory = jsonTree.get("id").asText();
         assertTrue(jsonTree.get("name").asText().equals("newDir"));
         assertFalse(jsonTree.get("private").asBoolean());

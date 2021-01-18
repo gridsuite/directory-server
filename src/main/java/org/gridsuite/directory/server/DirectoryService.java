@@ -9,9 +9,10 @@ package org.gridsuite.directory.server;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.CreateDirectoryAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.DirectoryRootEntity;
+import org.gridsuite.directory.server.repository.DirectoryRootRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.ComponentScan;
@@ -32,7 +33,10 @@ class DirectoryService {
 
     private final DirectoryElementRepository directoryElementRepository;
 
-    DirectoryService(DirectoryElementRepository directoryElementRepository) {
+    private final DirectoryRootRepository directoryRootRepository;
+
+    DirectoryService(DirectoryRootRepository directoryRootRepository, DirectoryElementRepository directoryElementRepository) {
+        this.directoryRootRepository = directoryRootRepository;
         this.directoryElementRepository = directoryElementRepository;
     }
 
@@ -40,8 +44,8 @@ class DirectoryService {
         return new ElementAttributes(entity.getId().toString(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
     }
 
-    public RootDirectoryAttributes getRootDirectory() {
-        return null;
+    public Mono<DirectoryRootEntity> getRootDirectory() {
+        return directoryRootRepository.findAll().single();
     }
 
     public Mono<DirectoryElementEntity> createDirectory(CreateDirectoryAttributes createDirectoryAttributes) {
