@@ -116,10 +116,12 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"owner\"}]");
 
+        UUID uuidAddedStudy = UUID.randomUUID();
+
         result = webTestClient.put().uri("/v1/directories/" + rootDirectoryUuid + "/add")
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(new ElementAttributes(null, "newElement", ElementType.STUDY, new AccessRightsAttributes(false), "owner")))
+                .bodyValue(objectMapper.writeValueAsString(new ElementAttributes(uuidAddedStudy, "newElement", ElementType.STUDY, new AccessRightsAttributes(false), "owner")))
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -127,7 +129,7 @@ public class DirectoryTest {
                 .returnResult();
 
         jsonTree = objectMapper.readTree(result.getResponseBody().toString());
-        String uuidAddedStudy = jsonTree.get("id").asText();
+        assertTrue(uuidAddedStudy.toString().equals(jsonTree.get("id").asText()));
 
         webTestClient.put().uri("/v1/directories/" + uuidNewDirectory + "/rename/newName")
                 .header("userId", "userId")

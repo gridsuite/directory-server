@@ -41,7 +41,7 @@ class DirectoryService {
     }
 
     private static ElementAttributes fromEntity(DirectoryElementEntity entity) {
-        return new ElementAttributes(entity.getId().toString(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
+        return new ElementAttributes(entity.getId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
     }
 
     public Mono<DirectoryRootEntity> getRootDirectory() {
@@ -53,18 +53,20 @@ class DirectoryService {
                                                                    createDirectoryAttributes.getDirectoryName(),
                                                                    ElementType.DIRECTORY.toString(),
                                                                    createDirectoryAttributes.getAccessRights() != null ? createDirectoryAttributes.getAccessRights().isPrivate() : true,
-                                                                   createDirectoryAttributes.getOwner()));
+                                                                   createDirectoryAttributes.getOwner(),
+                                                        true));
 
         return createdDirectory;
     }
 
     public Mono<DirectoryElementEntity> addElementToDirectory(String directoryUuid, ElementAttributes elementAttributes) {
-        return directoryElementRepository.save(new DirectoryElementEntity(null,
+        return directoryElementRepository.save(new DirectoryElementEntity(elementAttributes.getElementUuid(),
                                                                    directoryUuid != null ? UUID.fromString(directoryUuid) : null,
                                                                    elementAttributes.getElementName(),
                                                                    elementAttributes.getType().toString(),
                                                                    elementAttributes.getAccessRights().isPrivate(),
-                                                                   elementAttributes.getOwner()));
+                                                                   elementAttributes.getOwner(),
+                                                        true));
     }
 
     public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {

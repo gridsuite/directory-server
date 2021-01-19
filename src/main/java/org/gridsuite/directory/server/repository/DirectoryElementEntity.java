@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.PersistenceConstructor;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
@@ -27,6 +28,17 @@ import java.util.UUID;
 @AllArgsConstructor
 @Table("element")
 public class DirectoryElementEntity implements Serializable, Persistable<UUID> {
+
+    @PersistenceConstructor
+    public DirectoryElementEntity(UUID id, UUID parentId, String name, String type, boolean isPrivate, String owner) {
+        this.id = id;
+        this.parentId = parentId;
+        this.name = name;
+        this.type = type;
+        this.isPrivate = isPrivate;
+        this.owner = owner;
+        this.newElement = false;
+    }
 
     @Id
     @Column("id")
@@ -47,13 +59,15 @@ public class DirectoryElementEntity implements Serializable, Persistable<UUID> {
     @Column("owner")
     private String owner;
 
+    @Transient
+    private boolean newElement;
+
     @Override
     @Transient
     public boolean isNew() {
-        boolean isNew = id == null;
-        if (isNew) {
+        if (newElement && id == null) {
             id = UUID.randomUUID();
         }
-        return isNew;
+        return newElement;
     }
 }

@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.gridsuite.directory.server.ElementType;
 
+import java.util.UUID;
+
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
@@ -21,7 +23,7 @@ import org.gridsuite.directory.server.ElementType;
 @AllArgsConstructor
 public class ElementAttributes {
 
-    private String elementUuid;
+    private UUID elementUuid;
 
     private String elementName;
 
