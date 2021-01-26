@@ -45,7 +45,7 @@ public class DatabaseConfig extends AbstractR2dbcConfiguration {
         } else if (driver.equals("postgresql")) {
             return new PostgresqlConnectionFactory(PostgresqlConnectionConfiguration.builder()
                     .host(env.getRequiredProperty("host"))
-                    .port(Integer.valueOf(env.getRequiredProperty("port")))
+                    .port(Integer.parseInt(env.getRequiredProperty("port")))
                     .database(env.getRequiredProperty("database"))
                     .username(env.getRequiredProperty("login"))
                     .password(env.getRequiredProperty("password"))

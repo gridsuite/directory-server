@@ -21,7 +21,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateDirectoryAttributes {
+public class DirectoryAttributes {
 
     private UUID parentId;
 

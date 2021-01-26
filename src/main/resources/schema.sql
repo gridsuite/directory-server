@@ -1,7 +1,3 @@
-CREATE TABLE root (
-    id uuid
-);
-
 CREATE TABLE element (
     parentId uuid,
     id uuid,
