@@ -43,7 +43,7 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createDirectory(directoryAttributes));
     }
 
-    @PutMapping(value = {"/directories/root/add", "/directories/{directoryUuid}/add"}, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/directories/{directoryUuid}/add", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Add element/directory to directory")
     @ApiResponses(@ApiResponse(code = 200, message = "The added element/directory"))
     public ResponseEntity<Mono<DirectoryElementEntity>> addElementToDirectory(@PathVariable("directoryUuid") Optional<String> directoryUuid,
@@ -51,7 +51,7 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.addElementToDirectory(directoryUuid, elementAttributes));
     }
 
-    @GetMapping(value = {"/directories/root/content", "/directories/{directoryUuid}/content"}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = {"/directories/roots", "/directories/{directoryUuid}/content"}, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
     @ApiResponses(@ApiResponse(code = 200, message = "List of directory's elements"))
     public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") Optional<String> directoryUuid) {
@@ -69,10 +69,9 @@ public class DirectoryController {
     @PutMapping(value = "/directories/{directoryUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Modify directory's access rights")
     @ApiResponses(@ApiResponse(code = 200, message = "Directory's access rights were successfully modified"))
-    public ResponseEntity<Void> setDirectoryAccessRights(@PathVariable("directoryUuid") String directoryUuid,
+    public ResponseEntity<Mono<Void>> setDirectoryAccessRights(@PathVariable("directoryUuid") String directoryUuid,
                                                          @RequestBody AccessRightsAttributes accessRightsAttributes) {
-        service.setDirectoryAccessRights(directoryUuid, accessRightsAttributes);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().body(service.setDirectoryAccessRights(directoryUuid, accessRightsAttributes));
     }
 
     @DeleteMapping(value = "/directories/{elementUuid}")

@@ -25,6 +25,9 @@ public interface DirectoryElementRepository extends ReactiveCrudRepository<Direc
     @Query("UPDATE element SET name = :newElementName WHERE id = :elementUuid")
     Mono<Void> updateElementName(UUID elementUuid, String newElementName);
 
+    @Query("UPDATE element SET isPrivate = :isPrivate WHERE id = :elementUuid")
+    Mono<Void> updateElementAccessRights(UUID elementUuid, boolean isPrivate);
+
     Mono<Void> deleteById(UUID id);
 
 }

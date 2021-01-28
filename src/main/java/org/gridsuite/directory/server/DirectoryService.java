@@ -69,7 +69,8 @@ class DirectoryService {
         return directoryElementRepository.updateElementName(UUID.fromString(elementUuid), newElementName);
     }
 
-    public void setDirectoryAccessRights(String directoryUuid, AccessRightsAttributes accessRightsAttributes) {
+    public Mono<Void> setDirectoryAccessRights(String directoryUuid, AccessRightsAttributes accessRightsAttributes) {
+        return directoryElementRepository.updateElementAccessRights(UUID.fromString(directoryUuid), accessRightsAttributes.isPrivate());
     }
 
     public Mono<Void> deleteElement(String elementUuid) {
