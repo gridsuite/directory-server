@@ -11,8 +11,6 @@ import org.gridsuite.directory.server.dto.DirectoryAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -28,8 +26,6 @@ import java.util.UUID;
 @Service
 class DirectoryService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
-
     private final DirectoryElementRepository directoryElementRepository;
 
     DirectoryService(DirectoryElementRepository directoryElementRepository) {
@@ -41,14 +37,12 @@ class DirectoryService {
     }
 
     public Mono<DirectoryElementEntity> createDirectory(DirectoryAttributes directoryAttributes) {
-        Mono<DirectoryElementEntity> createdDirectory = directoryElementRepository.save(new DirectoryElementEntity(null, directoryAttributes.getParentId(),
+        return directoryElementRepository.save(new DirectoryElementEntity(null, directoryAttributes.getParentId(),
                                                                    directoryAttributes.getDirectoryName(),
                                                                    ElementType.DIRECTORY.toString(),
-                                                                   directoryAttributes.getAccessRights() != null ? directoryAttributes.getAccessRights().isPrivate() : true,
+                                                                   directoryAttributes.getAccessRights() == null || directoryAttributes.getAccessRights().isPrivate(),
                                                                    directoryAttributes.getOwner(),
                                                         true));
-
-        return createdDirectory;
     }
 
     public Mono<DirectoryElementEntity> addElementToDirectory(Optional<String> directoryUuid, ElementAttributes elementAttributes) {

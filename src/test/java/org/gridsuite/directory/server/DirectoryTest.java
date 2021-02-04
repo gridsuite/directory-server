@@ -33,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -90,7 +91,7 @@ public class DirectoryTest {
 
         JsonNode jsonTree = objectMapper.readTree(result.getResponseBody().toString());
         String uuidNewDirectory = jsonTree.get("id").asText();
-        assertTrue(jsonTree.get("name").asText().equals("newDir"));
+        assertEquals("newDir", jsonTree.get("name").asText());
         assertFalse(jsonTree.get("private").asBoolean());
         webTestClient.get()
                 .uri("/v1/directories/roots")
@@ -114,7 +115,7 @@ public class DirectoryTest {
 
         jsonTree = objectMapper.readTree(result.getResponseBody().toString());
         String uuidNewSubDirectory = jsonTree.get("id").asText();
-        assertTrue(jsonTree.get("name").asText().equals("newSubDir"));
+        assertEquals("newSubDir", jsonTree.get("name").asText());
         assertTrue(jsonTree.get("private").asBoolean());
 
         webTestClient.get()
@@ -139,7 +140,7 @@ public class DirectoryTest {
                 .returnResult();
 
         jsonTree = objectMapper.readTree(result.getResponseBody().toString());
-        assertTrue(uuidAddedStudy.toString().equals(jsonTree.get("id").asText()));
+        assertEquals(uuidAddedStudy.toString(), jsonTree.get("id").asText());
 
         webTestClient.get()
                 .uri("/v1/directories/" + uuidNewDirectory + "/content")
