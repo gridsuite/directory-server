@@ -51,7 +51,7 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.addElementToDirectory(directoryUuid, elementAttributes));
     }
 
-    @GetMapping(value = {"/directories/root-directories", "/directories/{directoryUuid}/content"}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = {"/root-directories", "/directories/{directoryUuid}/content"}, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
     @ApiResponses(@ApiResponse(code = 200, message = "List of directory's elements"))
     public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") Optional<String> directoryUuid) {

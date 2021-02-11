@@ -70,7 +70,7 @@ public class DirectoryTest {
     public void test() throws Exception {
 
         webTestClient.get()
-                .uri("/v1/directories/root-directories")
+                .uri("/v1/root-directories")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
@@ -94,7 +94,7 @@ public class DirectoryTest {
         assertEquals("newDir", jsonTree.get("name").asText());
         assertFalse(jsonTree.get("private").asBoolean());
         webTestClient.get()
-                .uri("/v1/directories/root-directories")
+                .uri("/v1/root-directories")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
@@ -188,7 +188,7 @@ public class DirectoryTest {
                 .expectStatus().isOk();
 
         webTestClient.get()
-                .uri("/v1/directories/root-directories")
+                .uri("/v1/root-directories")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
@@ -204,7 +204,7 @@ public class DirectoryTest {
                 .expectStatus().isOk();
 
         webTestClient.get()
-                .uri("/v1/directories/root-directories")
+                .uri("/v1/root-directories")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
@@ -219,7 +219,7 @@ public class DirectoryTest {
                 .expectStatus().isOk();
 
         webTestClient.get()
-                .uri("/v1/directories/root-directories")
+                .uri("/v1/root-directories")
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isOk()
