@@ -36,14 +36,14 @@ public class DirectoryController {
         this.service = service;
     }
 
-    @PostMapping(value = "/directories/create")
+    @PostMapping(value = "/directories")
     @ApiOperation(value = "Create directory")
     @ApiResponses(@ApiResponse(code = 200, message = "The created directory"))
     public ResponseEntity<Mono<DirectoryElementEntity>> createDirectory(@RequestBody DirectoryAttributes directoryAttributes) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createDirectory(directoryAttributes));
     }
 
-    @PutMapping(value = "/directories/{directoryUuid}/add", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/directories/{directoryUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Add element/directory to directory")
     @ApiResponses(@ApiResponse(code = 200, message = "The added element/directory"))
     public ResponseEntity<Mono<DirectoryElementEntity>> addElementToDirectory(@PathVariable("directoryUuid") Optional<String> directoryUuid,
@@ -51,7 +51,7 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.addElementToDirectory(directoryUuid, elementAttributes));
     }
 
-    @GetMapping(value = {"/directories/roots", "/directories/{directoryUuid}/content"}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = {"/directories/root-directories", "/directories/{directoryUuid}/content"}, produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
     @ApiResponses(@ApiResponse(code = 200, message = "List of directory's elements"))
     public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") Optional<String> directoryUuid) {
