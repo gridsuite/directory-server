@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>3</version>
+        <version>5</version>
         <relativePath/>
     </parent>
 
@@ -45,8 +45,8 @@
 
     <properties>
         <java.version>11</java.version>
-        <gridsuite-dependencies.version>4</gridsuite-dependencies.version>
-        <springboot.version>2.3.0.RELEASE</springboot.version>
+        <gridsuite-dependencies.version>5</gridsuite-dependencies.version>
+        <jib.to.image>gridsuite/directory-server</jib.to.image>
     </properties>
 
     <build>
@@ -89,7 +89,7 @@
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
-                <version>${springboot.version}</version>
+                <version>${maven.spring-boot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
