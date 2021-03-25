@@ -19,8 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.r2dbc.core.DatabaseClient;
 import org.springframework.http.MediaType;
+import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
@@ -63,7 +63,7 @@ public class DirectoryTest {
     public void initDatabase() throws IOException {
         // Init schema
         File schemaFile = new File(getClass().getClassLoader().getResource("schema.sql").getFile());
-        databaseClient.execute(Files.readString(Path.of(schemaFile.toURI()))).fetch().first().block();
+        databaseClient.sql(Files.readString(Path.of(schemaFile.toURI()))).fetch().first().block();
     }
 
     @Test
