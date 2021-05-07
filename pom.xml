@@ -15,7 +15,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>4</version>
+        <version>5-SNAPSHOT</version>
         <relativePath/>
     </parent>
 
@@ -45,8 +45,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <gridsuite-dependencies.version>7</gridsuite-dependencies.version>
-        <springboot.version>2.3.0.RELEASE</springboot.version>
+        <gridsuite-dependencies.version>7-SNAPSHOT</gridsuite-dependencies.version>
     </properties>
 
     <build>
@@ -85,15 +84,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- overrides of imports -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${springboot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
             <!-- imports -->
             <dependency>
                 <groupId>org.gridsuite</groupId>
@@ -185,6 +175,11 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
