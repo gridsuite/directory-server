@@ -61,7 +61,7 @@ public class DirectoryController {
     @GetMapping(value = "/directories/{directoryUuid}/content", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
     @ApiResponses(@ApiResponse(code = 200, message = "List directory's elements"))
-    public ResponseEntity<Flux<ElementAttributes>> listRootDirectories(@PathVariable("directoryUuid") String directoryUuid) {
+    public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
     }
 
