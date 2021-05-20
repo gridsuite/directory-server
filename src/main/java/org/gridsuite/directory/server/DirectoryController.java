@@ -51,10 +51,17 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.addElementToDirectory(directoryUuid, elementAttributes));
     }
 
-    @GetMapping(value = {"/root-directories", "/directories/{directoryUuid}/content"}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Get root directories")
+    @ApiResponses(@ApiResponse(code = 200, message = "List root elements"))
+    public ResponseEntity<Flux<ElementAttributes>> listRootDirectories() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getRootDirectories());
+    }
+
+    @GetMapping(value = "/directories/{directoryUuid}/content", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
-    @ApiResponses(@ApiResponse(code = 200, message = "List of directory's elements"))
-    public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") Optional<String> directoryUuid) {
+    @ApiResponses(@ApiResponse(code = 200, message = "List directory's elements"))
+    public ResponseEntity<Flux<ElementAttributes>> listRootDirectories(@PathVariable("directoryUuid") String directoryUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
     }
 
