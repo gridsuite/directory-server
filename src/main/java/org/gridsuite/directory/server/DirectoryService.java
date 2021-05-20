@@ -55,8 +55,12 @@ class DirectoryService {
                                                         true));
     }
 
-    public Flux<ElementAttributes> listDirectoryContent(Optional<String> directoryUuid) {
-        return directoryElementRepository.findByParentId(directoryUuid.isPresent() ? UUID.fromString(directoryUuid.get()) : null).map(DirectoryService::fromEntity);
+    public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {
+        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).map(DirectoryService::fromEntity);
+    }
+
+    public Flux<ElementAttributes> getRootDirectories() {
+        return directoryElementRepository.findByParentId(null).map(DirectoryService::fromEntity);
     }
 
     public Mono<Void> renameElement(String elementUuid, String newElementName) {
