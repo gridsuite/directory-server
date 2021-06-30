@@ -1,2 +1,3 @@
 server :
   port : 5026
+  forward-headers-strategy: framework
