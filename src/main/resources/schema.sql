@@ -4,5 +4,5 @@ CREATE TABLE element (
     name varchar(80),
     type varchar(20),
     isPrivate boolean,
-    owner varchar(30)
+    owner varchar(80)
 );
