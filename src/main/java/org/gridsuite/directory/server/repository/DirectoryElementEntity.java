@@ -6,18 +6,11 @@
 */
 package org.gridsuite.directory.server.repository;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.PersistenceConstructor;
-import org.springframework.data.annotation.Transient;
-import org.springframework.data.domain.Persistable;
-import org.springframework.data.relational.core.mapping.Column;
-import org.springframework.data.relational.core.mapping.Table;
-
-import java.io.Serializable;
 import java.util.UUID;
+
+import lombok.*;
+
+import javax.persistence.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -26,48 +19,31 @@ import java.util.UUID;
 @Getter
 @Setter
 @AllArgsConstructor
-@Table("element")
-public class DirectoryElementEntity implements Serializable, Persistable<UUID> {
+@NoArgsConstructor
+@Entity
+@Table(name = "element")
+public class DirectoryElementEntity {
 
-    @PersistenceConstructor
-    public DirectoryElementEntity(UUID id, UUID parentId, String name, String type, boolean isPrivate, String owner) {
-        this.id = id;
-        this.parentId = parentId;
-        this.name = name;
-        this.type = type;
-        this.isPrivate = isPrivate;
-        this.owner = owner;
-        this.newElement = false;
+    public DirectoryElementEntity(UUID parentId, String name, String type, boolean isPrivate, String owner) {
+        this(null, parentId, name, type, isPrivate, owner);
     }
 
     @Id
-    @Column("id")
+    @Column(name = "id")
     private UUID id;
 
-    @Column("parentId")
+    @Column(name = "parentId")
     private UUID parentId;
 
-    @Column("name")
+    @Column(name = "name")
     private String name;
 
-    @Column("type")
+    @Column(name = "type", nullable = false)
     private String type;
 
-    @Column("isPrivate")
+    @Column(name = "isPrivate", nullable = false)
     private boolean isPrivate;
 
-    @Column("owner")
+    @Column(name = "owner", nullable = false)
     private String owner;
-
-    @Transient
-    private boolean newElement;
-
-    @Override
-    @Transient
-    public boolean isNew() {
-        if (newElement && id == null) {
-            id = UUID.randomUUID();
-        }
-        return newElement;
-    }
 }

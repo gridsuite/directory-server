@@ -6,28 +6,34 @@
  */
 package org.gridsuite.directory.server.repository;
 
-import org.springframework.data.r2dbc.repository.Query;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Repository
-public interface DirectoryElementRepository extends ReactiveCrudRepository<DirectoryElementEntity, UUID> {
+public interface DirectoryElementRepository extends JpaRepository<DirectoryElementEntity, UUID> {
 
-    Flux<DirectoryElementEntity> findByParentId(UUID parentId);
+    List<DirectoryElementEntity> findByParentId(UUID parentId);
 
-    @Query("UPDATE element SET name = :newElementName WHERE id = :elementUuid")
-    Mono<Void> updateElementName(UUID elementUuid, String newElementName);
+    @Transactional
+    @Modifying
+    @Query("UPDATE DirectoryElementEntity SET name = :newElementName WHERE id = :elementUuid")
+    void updateElementName(UUID elementUuid, String newElementName);
 
-    @Query("UPDATE element SET isPrivate = :isPrivate WHERE id = :elementUuid")
-    Mono<Void> updateElementAccessRights(UUID elementUuid, boolean isPrivate);
+    @Transactional
+    @Modifying
+    @Query("UPDATE DirectoryElementEntity SET isPrivate = :isPrivate WHERE id = :elementUuid")
+    void updateElementAccessRights(UUID elementUuid, boolean isPrivate);
 
-    Mono<Void> deleteById(UUID id);
+    @Transactional
+    void deleteById(UUID id);
 
 }
