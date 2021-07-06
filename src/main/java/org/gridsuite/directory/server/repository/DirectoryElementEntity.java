@@ -35,15 +35,15 @@ public class DirectoryElementEntity {
     @Column(name = "parentId")
     private UUID parentId;
 
-    @Column(name = "name")
+    @Column(name = "name", length = 80)
     private String name;
 
-    @Column(name = "type", nullable = false)
+    @Column(name = "type", length = 20, nullable = false)
     private String type;
 
     @Column(name = "isPrivate", nullable = false)
     private boolean isPrivate;
 
-    @Column(name = "owner", nullable = false)
+    @Column(name = "owner", length = 80, nullable = false)
     private String owner;
 }
