@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.DirectoryAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.junit.Before;
+import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -27,10 +26,6 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.config.EnableWebFlux;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
@@ -54,17 +49,10 @@ public class DirectoryTest {
     private WebTestClient webTestClient;
 
     @Autowired
-    private DatabaseClient databaseClient;
-
-    @Autowired
     ObjectMapper objectMapper;
 
-    @Before
-    public void initDatabase() throws IOException {
-        // Init schema
-        File schemaFile = new File(getClass().getClassLoader().getResource("schema.sql").getFile());
-        databaseClient.sql(Files.readString(Path.of(schemaFile.toURI()))).fetch().first().block();
-    }
+    @Autowired
+    private DirectoryElementRepository directoryElementRepository;
 
     @Test
     public void test() throws Exception {
