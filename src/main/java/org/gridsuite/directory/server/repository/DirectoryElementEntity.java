@@ -23,11 +23,6 @@ import javax.persistence.*;
 @Entity
 @Table(name = "element")
 public class DirectoryElementEntity {
-
-    public DirectoryElementEntity(UUID parentId, String name, String type, boolean isPrivate, String owner) {
-        this(null, parentId, name, type, isPrivate, owner);
-    }
-
     @Id
     @Column(name = "id")
     private UUID id;
