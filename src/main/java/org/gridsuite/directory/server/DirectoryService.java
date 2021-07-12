@@ -60,7 +60,7 @@ class DirectoryService {
         return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).stream().map(DirectoryService::fromEntity);
     }
 
-    public Mono<ElementAttributes> getDirectoryInfos(String directoryUuid) {
+    public Mono<ElementAttributes> getElementInfos(String directoryUuid) {
         return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::fromEntity).orElse(null));
     }
 
@@ -77,15 +77,11 @@ class DirectoryService {
     }
 
     public Mono<Void> deleteElement(String elementUuid) {
-        return Mono.fromRunnable(() -> {
-            directoryElementRepository.deleteById(UUID.fromString(elementUuid));
-        });
+        return Mono.fromRunnable(() -> deleteElementTree(elementUuid));
     }
 
     private void deleteElementTree(String elementUuid) {
-        directoryContentStream(elementUuid).map(e -> e.getElementUuid()).forEach(uuid -> {
-            deleteElementTree(uuid.toString());
-        });
+        directoryContentStream(elementUuid).map(e -> e.getElementUuid().toString()).forEach(this::deleteElementTree);
         directoryElementRepository.deleteById(UUID.fromString(elementUuid));
     }
 

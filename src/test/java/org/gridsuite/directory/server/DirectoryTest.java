@@ -103,6 +103,7 @@ public class DirectoryTest {
 
         jsonTree = objectMapper.readTree(result.getResponseBody().toString());
         String uuidNewSubDirectory = jsonTree.get("id").asText();
+
         assertEquals("newSubDir", jsonTree.get("name").asText());
         assertTrue(jsonTree.get("private").asBoolean());
 
@@ -209,6 +210,31 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newName\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"owner\"}]");
 
+        result = webTestClient.post()
+                .uri("/v1/directories")
+                .header("userId", "userId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(objectMapper.writeValueAsString(new DirectoryAttributes(UUID.fromString(uuidNewDirectory), "newSubDir", new AccessRightsAttributes(true), "owner")))
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .returnResult();
+
+        jsonTree = objectMapper.readTree(result.getResponseBody().toString());
+        uuidNewSubDirectory = jsonTree.get("id").asText();
+        assertEquals("newSubDir", jsonTree.get("name").asText());
+        assertTrue(jsonTree.get("private").asBoolean());
+
+        webTestClient.get()
+                .uri("/v1/directories/" + uuidNewDirectory + "/content")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[{\"elementUuid\":\"" + uuidNewSubDirectory + "\",\"elementName\":\"newSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"owner\"}]");
+
         webTestClient.delete()
                 .uri("/v1/directories/" + uuidNewDirectory)
                 .header("userId", "userId")
@@ -224,6 +250,11 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[]");
 
+        webTestClient.get()
+                .uri("/v1/directories/" + uuidNewSubDirectory)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isNotFound();
     }
 
 }

@@ -14,9 +14,11 @@ import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.DirectoryAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -68,8 +70,9 @@ public class DirectoryController {
     @GetMapping(value = "/directories/{directoryUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory infos")
     @ApiResponses(@ApiResponse(code = 200, message = "directory's infos"))
-    public ResponseEntity<Mono<ElementAttributes>> getDirectoryInfos(@PathVariable("directoryUuid") String directoryUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryInfos(directoryUuid));
+    public ResponseEntity<Mono<ElementAttributes>> getElementInfos(@PathVariable("directoryUuid") String directoryUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementInfos(directoryUuid)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
     @PutMapping(value = "/directories/{elementUuid}/rename/{newElementName}")
