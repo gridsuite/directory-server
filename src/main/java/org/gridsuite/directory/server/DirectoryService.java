@@ -31,8 +31,12 @@ class DirectoryService {
         this.directoryElementRepository = directoryElementRepository;
     }
 
-    private static ElementAttributes fromEntity(DirectoryElementEntity entity) {
+    private static ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
         return new ElementAttributes(entity.getId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
+    }
+
+    private static DirectoryAttributes toDirectoryAttributes(DirectoryElementEntity entity) {
+        return new DirectoryAttributes(entity.getParentId(), entity.getName(), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
     }
 
     public Mono<DirectoryElementEntity> createDirectory(DirectoryAttributes directoryAttributes) {
@@ -57,15 +61,15 @@ class DirectoryService {
     }
 
     private Stream<ElementAttributes> directoryContentStream(String directoryUuid) {
-        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).stream().map(DirectoryService::fromEntity);
+        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).stream().map(DirectoryService::toElementAttributes);
     }
 
-    public Mono<ElementAttributes> getElementInfos(String directoryUuid) {
-        return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::fromEntity).orElse(null));
+    public Mono<DirectoryAttributes> getDirectoryInfos(String directoryUuid) {
+        return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::toDirectoryAttributes).orElse(null));
     }
 
     public Flux<ElementAttributes> getRootDirectories() {
-        return Flux.fromStream(directoryElementRepository.findByParentId(null).stream().map(DirectoryService::fromEntity));
+        return Flux.fromStream(directoryElementRepository.findByParentId(null).stream().map(DirectoryService::toElementAttributes));
     }
 
     public Mono<Void> renameElement(String elementUuid, String newElementName) {

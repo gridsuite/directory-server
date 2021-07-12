@@ -123,7 +123,7 @@ public class DirectoryTest {
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
                 .expectBody(String.class)
-                .isEqualTo("{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"owner\"}");
+                .isEqualTo("{\"parentId\":null,\"directoryName\":\"newDir\",\"accessRights\":{\"private\":false},\"owner\":\"owner\"}");
 
         UUID uuidAddedStudy = UUID.randomUUID();
 
