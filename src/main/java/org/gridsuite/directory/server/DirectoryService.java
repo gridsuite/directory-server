@@ -17,6 +17,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -52,7 +53,15 @@ class DirectoryService {
     }
 
     public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {
-        return Flux.fromStream(directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).stream().map(DirectoryService::fromEntity));
+        return Flux.fromStream(directoryContentStream(directoryUuid));
+    }
+
+    private Stream<ElementAttributes> directoryContentStream(String directoryUuid) {
+        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).stream().map(DirectoryService::fromEntity);
+    }
+
+    public Mono<ElementAttributes> getDirectoryInfos(String directoryUuid) {
+        return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::fromEntity).orElse(null));
     }
 
     public Flux<ElementAttributes> getRootDirectories() {
@@ -68,7 +77,16 @@ class DirectoryService {
     }
 
     public Mono<Void> deleteElement(String elementUuid) {
-        return Mono.fromRunnable(() -> directoryElementRepository.deleteById(UUID.fromString(elementUuid)));
+        return Mono.fromRunnable(() -> {
+            directoryElementRepository.deleteById(UUID.fromString(elementUuid));
+        });
+    }
+
+    private void deleteElementTree(String elementUuid) {
+        directoryContentStream(elementUuid).map(e -> e.getElementUuid()).forEach(uuid -> {
+            deleteElementTree(uuid.toString());
+        });
+        directoryElementRepository.deleteById(UUID.fromString(elementUuid));
     }
 
 }

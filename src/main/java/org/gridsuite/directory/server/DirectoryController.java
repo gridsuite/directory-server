@@ -65,6 +65,13 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
     }
 
+    @GetMapping(value = "/directories/{directoryUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Get directory infos")
+    @ApiResponses(@ApiResponse(code = 200, message = "directory's infos"))
+    public ResponseEntity<Mono<ElementAttributes>> getDirectoryInfos(@PathVariable("directoryUuid") String directoryUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryInfos(directoryUuid));
+    }
+
     @PutMapping(value = "/directories/{elementUuid}/rename/{newElementName}")
     @ApiOperation(value = "Rename element/directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Element/directory was successfully renamed"))

@@ -115,6 +115,15 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[{\"elementUuid\":\"" + uuidNewSubDirectory + "\",\"elementName\":\"newSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"owner\"}]");
 
+        webTestClient.get()
+                .uri("/v1/directories/" + uuidNewDirectory)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"owner\"}");
+
         UUID uuidAddedStudy = UUID.randomUUID();
 
         result = webTestClient.put().uri("/v1/directories/" + uuidNewDirectory)
