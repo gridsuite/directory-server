@@ -10,9 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.gridsuite.directory.server.ElementType;
-
-import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
