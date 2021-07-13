@@ -29,13 +29,13 @@ class DirectoryService {
     }
 
     private static ElementAttributes fromEntity(DirectoryElementEntity entity) {
-        return new ElementAttributes(entity.getId(), entity.getParentId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
+        return new ElementAttributes(entity.getId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
     }
 
-    public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes) {
+    public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID directoryUuid) {
         return Mono.fromCallable(() -> fromEntity(directoryElementRepository.save(new DirectoryElementEntity(
                 elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
-                elementAttributes.getParentUuid(),
+                directoryUuid,
                 elementAttributes.getElementName(),
                 elementAttributes.getType().toString(),
                 elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),

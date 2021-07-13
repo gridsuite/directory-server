@@ -24,8 +24,6 @@ import java.util.UUID;
 public class ElementAttributes {
     private UUID elementUuid;
 
-    private UUID parentUuid;
-
     private String elementName;
 
     private ElementType type;

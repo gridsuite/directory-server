@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
+
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
@@ -32,11 +34,18 @@ public class DirectoryController {
         this.service = service;
     }
 
-    @PostMapping(value = "/directories")
+    @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Create directory")
+    @ApiResponses(@ApiResponse(code = 200, message = "The created directory"))
+    public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody ElementAttributes elementAttributes) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, null));
+    }
+
+    @PostMapping(value = "/directories/{directoryUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Create an element")
     @ApiResponses(@ApiResponse(code = 200, message = "The created element"))
-    public ResponseEntity<Mono<ElementAttributes>> createElement(@RequestBody ElementAttributes elementAttributes) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes));
+    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid, @RequestBody ElementAttributes elementAttributes) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid));
     }
 
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
