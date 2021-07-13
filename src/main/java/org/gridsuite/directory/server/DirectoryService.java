@@ -8,6 +8,7 @@ package org.gridsuite.directory.server;
 
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,12 @@ class DirectoryService {
                 elementAttributes.getType().toString(),
                 elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
                 elementAttributes.getOwner()))));
+    }
+
+    public Mono<ElementAttributes> createElement(RootDirectoryAttributes rootDirectoryAttributes, UUID directoryUuid) {
+        ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY,
+                rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner());
+        return createElement(elementAttributes, directoryUuid);
     }
 
     public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {
