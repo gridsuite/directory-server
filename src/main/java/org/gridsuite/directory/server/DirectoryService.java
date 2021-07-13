@@ -7,7 +7,6 @@
 package org.gridsuite.directory.server;
 
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
-import org.gridsuite.directory.server.dto.DirectoryAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -31,24 +29,17 @@ class DirectoryService {
     }
 
     private static ElementAttributes fromEntity(DirectoryElementEntity entity) {
-        return new ElementAttributes(entity.getId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
+        return new ElementAttributes(entity.getId(), entity.getParentId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
     }
 
-    public Mono<DirectoryElementEntity> createDirectory(DirectoryAttributes directoryAttributes) {
-        return Mono.fromCallable(() -> directoryElementRepository.save(new DirectoryElementEntity(UUID.randomUUID(), directoryAttributes.getParentId(),
-                                                                   directoryAttributes.getDirectoryName(),
-                                                                   ElementType.DIRECTORY.toString(),
-                                                                   directoryAttributes.getAccessRights() == null || directoryAttributes.getAccessRights().isPrivate(),
-                                                                   directoryAttributes.getOwner())));
-    }
-
-    public Mono<DirectoryElementEntity> addElementToDirectory(Optional<String> directoryUuid, ElementAttributes elementAttributes) {
-        return Mono.just(directoryElementRepository.save(new DirectoryElementEntity(elementAttributes.getElementUuid(),
-                                                                   directoryUuid.isPresent() ? UUID.fromString(directoryUuid.get()) : null,
-                                                                   elementAttributes.getElementName(),
-                                                                   elementAttributes.getType().toString(),
-                                                                   elementAttributes.getAccessRights().isPrivate(),
-                                                                   elementAttributes.getOwner())));
+    public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes) {
+        return Mono.fromCallable(() -> fromEntity(directoryElementRepository.save(new DirectoryElementEntity(
+                elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
+                elementAttributes.getParentUuid(),
+                elementAttributes.getElementName(),
+                elementAttributes.getType().toString(),
+                elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
+                elementAttributes.getOwner()))));
     }
 
     public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {
@@ -56,7 +47,8 @@ class DirectoryService {
     }
 
     public Flux<ElementAttributes> getRootDirectories() {
-        return Flux.fromStream(directoryElementRepository.findByParentId(null).stream().map(DirectoryService::fromEntity));
+        return Flux.fromStream(directoryElementRepository.findByParentId(null).stream()
+                .filter(e -> e.getType().equals(ElementType.DIRECTORY.toString())).map(DirectoryService::fromEntity));
     }
 
     public Mono<Void> renameElement(String elementUuid, String newElementName) {
