@@ -80,7 +80,7 @@ class DirectoryService {
         directoryElementRepository.deleteById(UUID.fromString(elementUuid));
     }
 
-    public Mono<ElementAttributes> getDirectoryInfos(String directoryUuid) {
+    public Mono<ElementAttributes> getElementInfos(String directoryUuid) {
         return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::toElementAttributes).orElse(null));
     }
 }

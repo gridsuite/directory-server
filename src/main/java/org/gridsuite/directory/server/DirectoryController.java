@@ -66,10 +66,10 @@ public class DirectoryController {
     }
 
     @GetMapping(value = "/directories/{directoryUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ApiOperation(value = "Get directory infos")
-    @ApiResponses(@ApiResponse(code = 200, message = "directory's infos"))
+    @ApiOperation(value = "Get element infos")
+    @ApiResponses(@ApiResponse(code = 200, message = "element's infos"))
     public ResponseEntity<Mono<ElementAttributes>> getElementInfos(@PathVariable("directoryUuid") String directoryUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryInfos(directoryUuid)
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementInfos(directoryUuid)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
