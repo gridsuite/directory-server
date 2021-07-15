@@ -11,24 +11,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.UUID;
-
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class DirectoryAttributes {
+public class RootDirectoryAttributes {
+    private String elementName;
 
-    private UUID parentId;
-
-    private String directoryName;
-
-    private AccessRightsAttributes accessRights = new AccessRightsAttributes(true);
+    private AccessRightsAttributes accessRights;
 
     private String owner;
-
 }

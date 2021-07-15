@@ -11,10 +11,9 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
-import org.gridsuite.directory.server.dto.DirectoryAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.springframework.http.HttpStatus;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -38,19 +37,18 @@ public class DirectoryController {
         this.service = service;
     }
 
-    @PostMapping(value = "/directories")
+    @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Create directory")
     @ApiResponses(@ApiResponse(code = 200, message = "The created directory"))
-    public ResponseEntity<Mono<DirectoryElementEntity>> createDirectory(@RequestBody DirectoryAttributes directoryAttributes) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createDirectory(directoryAttributes));
+    public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(rootDirectoryAttributes, null));
     }
 
-    @PutMapping(value = "/directories/{directoryUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @ApiOperation(value = "Add element/directory to directory")
-    @ApiResponses(@ApiResponse(code = 200, message = "The added element/directory"))
-    public ResponseEntity<Mono<DirectoryElementEntity>> addElementToDirectory(@PathVariable("directoryUuid") Optional<String> directoryUuid,
-                                                      @RequestBody ElementAttributes elementAttributes) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.addElementToDirectory(directoryUuid, elementAttributes));
+    @PostMapping(value = "/directories/{directoryUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Create an element")
+    @ApiResponses(@ApiResponse(code = 200, message = "The created element"))
+    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid, @RequestBody ElementAttributes elementAttributes) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid));
     }
 
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -70,7 +68,7 @@ public class DirectoryController {
     @GetMapping(value = "/directories/{directoryUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory infos")
     @ApiResponses(@ApiResponse(code = 200, message = "directory's infos"))
-    public ResponseEntity<Mono<DirectoryAttributes>> getElementInfos(@PathVariable("directoryUuid") String directoryUuid) {
+    public ResponseEntity<Mono<ElementAttributes>> getElementInfos(@PathVariable("directoryUuid") String directoryUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryInfos(directoryUuid)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
