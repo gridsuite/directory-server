@@ -9,8 +9,8 @@ package org.gridsuite.directory.server;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
-import org.gridsuite.directory.server.dto.DirectoryAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,11 +66,12 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[]");
 
+        // Insert a root directory
         EntityExchangeResult result = webTestClient.post()
-                .uri("/v1/directories")
+                .uri("/v1/root-directories")
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(new DirectoryAttributes(null, "newDir", new AccessRightsAttributes(false), "owner")))
+                .bodyValue(objectMapper.writeValueAsString(new RootDirectoryAttributes("newDir", new AccessRightsAttributes(false), "owner")))
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -78,9 +79,9 @@ public class DirectoryTest {
                 .returnResult();
 
         JsonNode jsonTree = objectMapper.readTree(result.getResponseBody().toString());
-        String uuidNewDirectory = jsonTree.get("id").asText();
-        assertEquals("newDir", jsonTree.get("name").asText());
-        assertFalse(jsonTree.get("private").asBoolean());
+        String uuidNewDirectory = jsonTree.get("elementUuid").asText();
+        assertEquals("newDir", jsonTree.get("elementName").asText());
+        assertFalse(jsonTree.get("accessRights").get("private").asBoolean());
         webTestClient.get()
                 .uri("/v1/root-directories")
                 .header("userId", "userId")
@@ -90,11 +91,12 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"owner\"}]");
 
+        // Insert a sub-element of type DIRECTORY
         result = webTestClient.post()
-                .uri("/v1/directories")
+                .uri("/v1/directories/" + UUID.fromString(uuidNewDirectory))
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(new DirectoryAttributes(UUID.fromString(uuidNewDirectory), "newSubDir", new AccessRightsAttributes(true), "owner")))
+                .bodyValue(objectMapper.writeValueAsString(new ElementAttributes(null, "newSubDir", ElementType.DIRECTORY, new AccessRightsAttributes(true), "owner")))
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.APPLICATION_JSON)
@@ -102,9 +104,9 @@ public class DirectoryTest {
                 .returnResult();
 
         jsonTree = objectMapper.readTree(result.getResponseBody().toString());
-        String uuidNewSubDirectory = jsonTree.get("id").asText();
-        assertEquals("newSubDir", jsonTree.get("name").asText());
-        assertTrue(jsonTree.get("private").asBoolean());
+        String uuidNewSubDirectory = jsonTree.get("elementUuid").asText();
+        assertEquals("newSubDir", jsonTree.get("elementName").asText());
+        assertTrue(jsonTree.get("accessRights").get("private").asBoolean());
 
         webTestClient.get()
                 .uri("/v1/directories/" + uuidNewDirectory + "/content")
@@ -117,7 +119,8 @@ public class DirectoryTest {
 
         UUID uuidAddedStudy = UUID.randomUUID();
 
-        result = webTestClient.put().uri("/v1/directories/" + uuidNewDirectory)
+        // Insert a  sub-element of type STUDY
+        result = webTestClient.post().uri("/v1/directories/" + UUID.fromString(uuidNewDirectory))
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(new ElementAttributes(uuidAddedStudy, "newElement", ElementType.STUDY, new AccessRightsAttributes(false), "owner")))
@@ -128,7 +131,7 @@ public class DirectoryTest {
                 .returnResult();
 
         jsonTree = objectMapper.readTree(result.getResponseBody().toString());
-        assertEquals(uuidAddedStudy.toString(), jsonTree.get("id").asText());
+        assertEquals(uuidAddedStudy.toString(), jsonTree.get("elementUuid").asText());
 
         webTestClient.get()
                 .uri("/v1/directories/" + uuidNewDirectory + "/content")

@@ -22,7 +22,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ElementAttributes {
-
     private UUID elementUuid;
 
     private String elementName;
