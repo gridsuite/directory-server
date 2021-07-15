@@ -12,10 +12,12 @@ import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.springframework.http.HttpStatus;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -61,6 +63,14 @@ public class DirectoryController {
     @ApiResponses(@ApiResponse(code = 200, message = "List directory's elements"))
     public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
+    }
+
+    @GetMapping(value = "/directories/{directoryUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Get element infos")
+    @ApiResponses(@ApiResponse(code = 200, message = "element's infos"))
+    public ResponseEntity<Mono<ElementAttributes>> getElementInfos(@PathVariable("directoryUuid") String directoryUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementInfos(directoryUuid)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
     @PutMapping(value = "/directories/{elementUuid}/rename/{newElementName}")
