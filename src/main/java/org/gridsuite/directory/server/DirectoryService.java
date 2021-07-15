@@ -43,7 +43,7 @@ class DirectoryService {
                 elementAttributes.getOwner()))));
     }
 
-    public Mono<ElementAttributes> createElement(RootDirectoryAttributes rootDirectoryAttributes, UUID directoryUuid) {
+    public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, UUID directoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY,
                 rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner());
         return createElement(elementAttributes, directoryUuid);
