@@ -16,6 +16,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -29,12 +30,12 @@ class DirectoryService {
         this.directoryElementRepository = directoryElementRepository;
     }
 
-    private static ElementAttributes fromEntity(DirectoryElementEntity entity) {
+    private static ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
         return new ElementAttributes(entity.getId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
     }
 
     public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID directoryUuid) {
-        return Mono.fromCallable(() -> fromEntity(directoryElementRepository.save(new DirectoryElementEntity(
+        return Mono.fromCallable(() -> toElementAttributes(directoryElementRepository.save(new DirectoryElementEntity(
                 elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
                 directoryUuid,
                 elementAttributes.getElementName(),
@@ -50,12 +51,16 @@ class DirectoryService {
     }
 
     public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {
-        return Flux.fromStream(directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).stream().map(DirectoryService::fromEntity));
+        return Flux.fromStream(directoryContentStream(directoryUuid));
+    }
+
+    private Stream<ElementAttributes> directoryContentStream(String directoryUuid) {
+        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).stream().map(DirectoryService::toElementAttributes);
     }
 
     public Flux<ElementAttributes> getRootDirectories() {
         return Flux.fromStream(directoryElementRepository.findByParentId(null).stream()
-                .filter(e -> e.getType().equals(ElementType.DIRECTORY.toString())).map(DirectoryService::fromEntity));
+                .filter(e -> e.getType().equals(ElementType.DIRECTORY.toString())).map(DirectoryService::toElementAttributes));
     }
 
     public Mono<Void> renameElement(String elementUuid, String newElementName) {
@@ -67,7 +72,15 @@ class DirectoryService {
     }
 
     public Mono<Void> deleteElement(String elementUuid) {
-        return Mono.fromRunnable(() -> directoryElementRepository.deleteById(UUID.fromString(elementUuid)));
+        return Mono.fromRunnable(() -> deleteElementTree(elementUuid));
     }
 
+    private void deleteElementTree(String elementUuid) {
+        directoryContentStream(elementUuid).map(e -> e.getElementUuid().toString()).forEach(this::deleteElementTree);
+        directoryElementRepository.deleteById(UUID.fromString(elementUuid));
+    }
+
+    public Mono<ElementAttributes> getElementInfos(String directoryUuid) {
+        return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::toElementAttributes).orElse(null));
+    }
 }
