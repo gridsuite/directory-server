@@ -8,10 +8,16 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -26,7 +32,10 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.config.EnableWebFlux;
 
-import java.util.UUID;
+import okhttp3.mockwebserver.MockWebServer;
+
+import java.io.IOException;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -34,6 +43,7 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
 @RunWith(SpringRunner.class)
@@ -52,7 +62,39 @@ public class DirectoryTest {
     ObjectMapper objectMapper;
 
     @Autowired
+    private DirectoryService directoryService;
+
+    private MockWebServer server;
+
+    @Autowired
     private DirectoryElementRepository directoryElementRepository;
+
+    @Before
+    public void setup() throws IOException {
+        server = new MockWebServer();
+
+        // Start the server.
+        server.start();
+
+        // Ask the server for its URL. You'll need this to make HTTP requests.
+        HttpUrl baseHttpUrl = server.url("");
+        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+        directoryService.setStudyServerBaseUri(baseUrl);
+
+        final Dispatcher dispatcher = new Dispatcher() {
+            @SneakyThrows
+            @Override
+            public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
+                String path = Objects.requireNonNull(request.getPath());
+
+                if (path.matches("/v1/studies/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200);
+                }
+                return new MockResponse().setResponseCode(500);
+            }
+        };
+        server.setDispatcher(dispatcher);
+    }
 
     @Test
     public void test() throws Exception {
@@ -265,6 +307,33 @@ public class DirectoryTest {
                 .expectBody(String.class)
                 .isEqualTo("[{\"elementUuid\":\"" + uuidNewSubSubDirectory + "\",\"elementName\":\"newSubSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"owner\"}]");
 
+        /* add a study */
+        result = webTestClient.post()
+                .uri("/v1/directories/" + UUID.fromString(uuidNewSubSubDirectory))
+                .header("userId", "userId")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(objectMapper.writeValueAsString(new ElementAttributes(null, "myStudy", ElementType.STUDY, new AccessRightsAttributes(true), "owner")))
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .returnResult();
+
+        jsonTree = objectMapper.readTree(result.getResponseBody().toString());
+        String uuidNewStudy = jsonTree.get("elementUuid").asText();
+        assertEquals("myStudy", jsonTree.get("elementName").asText());
+        assertTrue(jsonTree.get("accessRights").get("private").asBoolean());
+
+        webTestClient.get()
+                .uri("/v1/directories/" + uuidNewSubSubDirectory + "/content")
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(String.class)
+                .isEqualTo("[{\"elementUuid\":\"" + uuidNewStudy + "\",\"elementName\":\"myStudy\",\"type\":\"STUDY\",\"accessRights\":{\"private\":true},\"owner\":\"owner\"}]");
+
+        /* Delete All */
         webTestClient.delete()
                 .uri("/v1/directories/" + uuidNewDirectory)
                 .header("userId", "userId")
@@ -292,5 +361,4 @@ public class DirectoryTest {
                 .exchange()
                 .expectStatus().isNotFound();
     }
-
 }

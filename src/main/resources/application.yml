@@ -33,3 +33,7 @@ spring:
 
 dbName: directory
 dbApi: jdbc
+
+backing-services:
+  study:
+    base-uri: http://localhost:5001
