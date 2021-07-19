@@ -360,5 +360,11 @@ public class DirectoryTest {
                 .header("userId", "userId")
                 .exchange()
                 .expectStatus().isNotFound();
+
+        webTestClient.get()
+                .uri("/v1/directories/" + uuidNewStudy)
+                .header("userId", "userId")
+                .exchange()
+                .expectStatus().isNotFound();
     }
 }

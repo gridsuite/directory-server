@@ -30,9 +30,9 @@ import java.util.stream.Stream;
  */
 @Service
 class DirectoryService {
-    static final String DELIMITER = "/";
-    static final String STUDY_SERVER_API_VERSION = "v1";
-    public static final String ROOT_CATEGORY_REACTOR = "reactor.";
+    private static final String DELIMITER = "/";
+    private static final String STUDY_SERVER_API_VERSION = "v1";
+    private static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
     private WebClient webClient;
     private String studyServerBaseUri;
