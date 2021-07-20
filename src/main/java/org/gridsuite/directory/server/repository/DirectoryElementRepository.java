@@ -21,7 +21,11 @@ import java.util.UUID;
 @Repository
 public interface DirectoryElementRepository extends JpaRepository<DirectoryElementEntity, UUID> {
 
-    List<DirectoryElementEntity> findByParentId(UUID parentId);
+    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId = :parentId AND (d.isPrivate='false' or d.owner=:owner)")
+    List<DirectoryElementEntity> findDirectoryContentByUserId(UUID parentId, String owner);
+
+    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND (d.isPrivate='false' or d.owner=:owner)")
+    List<DirectoryElementEntity> findRootDirectoriesByUserId(String owner);
 
     @Transactional
     @Modifying
