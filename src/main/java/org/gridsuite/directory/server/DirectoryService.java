@@ -95,7 +95,7 @@ class DirectoryService {
 
     public Mono<Void> deleteElement(String elementUuid, String userId) {
         return getElementInfos(elementUuid).map(elementAttributes -> {
-            if (elementAttributes.getType().toString().equals(ElementType.STUDY)) {
+            if (elementAttributes.getType().equals(ElementType.STUDY)) {
                 deleteStudy(elementAttributes.getElementUuid(), userId).subscribe();
                 directoryElementRepository.deleteById(UUID.fromString(elementAttributes.getElementUuid().toString()));
             } else {
