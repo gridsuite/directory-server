@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 @Service
 class DirectoryService {
@@ -75,9 +76,7 @@ class DirectoryService {
     }
 
     private void deleteElementTree(String elementUuid, String userId) {
-        directoryContentStream(elementUuid, userId).map(e -> e.getElementUuid().toString()).forEach(child -> {
-            deleteElementTree(child, userId);
-        });
+        directoryContentStream(elementUuid, userId).map(e -> e.getElementUuid().toString()).forEach(child -> deleteElementTree(child, userId));
         directoryElementRepository.deleteById(UUID.fromString(elementUuid));
     }
 

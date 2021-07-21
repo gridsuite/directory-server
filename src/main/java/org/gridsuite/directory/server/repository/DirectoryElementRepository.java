@@ -17,6 +17,7 @@ import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
+ * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 @Repository
 public interface DirectoryElementRepository extends JpaRepository<DirectoryElementEntity, UUID> {

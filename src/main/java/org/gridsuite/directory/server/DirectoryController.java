@@ -40,8 +40,7 @@ public class DirectoryController {
     @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Create directory")
     @ApiResponses(@ApiResponse(code = 200, message = "The created directory"))
-    public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes,
-                                                                       @RequestHeader("userId") String userId) {
+    public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createRootDirectory(rootDirectoryAttributes, null));
     }
 
