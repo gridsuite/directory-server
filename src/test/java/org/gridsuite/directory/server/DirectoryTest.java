@@ -168,11 +168,14 @@ public class DirectoryTest {
         // check user2 visible studies
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}," +
                 "{\"elementUuid\":\"" + study2Uuid + "\",\"elementName\":\"study2\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user2\"}]", "user2");
+        deleteElement(study1Uuid, "user1");
+        checkElementNotFound(study1Uuid, "user1");
+
+        deleteElement(study2Uuid, "user2");
+        checkElementNotFound(study2Uuid, "user2");
 
         deleteElement(rootDirUuid, "Doe");
         checkElementNotFound(rootDirUuid, "Doe");
-        checkElementNotFound(study1Uuid, "user1");
-        checkElementNotFound(study1Uuid, "user2");
     }
 
     @Test
@@ -194,9 +197,12 @@ public class DirectoryTest {
 
         deleteElement(study1Uuid, "user1");
         checkElementNotFound(study1Uuid, "user1");
+
+        deleteElement(study2Uuid, "user2");
+        checkElementNotFound(study2Uuid, "user2");
+
         deleteElement(rootDirUuid, "Doe");
         checkElementNotFound(rootDirUuid, "Doe");
-        checkElementNotFound(study1Uuid, "user2");
     }
 
     @Test
