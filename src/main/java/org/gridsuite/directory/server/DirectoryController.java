@@ -54,15 +54,16 @@ public class DirectoryController {
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get root directories")
     @ApiResponses(@ApiResponse(code = 200, message = "List root elements"))
-    public ResponseEntity<Flux<ElementAttributes>> listRootDirectories() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getRootDirectories());
+    public ResponseEntity<Flux<ElementAttributes>> listRootDirectories(@RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getRootDirectories(userId));
     }
 
     @GetMapping(value = "/directories/{directoryUuid}/content", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
     @ApiResponses(@ApiResponse(code = 200, message = "List directory's elements"))
-    public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid));
+    public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid,
+                                                                        @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid, userId));
     }
 
     @GetMapping(value = "/directories/{directoryUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -92,8 +93,9 @@ public class DirectoryController {
     @DeleteMapping(value = "/directories/{elementUuid}")
     @ApiOperation(value = "Remove directory/element")
     @ApiResponses(@ApiResponse(code = 200, message = "Directory/element was successfully removed"))
-    public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") String elementUuid) {
-        return ResponseEntity.ok().body(service.deleteElement(elementUuid));
+    public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") String elementUuid,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
     }
 
 }

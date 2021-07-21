@@ -69,17 +69,16 @@ class DirectoryService {
         return createElement(elementAttributes, directoryUuid);
     }
 
-    public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {
-        return Flux.fromStream(directoryContentStream(directoryUuid));
+    public Flux<ElementAttributes> listDirectoryContent(String directoryUuid, String userId) {
+        return Flux.fromStream(directoryContentStream(directoryUuid, userId));
     }
 
-    private Stream<ElementAttributes> directoryContentStream(String directoryUuid) {
-        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).stream().map(DirectoryService::toElementAttributes);
+    private Stream<ElementAttributes> directoryContentStream(String directoryUuid, String userId) {
+        return directoryElementRepository.findDirectoryContentByUserId(UUID.fromString(directoryUuid), userId).stream().map(DirectoryService::toElementAttributes);
     }
 
-    public Flux<ElementAttributes> getRootDirectories() {
-        return Flux.fromStream(directoryElementRepository.findByParentId(null).stream()
-                .filter(e -> e.getType().equals(ElementType.DIRECTORY.toString())).map(DirectoryService::toElementAttributes));
+    public Flux<ElementAttributes> getRootDirectories(String userId) {
+        return Flux.fromStream(directoryElementRepository.findRootDirectoriesByUserId(userId).stream().map(DirectoryService::toElementAttributes));
     }
 
     public Mono<Void> renameElement(String elementUuid, String newElementName) {
@@ -90,31 +89,37 @@ class DirectoryService {
         return Mono.fromRunnable(() -> directoryElementRepository.updateElementAccessRights(UUID.fromString(directoryUuid), accessRightsAttributes.isPrivate()));
     }
 
-    public Mono<Void> deleteElement(String elementUuid) {
-        return Mono.fromRunnable(() -> deleteElementTree(elementUuid));
+    public Mono<Void> deleteElement(String elementUuid, String userId) {
+        return Mono.fromRunnable(() -> deleteElementTree(elementUuid, userId));
     }
 
-    private void deleteElementTree(String elementUuid) {
-        directoryContentStream(elementUuid).forEach(e -> {
-            deleteElementTree(e.getElementUuid().toString());
+    private void deleteElementTree(String elementUuid, String userId) {
+        deleteSubElements(elementUuid, userId);
+        directoryElementRepository.deleteById(UUID.fromString(elementUuid));
+    }
+
+    private void deleteSubElements(String elementUuid, String userId) {
+        directoryContentStream(elementUuid, userId).forEach(e -> {
             if (e.getType().equals(ElementType.STUDY)) {
-                deleteStudy(e.getElementUuid()).subscribe();
+                deleteStudy(e.getElementUuid(), userId).subscribe();
+            } else {
+                deleteElementTree(e.getElementUuid().toString(), userId);  // Delete sub-directory
             }
         });
-        directoryElementRepository.deleteById(UUID.fromString(elementUuid));
     }
 
     public Mono<ElementAttributes> getElementInfos(String directoryUuid) {
         return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::toElementAttributes).orElse(null));
     }
 
-    private Mono<Void> deleteStudy(UUID studyUuid) {
+    private Mono<Void> deleteStudy(UUID studyUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}")
                 .buildAndExpand(studyUuid)
                 .toUriString();
 
         return webClient.delete()
                 .uri(studyServerBaseUri + path)
+                .header("userId", userId)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, r -> Mono.empty())
                 .bodyToMono(Void.class)
