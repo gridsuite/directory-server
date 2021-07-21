@@ -209,15 +209,14 @@ public class DirectoryTest {
         // check user2 visible studies
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}," +
                 "{\"elementUuid\":\"" + study2Uuid + "\",\"elementName\":\"study2\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user2\"}]", "user2");
-
-        deleteElement(rootDirUuid, "Doe");
-        checkElementNotFound(rootDirUuid, "Doe");
-
         deleteElement(study1Uuid, "user1");
         checkElementNotFound(study1Uuid, "user1");
 
         deleteElement(study2Uuid, "user2");
         checkElementNotFound(study2Uuid, "user2");
+
+        deleteElement(rootDirUuid, "Doe");
+        checkElementNotFound(rootDirUuid, "Doe");
     }
 
     @Test
@@ -271,6 +270,29 @@ public class DirectoryTest {
 
         deleteElement(rootDirUuid, "Doe");
         checkElementNotFound(rootDirUuid, "Doe");
+    }
+
+    @Test
+    public void testRecursiveDelete() throws Exception {
+        checkRootDirectoriesList("userId", "[]");
+        // Insert a private root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "userId");
+        // Insert a public study in the root directory bu the userId
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, true, "userId");
+        // Insert a public study in the root directory bu the userId
+        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  ElementType.STUDY, true, "userId");
+        // Insert a subDirectory
+        String subDirUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "subDir",  ElementType.DIRECTORY, true, "userId");
+        // Insert a public study in the root directory bu the userId
+        String subDirStudyUuid = insertAndCheckSubElement(UUID.randomUUID(),  subDirUuid, "study3",  ElementType.STUDY, true, "userId");
+
+        deleteElement(rootDirUuid, "userId");
+
+        checkElementNotFound(rootDirUuid, "userId");
+        checkElementNotFound(study1Uuid, "userId");
+        checkElementNotFound(study2Uuid, "userId");
+        checkElementNotFound(subDirUuid, "userId");
+        checkElementNotFound(subDirStudyUuid, "userId");
     }
 
     private void checkRootDirectoriesList(String userId, String expected) {
