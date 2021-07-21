@@ -149,7 +149,8 @@ public class DirectoryTest {
 
     @Test
     public void testTwoUsersTwoPublicDirectories() throws Exception {
-        checkRootDirectoriesList("userId", "[]");
+        checkRootDirectoriesList("user1", "[]");
+        checkRootDirectoriesList("user2", "[]");
         // Insert a root directory user1
         String rootDir1Uuid = insertAndCheckRootDirectory("rootDir1", false, "user1");
         // Insert a root directory user2
@@ -165,7 +166,8 @@ public class DirectoryTest {
 
     @Test
     public void testTwoUsersOnePublicOnePrivateDirectories() throws Exception {
-        checkRootDirectoriesList("userId", "[]");
+        checkRootDirectoriesList("user1", "[]");
+        checkRootDirectoriesList("user2", "[]");
         // Insert a root directory user1
         String rootDir1Uuid = insertAndCheckRootDirectory("rootDir1", true, "user1");
         // Insert a root directory user2
@@ -180,7 +182,8 @@ public class DirectoryTest {
 
     @Test
     public void testTwoUsersTwoPrivateDirectories() throws Exception {
-        checkRootDirectoriesList("userId", "[]");
+        checkRootDirectoriesList("user1", "[]");
+        checkRootDirectoriesList("user2", "[]");
         // Insert a root directory user1
         String rootDir1Uuid = insertAndCheckRootDirectory("rootDir1", true, "user1");
         // Insert a root directory user2
@@ -194,7 +197,7 @@ public class DirectoryTest {
 
     @Test
     public void testTwoUsersTwoPublicStudies() throws Exception {
-        checkRootDirectoriesList("userId", "[]");
+        checkRootDirectoriesList("Doe", "[]");
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
         // Insert a public study in the root directory bu the user1
@@ -221,7 +224,7 @@ public class DirectoryTest {
 
     @Test
     public void testTwoUsersOnePublicOnePrivateStudies() throws Exception {
-        checkRootDirectoriesList("userId", "[]");
+        checkRootDirectoriesList("Doe", "[]");
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
         // Insert a public study in the root directory bu the user1
@@ -248,7 +251,7 @@ public class DirectoryTest {
 
     @Test
     public void testTwoUsersTwoPrivateStudies() throws Exception {
-        checkRootDirectoriesList("userId", "[]");
+        checkRootDirectoriesList("Doe", "[]");
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
         // Insert a public study in the root directory bu the user1
