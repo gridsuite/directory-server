@@ -35,5 +35,5 @@ dbName: directory
 dbApi: jdbc
 
 backing-services:
-  study:
+  study-server:
     base-uri: http://localhost:5001
