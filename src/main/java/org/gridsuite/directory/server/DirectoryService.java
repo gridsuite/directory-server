@@ -107,9 +107,7 @@ class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        directoryContentStream(elementUuid, userId).forEach(elementAttributes -> {
-            deleteObject(elementAttributes, userId);
-        });
+        directoryContentStream(elementUuid, userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
     }
 
     private Mono<Void> deleteFromStudyServer(UUID studyUuid, String userId) {
