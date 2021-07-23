@@ -61,7 +61,7 @@ public class DirectoryController {
     @GetMapping(value = "/directories/{directoryUuid}/content", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get directory content")
     @ApiResponses(@ApiResponse(code = 200, message = "List directory's elements"))
-    public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") String directoryUuid,
+    public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                         @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(directoryUuid, userId));
     }
@@ -69,7 +69,7 @@ public class DirectoryController {
     @GetMapping(value = "/directories/{directoryUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Get element infos")
     @ApiResponses(@ApiResponse(code = 200, message = "element's infos"))
-    public ResponseEntity<Mono<ElementAttributes>> getElementInfos(@PathVariable("directoryUuid") String directoryUuid) {
+    public ResponseEntity<Mono<ElementAttributes>> getElementInfos(@PathVariable("directoryUuid") UUID directoryUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementInfos(directoryUuid)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
@@ -85,7 +85,7 @@ public class DirectoryController {
     @PutMapping(value = "/directories/{directoryUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Modify directory's access rights")
     @ApiResponses(@ApiResponse(code = 200, message = "Directory's access rights were successfully modified"))
-    public ResponseEntity<Mono<Void>> setDirectoryAccessRights(@PathVariable("directoryUuid") String directoryUuid,
+    public ResponseEntity<Mono<Void>> setDirectoryAccessRights(@PathVariable("directoryUuid") UUID directoryUuid,
                                                          @RequestBody AccessRightsAttributes accessRightsAttributes) {
         return ResponseEntity.ok().body(service.setDirectoryAccessRights(directoryUuid, accessRightsAttributes));
     }
@@ -93,7 +93,7 @@ public class DirectoryController {
     @DeleteMapping(value = "/directories/{elementUuid}")
     @ApiOperation(value = "Remove directory/element")
     @ApiResponses(@ApiResponse(code = 200, message = "Directory/element was successfully removed"))
-    public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") String elementUuid,
+    public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
     }

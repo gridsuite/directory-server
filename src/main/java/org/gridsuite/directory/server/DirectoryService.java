@@ -69,12 +69,12 @@ class DirectoryService {
         return createElement(elementAttributes, directoryUuid);
     }
 
-    public Flux<ElementAttributes> listDirectoryContent(String directoryUuid, String userId) {
+    public Flux<ElementAttributes> listDirectoryContent(UUID directoryUuid, String userId) {
         return Flux.fromStream(directoryContentStream(directoryUuid, userId));
     }
 
-    private Stream<ElementAttributes> directoryContentStream(String directoryUuid, String userId) {
-        return directoryElementRepository.findDirectoryContentByUserId(UUID.fromString(directoryUuid), userId).stream().map(DirectoryService::toElementAttributes);
+    private Stream<ElementAttributes> directoryContentStream(UUID directoryUuid, String userId) {
+        return directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId).stream().map(DirectoryService::toElementAttributes);
     }
 
     public Flux<ElementAttributes> getRootDirectories(String userId) {
@@ -85,44 +85,34 @@ class DirectoryService {
         return Mono.fromRunnable(() -> directoryElementRepository.updateElementName(UUID.fromString(elementUuid), newElementName));
     }
 
-    public Mono<Void> setDirectoryAccessRights(String directoryUuid, AccessRightsAttributes accessRightsAttributes) {
-        return Mono.fromRunnable(() -> directoryElementRepository.updateElementAccessRights(UUID.fromString(directoryUuid), accessRightsAttributes.isPrivate()));
+    public Mono<Void> setDirectoryAccessRights(UUID directoryUuid, AccessRightsAttributes accessRightsAttributes) {
+        return Mono.fromRunnable(() -> directoryElementRepository.updateElementAccessRights(directoryUuid, accessRightsAttributes.isPrivate()));
     }
 
-    public Mono<Void> deleteElement(String elementUuid, String userId) {
+    public Mono<Void> deleteElement(UUID elementUuid, String userId) {
         return getElementInfos(elementUuid).map(elementAttributes -> {
-            if (elementAttributes.getType().equals(ElementType.STUDY)) {
-                deleteObject(elementAttributes.getElementUuid(), userId);
-            } else {
-                // DIRECTORY
-                deleteElementTree(elementUuid, userId);
-            }
+            deleteObject(elementAttributes, userId);
             return elementAttributes;
         }).then();
     }
 
-    private void deleteObject(UUID elementUuid, String userId) {
-        deleteStudy(elementUuid, userId).subscribe();
-        directoryElementRepository.deleteById(elementUuid);
+    private void deleteObject(ElementAttributes elementAttributes, String userId) {
+        if (elementAttributes.getType().equals(ElementType.STUDY)) {
+            deleteFromStudyServer(elementAttributes.getElementUuid(), userId).subscribe();
+        } else {
+            // directory
+            deleteSubElements(elementAttributes.getElementUuid(), userId);
+        }
+        directoryElementRepository.deleteById(elementAttributes.getElementUuid());
     }
 
-    // DELETE DIRECTORY
-    private void deleteElementTree(String elementUuid, String userId) {
-        deleteSubElements(elementUuid, userId);
-        directoryElementRepository.deleteById(UUID.fromString(elementUuid));
-    }
-
-    private void deleteSubElements(String elementUuid, String userId) {
-        directoryContentStream(elementUuid, userId).forEach(e -> {
-            if (e.getType().equals(ElementType.STUDY)) {
-                deleteObject(e.getElementUuid(), userId);
-            } else {
-                deleteElementTree(e.getElementUuid().toString(), userId);  // Delete sub-directory
-            }
+    private void deleteSubElements(UUID elementUuid, String userId) {
+        directoryContentStream(elementUuid, userId).forEach(elementAttributes -> {
+            deleteObject(elementAttributes, userId);
         });
     }
 
-    private Mono<Void> deleteStudy(UUID studyUuid, String userId) {
+    private Mono<Void> deleteFromStudyServer(UUID studyUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}")
                 .buildAndExpand(studyUuid)
                 .toUriString();
@@ -141,7 +131,7 @@ class DirectoryService {
         this.studyServerBaseUri = studyServerBaseUri;
     }
 
-    public Mono<ElementAttributes> getElementInfos(String directoryUuid) {
-        return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::toElementAttributes).orElse(null));
+    public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
+        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(DirectoryService::toElementAttributes).orElse(null));
     }
 }
