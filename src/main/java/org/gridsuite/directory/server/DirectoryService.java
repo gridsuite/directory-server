@@ -11,11 +11,17 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.UUID;
+import java.util.logging.Level;
 import java.util.stream.Stream;
 
 /**
@@ -24,11 +30,23 @@ import java.util.stream.Stream;
  */
 @Service
 class DirectoryService {
+    private static final String DELIMITER = "/";
+    private static final String STUDY_SERVER_API_VERSION = "v1";
+    private static final String ROOT_CATEGORY_REACTOR = "reactor.";
+
+    private WebClient webClient;
+    private String studyServerBaseUri;
 
     private final DirectoryElementRepository directoryElementRepository;
 
-    DirectoryService(DirectoryElementRepository directoryElementRepository) {
+    public DirectoryService(
+            DirectoryElementRepository directoryElementRepository,
+            @Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri,
+            WebClient.Builder webClientBuilder) {
         this.directoryElementRepository = directoryElementRepository;
+        this.studyServerBaseUri = studyServerBaseUri;
+
+        this.webClient = webClientBuilder.build();
     }
 
     private static ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
@@ -51,12 +69,12 @@ class DirectoryService {
         return createElement(elementAttributes, directoryUuid);
     }
 
-    public Flux<ElementAttributes> listDirectoryContent(String directoryUuid, String userId) {
+    public Flux<ElementAttributes> listDirectoryContent(UUID directoryUuid, String userId) {
         return Flux.fromStream(directoryContentStream(directoryUuid, userId));
     }
 
-    private Stream<ElementAttributes> directoryContentStream(String directoryUuid, String userId) {
-        return directoryElementRepository.findDirectoryContentByUserId(UUID.fromString(directoryUuid), userId).stream().map(DirectoryService::toElementAttributes);
+    private Stream<ElementAttributes> directoryContentStream(UUID directoryUuid, String userId) {
+        return directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId).stream().map(DirectoryService::toElementAttributes);
     }
 
     public Flux<ElementAttributes> getRootDirectories(String userId) {
@@ -67,20 +85,51 @@ class DirectoryService {
         return Mono.fromRunnable(() -> directoryElementRepository.updateElementName(UUID.fromString(elementUuid), newElementName));
     }
 
-    public Mono<Void> setDirectoryAccessRights(String directoryUuid, AccessRightsAttributes accessRightsAttributes) {
-        return Mono.fromRunnable(() -> directoryElementRepository.updateElementAccessRights(UUID.fromString(directoryUuid), accessRightsAttributes.isPrivate()));
+    public Mono<Void> setDirectoryAccessRights(UUID directoryUuid, AccessRightsAttributes accessRightsAttributes) {
+        return Mono.fromRunnable(() -> directoryElementRepository.updateElementAccessRights(directoryUuid, accessRightsAttributes.isPrivate()));
     }
 
-    public Mono<Void> deleteElement(String elementUuid, String userId) {
-        return Mono.fromRunnable(() -> deleteElementTree(elementUuid, userId));
+    public Mono<Void> deleteElement(UUID elementUuid, String userId) {
+        return getElementInfos(elementUuid).map(elementAttributes -> {
+            deleteObject(elementAttributes, userId);
+            return elementAttributes;
+        }).then();
     }
 
-    private void deleteElementTree(String elementUuid, String userId) {
-        directoryContentStream(elementUuid, userId).map(e -> e.getElementUuid().toString()).forEach(child -> deleteElementTree(child, userId));
-        directoryElementRepository.deleteById(UUID.fromString(elementUuid));
+    private void deleteObject(ElementAttributes elementAttributes, String userId) {
+        if (elementAttributes.getType().equals(ElementType.STUDY)) {
+            deleteFromStudyServer(elementAttributes.getElementUuid(), userId).subscribe();
+        } else {
+            // directory
+            deleteSubElements(elementAttributes.getElementUuid(), userId);
+        }
+        directoryElementRepository.deleteById(elementAttributes.getElementUuid());
     }
 
-    public Mono<ElementAttributes> getElementInfos(String directoryUuid) {
-        return Mono.fromCallable(() -> directoryElementRepository.findById(UUID.fromString(directoryUuid)).map(DirectoryService::toElementAttributes).orElse(null));
+    private void deleteSubElements(UUID elementUuid, String userId) {
+        directoryContentStream(elementUuid, userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
+    }
+
+    private Mono<Void> deleteFromStudyServer(UUID studyUuid, String userId) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}")
+                .buildAndExpand(studyUuid)
+                .toUriString();
+
+        return webClient.delete()
+                .uri(studyServerBaseUri + path)
+                .header("userId", userId)
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, r -> Mono.empty())
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
+    public void setStudyServerBaseUri(String studyServerBaseUri) {
+        this.studyServerBaseUri = studyServerBaseUri;
+    }
+
+    public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
+        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(DirectoryService::toElementAttributes).orElse(null));
     }
 }

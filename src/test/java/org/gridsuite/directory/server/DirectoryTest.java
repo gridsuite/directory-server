@@ -9,10 +9,16 @@ package org.gridsuite.directory.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +31,10 @@ import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.config.EnableWebFlux;
 
-import java.util.UUID;
+import okhttp3.mockwebserver.MockWebServer;
+
+import java.io.IOException;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 
@@ -47,7 +56,39 @@ public class DirectoryTest {
     ObjectMapper objectMapper;
 
     @Autowired
+    private DirectoryService directoryService;
+
+    private MockWebServer server;
+
+    @Autowired
     private DirectoryElementRepository directoryElementRepository;
+
+    @Before
+    public void setup() throws IOException {
+        server = new MockWebServer();
+
+        // Start the server.
+        server.start();
+
+        // Ask the server for its URL. You'll need this to make HTTP requests.
+        HttpUrl baseHttpUrl = server.url("");
+        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+        directoryService.setStudyServerBaseUri(baseUrl);
+
+        final Dispatcher dispatcher = new Dispatcher() {
+            @SneakyThrows
+            @Override
+            public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
+                String path = Objects.requireNonNull(request.getPath());
+
+                if (path.matches("/v1/studies/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200);
+                }
+                return new MockResponse().setResponseCode(500);
+            }
+        };
+        server.setDispatcher(dispatcher);
+    }
 
     @Test
     public void test() throws Exception {
@@ -232,6 +273,29 @@ public class DirectoryTest {
 
         deleteElement(rootDirUuid, "Doe");
         checkElementNotFound(rootDirUuid, "Doe");
+    }
+
+    @Test
+    public void testRecursiveDelete() throws Exception {
+        checkRootDirectoriesList("userId", "[]");
+        // Insert a private root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "userId");
+        // Insert a public study in the root directory bu the userId
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, true, "userId");
+        // Insert a public study in the root directory bu the userId
+        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  ElementType.STUDY, true, "userId");
+        // Insert a subDirectory
+        String subDirUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "subDir",  ElementType.DIRECTORY, true, "userId");
+        // Insert a public study in the root directory bu the userId
+        String subDirStudyUuid = insertAndCheckSubElement(UUID.randomUUID(),  subDirUuid, "study3",  ElementType.STUDY, true, "userId");
+
+        deleteElement(rootDirUuid, "userId");
+
+        checkElementNotFound(rootDirUuid, "userId");
+        checkElementNotFound(study1Uuid, "userId");
+        checkElementNotFound(study2Uuid, "userId");
+        checkElementNotFound(subDirUuid, "userId");
+        checkElementNotFound(subDirStudyUuid, "userId");
     }
 
     private void checkRootDirectoriesList(String userId, String expected) {
