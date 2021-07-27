@@ -12,10 +12,20 @@ import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.integration.support.MessageBuilder;
+import org.springframework.messaging.Message;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -34,19 +44,57 @@ class DirectoryService {
     private static final String STUDY_SERVER_API_VERSION = "v1";
     private static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
-    private WebClient webClient;
+    private final WebClient webClient;
     private String studyServerBaseUri;
 
     private final DirectoryElementRepository directoryElementRepository;
 
+    private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
+
+    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
+
+    static final String HEADER_USER_ID = "userId";
+    static final String HEADER_UPDATE_TYPE = "updateType";
+    static final String UPDATE_TYPE_DIRECTORIES = "directories";
+    static final String HEADER_DIRECTORY_UUID = "directoryUuid";
+    static final String HEADER_IS_PRIVATE_DIRECTORY = "isPrivateDirectory";
+    static final String HEADER_IS_ROOT_DIRECTORY = "isRootDirectory";
+
+    private final StreamBridge studyUpdatePublisher;
+
     public DirectoryService(
             DirectoryElementRepository directoryElementRepository,
             @Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri,
-            WebClient.Builder webClientBuilder) {
+            WebClient.Builder webClientBuilder, StreamBridge studyUpdatePublisher) {
         this.directoryElementRepository = directoryElementRepository;
         this.studyServerBaseUri = studyServerBaseUri;
 
         this.webClient = webClientBuilder.build();
+        this.studyUpdatePublisher = studyUpdatePublisher;
+    }
+
+    private void sendUpdateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        studyUpdatePublisher.send("publishStudyUpdate-out-0", message);
+    }
+
+    private void emitDirectoryChanged(UUID directoryUuid, String userId) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
+                .setHeader(HEADER_IS_ROOT_DIRECTORY, false)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
+                .build());
+    }
+
+    private void emitRootDirectoriesChanged(UUID directoryUuid, String userId, boolean isPrivate) {
+        sendUpdateMessage(MessageBuilder.withPayload("")
+                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
+                .setHeader(HEADER_IS_PRIVATE_DIRECTORY, isPrivate)
+                .setHeader(HEADER_IS_ROOT_DIRECTORY, true)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
+                .build());
     }
 
     private static ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
@@ -63,10 +111,12 @@ class DirectoryService {
                 elementAttributes.getOwner()))));
     }
 
-    public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, UUID directoryUuid) {
+    public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, UUID directoryUuid, String userId) {
         ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY,
                 rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner());
-        return createElement(elementAttributes, directoryUuid);
+        return createElement(elementAttributes, directoryUuid).doOnSuccess(element ->
+                emitRootDirectoriesChanged(element.getElementUuid(), userId, rootDirectoryAttributes.getAccessRights().isPrivate())
+        );
     }
 
     public Flux<ElementAttributes> listDirectoryContent(UUID directoryUuid, String userId) {
@@ -110,6 +160,16 @@ class DirectoryService {
         directoryContentStream(elementUuid, userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
     }
 
+    public void setStudyServerBaseUri(String studyServerBaseUri) {
+        this.studyServerBaseUri = studyServerBaseUri;
+    }
+
+    public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
+        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(DirectoryService::toElementAttributes).orElse(null));
+    }
+
+    /* handle STUDY objects */
+
     private Mono<Void> deleteFromStudyServer(UUID studyUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}")
                 .buildAndExpand(studyUuid)
@@ -125,11 +185,70 @@ class DirectoryService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    public void setStudyServerBaseUri(String studyServerBaseUri) {
-        this.studyServerBaseUri = studyServerBaseUri;
+    private Mono<Void> insertStudyWithExistingCaseFile(UUID studyUuid, String studyName, String description, String userId, Boolean isPrivate, UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION +
+                "/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}&studyUuid={studyUuid}")
+                .buildAndExpand(studyName, caseUuid, description, isPrivate, studyUuid)
+                .toUriString();
+
+        return webClient.post()
+                .uri(studyServerBaseUri + path)
+                .header("userId", userId)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
-        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(DirectoryService::toElementAttributes).orElse(null));
+    private Mono<Void> insertStudyWithCaseFile(UUID studyUuid, String studyName, String description, String userId, Boolean isPrivate, Mono<FilePart> caseFile) {
+        return caseFile.flatMap(file -> {
+            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+            multipartBodyBuilder.part("caseFile", file);
+
+            String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION +
+                    "/studies/{studyName}?description={description}&isPrivate={isPrivate}&studyUuid={studyUuid}")
+                    .buildAndExpand(studyName, description, isPrivate, studyUuid)
+                    .toUriString();
+
+            return webClient.post()
+                    .uri(studyServerBaseUri + path)
+                    .header("userId", userId)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+                    .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+                    .retrieve()
+                    .bodyToMono(Void.class)
+                    .publishOn(Schedulers.boundedElastic())
+                    .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+        });
     }
+
+    public Mono<Void> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+        ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
+                new AccessRightsAttributes(isPrivate), userId);
+        return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+            emitDirectoryChanged(parentDirectoryUuid, userId);
+            return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid).doOnSuccess(res -> {
+                emitDirectoryChanged(parentDirectoryUuid, userId);
+            }).doOnError(err -> {
+                deleteElement(elementAttributes1.getElementUuid(), userId);
+                emitDirectoryChanged(parentDirectoryUuid, userId);
+            });
+        });
+    }
+
+    public Mono<Void> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+        ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
+                new AccessRightsAttributes(isPrivate), userId);
+        return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+            // notification here
+            emitDirectoryChanged(parentDirectoryUuid, userId);
+            return insertStudyWithCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseFile).doOnSuccess(res -> {
+                emitDirectoryChanged(parentDirectoryUuid, userId);
+            }).doOnError(err -> {
+                deleteElement(elementAttributes1.getElementUuid(), userId);
+                emitDirectoryChanged(parentDirectoryUuid, userId);
+            });
+        });
+    }
+
 }
