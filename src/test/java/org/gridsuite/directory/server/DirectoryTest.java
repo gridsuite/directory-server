@@ -465,7 +465,7 @@ public class DirectoryTest {
         assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
         assertEquals(uuidNewDirectory, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
         assertEquals(true, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(isPrivate, headers.get(DirectoryService.HEADER_IS_PRIVATE_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         return uuidNewDirectory;

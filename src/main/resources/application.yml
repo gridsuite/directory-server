@@ -12,7 +12,7 @@ spring:
     stream:
       bindings:
         publishStudyUpdate-out-0:
-          destination: study.update
+          destination: directory.update
       source: publishStudyUpdate
 
   datasource:

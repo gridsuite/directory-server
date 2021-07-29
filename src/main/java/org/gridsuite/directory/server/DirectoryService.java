@@ -57,7 +57,7 @@ class DirectoryService {
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String UPDATE_TYPE_DIRECTORIES = "directories";
     static final String HEADER_DIRECTORY_UUID = "directoryUuid";
-    static final String HEADER_IS_PRIVATE_DIRECTORY = "isPrivateDirectory";
+    static final String HEADER_IS_PUBLIC_DIRECTORY = "isPublicDirectory";
     static final String HEADER_IS_ROOT_DIRECTORY = "isRootDirectory";
 
     private final StreamBridge studyUpdatePublisher;
@@ -82,6 +82,7 @@ class DirectoryService {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
+                .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // hardcoded !
                 .setHeader(HEADER_IS_ROOT_DIRECTORY, false)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
                 .build());
@@ -91,7 +92,7 @@ class DirectoryService {
         sendUpdateMessage(MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
-                .setHeader(HEADER_IS_PRIVATE_DIRECTORY, isPrivate)
+                .setHeader(HEADER_IS_PUBLIC_DIRECTORY, !isPrivate)
                 .setHeader(HEADER_IS_ROOT_DIRECTORY, true)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
                 .build());
