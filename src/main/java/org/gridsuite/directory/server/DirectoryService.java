@@ -178,7 +178,7 @@ class DirectoryService {
 
         return webClient.delete()
                 .uri(studyServerBaseUri + path)
-                .header("userId", userId)
+                .header(HEADER_USER_ID, userId)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, r -> Mono.empty())
                 .bodyToMono(Void.class)
@@ -194,7 +194,7 @@ class DirectoryService {
 
         return webClient.post()
                 .uri(studyServerBaseUri + path)
-                .header("userId", userId)
+                .header(HEADER_USER_ID, userId)
                 .retrieve()
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())
@@ -213,7 +213,7 @@ class DirectoryService {
 
             return webClient.post()
                     .uri(studyServerBaseUri + path)
-                    .header("userId", userId)
+                    .header(HEADER_USER_ID, userId)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
                     .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
                     .retrieve()
@@ -228,12 +228,12 @@ class DirectoryService {
                 new AccessRightsAttributes(isPrivate), userId);
         return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId);
-            return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid).doOnSuccess(res -> {
-                emitDirectoryChanged(parentDirectoryUuid, userId);
-            }).doOnError(err -> {
-                deleteElement(elementAttributes1.getElementUuid(), userId);
-                emitDirectoryChanged(parentDirectoryUuid, userId);
-            });
+            return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
+                    .doOnSuccess(res -> emitDirectoryChanged(parentDirectoryUuid, userId))
+                    .doOnError(err -> {
+                        deleteElement(elementAttributes1.getElementUuid(), userId);
+                        emitDirectoryChanged(parentDirectoryUuid, userId);
+                    });
         });
     }
 
@@ -243,13 +243,12 @@ class DirectoryService {
         return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             // notification here
             emitDirectoryChanged(parentDirectoryUuid, userId);
-            return insertStudyWithCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseFile).doOnSuccess(res -> {
-                emitDirectoryChanged(parentDirectoryUuid, userId);
-            }).doOnError(err -> {
-                deleteElement(elementAttributes1.getElementUuid(), userId);
-                emitDirectoryChanged(parentDirectoryUuid, userId);
-            });
+            return insertStudyWithCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseFile)
+                    .doOnSuccess(res -> emitDirectoryChanged(parentDirectoryUuid, userId)
+                    ).doOnError(err -> {
+                        deleteElement(elementAttributes1.getElementUuid(), userId);
+                        emitDirectoryChanged(parentDirectoryUuid, userId);
+                    });
         });
     }
-
 }
