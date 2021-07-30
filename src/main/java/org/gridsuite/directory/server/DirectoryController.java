@@ -10,7 +10,6 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
-import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.springframework.http.HttpStatus;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
@@ -77,17 +76,19 @@ public class DirectoryController {
     @PutMapping(value = "/directories/{elementUuid}/rename/{newElementName}")
     @ApiOperation(value = "Rename element/directory")
     @ApiResponses(@ApiResponse(code = 200, message = "Element/directory was successfully renamed"))
-    public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") String elementUuid,
-                                              @PathVariable("newElementName") String newElementName) {
-        return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName));
+    public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") UUID elementUuid,
+                                                    @PathVariable("newElementName") String newElementName,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName, userId));
     }
 
-    @PutMapping(value = "/directories/{directoryUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/directories/{elementUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Modify directory's access rights")
     @ApiResponses(@ApiResponse(code = 200, message = "Directory's access rights were successfully modified"))
-    public ResponseEntity<Mono<Void>> setDirectoryAccessRights(@PathVariable("directoryUuid") UUID directoryUuid,
-                                                         @RequestBody AccessRightsAttributes accessRightsAttributes) {
-        return ResponseEntity.ok().body(service.setDirectoryAccessRights(directoryUuid, accessRightsAttributes));
+    public ResponseEntity<Mono<Void>> setAccessRights(@PathVariable("elementUuid") UUID elementUuid,
+                                                      @RequestBody boolean isPrivate,
+                                                      @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.setAccessRights(elementUuid, isPrivate, userId));
     }
 
     @DeleteMapping(value = "/directories/{elementUuid}")

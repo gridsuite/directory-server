@@ -8,12 +8,14 @@ package org.gridsuite.directory.server;
 
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.RenameStudyAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
@@ -23,6 +25,9 @@ import reactor.core.scheduler.Schedulers;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.stream.Stream;
+
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
+import static org.gridsuite.directory.server.DirectoryException.Type.STUDY_NOT_FOUND;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -81,12 +86,29 @@ class DirectoryService {
         return Flux.fromStream(directoryElementRepository.findRootDirectoriesByUserId(userId).stream().map(DirectoryService::toElementAttributes));
     }
 
-    public Mono<Void> renameElement(String elementUuid, String newElementName) {
-        return Mono.fromRunnable(() -> directoryElementRepository.updateElementName(UUID.fromString(elementUuid), newElementName));
+    public Mono<Void> renameElement(UUID elementUuid, String newElementName, String userId) {
+        return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+            if (elementAttributes.getType().equals(ElementType.STUDY)) {
+                return renameStudy(elementUuid, userId, newElementName);
+            } else {
+                return Mono.empty();
+            }
+        }).doOnSuccess(unused -> {
+            directoryElementRepository.updateElementName(elementUuid, newElementName);
+            //todo emit
+        });
     }
 
-    public Mono<Void> setDirectoryAccessRights(UUID directoryUuid, AccessRightsAttributes accessRightsAttributes) {
-        return Mono.fromRunnable(() -> directoryElementRepository.updateElementAccessRights(directoryUuid, accessRightsAttributes.isPrivate()));
+    public Mono<Void> setAccessRights(UUID elementUuid, boolean isPrivate, String userId) {
+        return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+            if (elementAttributes.getType().equals(ElementType.STUDY)) {
+                return setStudyAccessRight(elementUuid, userId, isPrivate);
+            }
+            return Mono.empty();
+        }).doOnSuccess(unused -> {
+            directoryElementRepository.updateElementAccessRights(elementUuid, isPrivate);
+            //TODO emit
+        });
     }
 
     public Mono<Void> deleteElement(UUID elementUuid, String userId) {
@@ -120,6 +142,45 @@ class DirectoryService {
                 .header("userId", userId)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus != HttpStatus.OK, r -> Mono.empty())
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
+    private Mono<Void> renameStudy(UUID studyUuid, String userId, String newElementName) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}/rename")
+                .buildAndExpand(studyUuid)
+                .toUriString();
+
+        return webClient.post()
+                .uri(studyServerBaseUri + path)
+                .header("userId", userId)
+                .body(BodyInserters.fromValue(new RenameStudyAttributes(newElementName)))
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(STUDY_NOT_FOUND)))
+                .onStatus(httpStatus -> httpStatus == HttpStatus.FORBIDDEN, clientResponse -> Mono.error(new DirectoryException(NOT_ALLOWED)))
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
+    private Mono<Void> setStudyAccessRight(UUID studyUuid, String userId, boolean isPrivate) {
+        String path;
+        if (isPrivate) {
+            path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}/private")
+                    .buildAndExpand(studyUuid)
+                    .toUriString();
+        } else {
+            path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}/public")
+                    .buildAndExpand(studyUuid)
+                    .toUriString();
+        }
+        return webClient.post()
+                .uri(studyServerBaseUri + path)
+                .header("userId", userId)
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(STUDY_NOT_FOUND)))
+                .onStatus(httpStatus -> httpStatus == HttpStatus.FORBIDDEN, clientResponse -> Mono.error(new DirectoryException(NOT_ALLOWED)))
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);

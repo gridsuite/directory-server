@@ -126,7 +126,7 @@ public class DirectoryTest {
         webTestClient.put().uri("/v1/directories/" + uuidNewDirectory + "/rights")
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(new AccessRightsAttributes(true)))
+                .bodyValue(objectMapper.writeValueAsString(true))
                 .exchange()
                 .expectStatus().isOk();
 
