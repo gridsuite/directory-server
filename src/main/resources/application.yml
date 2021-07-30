@@ -10,10 +10,14 @@ spring:
 
   cloud:
     stream:
+      function:
+        definition: consumeStudyUpdate
       bindings:
-        publishStudyUpdate-out-0:
+        publishDirectoryUpdate-out-0:
           destination: directory.update
-      source: publishStudyUpdate
+        consumeStudyUpdate-in-0:
+          destination: study.update
+      source: publishDirectoryUpdate
 
   datasource:
     url: ${dbApi}:${dbVendor}://${hostPort}/${dbName}${query}

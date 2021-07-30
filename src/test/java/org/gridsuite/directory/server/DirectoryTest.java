@@ -340,10 +340,17 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testInsertStudy() {
-        createStudy("userId", "myStudy", UUID.randomUUID(), "description", true, UUID.randomUUID());
-        createStudyWithCaseFile("userId", "myStudy", "description", true, UUID.randomUUID(), TEST_FILE);
+    public void testInsertStudy() throws JsonProcessingException {
+        String rootDirectoryUuid = insertAndCheckRootDirectory("rootDir", true, "user1");
+        createStudy("user1", "myStudy", UUID.randomUUID(), "description", true, UUID.fromString(rootDirectoryUuid));
+        cleanDB();
+    }
 
+    @Test
+    public void testInsertStudyWithFile() throws JsonProcessingException {
+        String rootDirectoryUuid = insertAndCheckRootDirectory("rootDir", true, "user1");
+        createStudyWithCaseFile("user1", "myStudy", "description", true, UUID.fromString(rootDirectoryUuid), TEST_FILE);
+        cleanDB();
     }
 
     private static final String TEST_FILE = "testCase.xiidm";
@@ -357,7 +364,7 @@ public class DirectoryTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        UUID studyUuid = directoryElementRepository.findAll().get(0).getId();
+        UUID studyUuid = directoryElementRepository.findAll().get(1).getId();
 
         // assert that the broker message has been sent a root directory creation request message
         Message<byte[]> message = output.receive(1000);
@@ -381,7 +388,6 @@ public class DirectoryTest {
         var requests = getRequestsDone(1);
         assertTrue(requests.contains(String.format("/v1/studies/%s/cases/%s?" +
                 "description=%s&isPrivate=%s&studyUuid=%s", studyName, caseUuid, description, isPrivate, studyUuid)));
-        cleanDB();
     }
 
     @SneakyThrows
@@ -403,20 +409,12 @@ public class DirectoryTest {
                     .expectStatus().isOk();
         }
 
-        UUID studyUuid = directoryElementRepository.findAll().get(0).getId();
+        UUID studyUuid = directoryElementRepository.findAll().get(1).getId();
 
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent a study creation request message
-        message = output.receive(1000);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
         assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
         assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
