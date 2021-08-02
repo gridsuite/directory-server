@@ -3,6 +3,10 @@ server :
   forward-headers-strategy: framework
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 103MB
 
   rabbitmq:
     addresses: localhost
