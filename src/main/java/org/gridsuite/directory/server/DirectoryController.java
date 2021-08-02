@@ -102,8 +102,8 @@ public class DirectoryController {
 
     /* handle STUDY objects */
     @PostMapping(value = "/directories/studies/{studyName}/cases/{caseUuid}")
-    @ApiOperation(value = "create a study from an existing case")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "Study creation request delegated to study server")})
+    @Operation(summary = "create a study from an existing case")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study creation request delegated to study server")})
     public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
                                                                   @PathVariable("caseUuid") UUID caseUuid,
                                                                   @RequestParam("description") String description,
@@ -114,8 +114,8 @@ public class DirectoryController {
     }
 
     @PostMapping(value = "/directories/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @ApiOperation(value = "create a study and import the case")
-    @ApiResponses(value = {@ApiResponse(code = 200, message = "Study creation request delegated to study server")})
+    @Operation(summary = "create a study and import the case")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study creation request delegated to study server")})
     public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
                                                   @RequestPart("caseFile") FilePart caseFile,
                                                   @RequestParam("description") String description,
