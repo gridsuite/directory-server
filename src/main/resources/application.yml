@@ -51,10 +51,6 @@ spring:
               create-target: src/main/resources/directory.sql
               create-source: metadata
 
-springdoc:
-  swagger-ui:
-    path: swagger-ui.html
-
 dbName: directory
 dbApi: jdbc
 
