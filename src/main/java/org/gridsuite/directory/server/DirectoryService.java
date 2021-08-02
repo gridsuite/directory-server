@@ -111,7 +111,7 @@ class DirectoryService {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
-                .setHeader(HEADER_IS_PUBLIC_DIRECTORY, isPublicDirectory(directoryUuid)) // hardcoded !
+                .setHeader(HEADER_IS_PUBLIC_DIRECTORY, isPublicDirectory(directoryUuid))
                 .setHeader(HEADER_IS_ROOT_DIRECTORY, false)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES);
         if (error != null) {
@@ -273,10 +273,9 @@ class DirectoryService {
         return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId);
             return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
-                    .doOnSuccess(res -> emitDirectoryChanged(parentDirectoryUuid, userId))
                     .doOnError(err -> {
-                        System.out.println("CHAMS ERR");
-                        deleteElement(elementAttributes1.getElementUuid(), userId).doOnSuccess(ignore -> emitDirectoryChanged(parentDirectoryUuid, userId));
+                        deleteElement(elementAttributes1.getElementUuid(), userId);
+                        emitDirectoryChanged(parentDirectoryUuid, userId);
                     });
         });
     }

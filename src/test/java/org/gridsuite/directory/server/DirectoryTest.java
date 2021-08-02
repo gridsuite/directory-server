@@ -33,6 +33,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -60,7 +61,7 @@ import static org.junit.Assert.*;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient
+@AutoConfigureWebTestClient(timeout = "20000")
 @EnableWebFlux
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
@@ -108,10 +109,15 @@ public class DirectoryTest {
             @Override
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 String path = Objects.requireNonNull(request.getPath());
+                String userId = request.getHeaders().get("userId");
 
                 if (path.matches("/v1/studies/.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/studies/.*") && request.getMethod().equals("POST")) {
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("studyUuid", path.split("=")[3])
+                            .setHeader("userId", userId)
+                            .build());
                     return new MockResponse().setResponseCode(200);
                 }
                 return new MockResponse().setResponseCode(500);
@@ -341,8 +347,8 @@ public class DirectoryTest {
 
     @Test
     public void testInsertStudy() throws JsonProcessingException {
-        String rootDirectoryUuid = insertAndCheckRootDirectory("rootDir", true, "user1");
-        createStudy("user1", "myStudy", UUID.randomUUID(), "description", true, UUID.fromString(rootDirectoryUuid));
+        String rootDirectoryUuid = insertAndCheckRootDirectory("newRoot", true, "user3");
+        createStudy("user3", "myStudy", UUID.randomUUID(), "description", true, UUID.fromString(rootDirectoryUuid));
         cleanDB();
     }
 
@@ -417,6 +423,15 @@ public class DirectoryTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
         assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent a root directory creation request message
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
