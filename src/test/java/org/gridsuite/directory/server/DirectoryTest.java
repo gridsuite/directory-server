@@ -21,22 +21,39 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.InputDestination;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.util.ResourceUtils;
 import org.springframework.web.reactive.config.EnableWebFlux;
 
 import okhttp3.mockwebserver.MockWebServer;
+import org.springframework.web.reactive.function.BodyInserters;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -44,10 +61,10 @@ import static org.junit.Assert.assertEquals;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient
+@AutoConfigureWebTestClient(timeout = "20000")
 @EnableWebFlux
 @SpringBootTest
-@ContextConfiguration(classes = {DirectoryApplication.class})
+@ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class DirectoryTest {
     @Autowired
     private WebTestClient webTestClient;
@@ -62,6 +79,18 @@ public class DirectoryTest {
 
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
+
+    @Autowired
+    private OutputDestination output;
+
+    @Autowired
+    private InputDestination input;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryTest.class);
+
+    private void cleanDB() {
+        directoryElementRepository.deleteAll();
+    }
 
     @Before
     public void setup() throws IOException {
@@ -80,8 +109,15 @@ public class DirectoryTest {
             @Override
             public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
                 String path = Objects.requireNonNull(request.getPath());
+                String userId = request.getHeaders().get("userId");
 
                 if (path.matches("/v1/studies/.*") && request.getMethod().equals("DELETE")) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/studies/.*") && request.getMethod().equals("POST")) {
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("studyUuid", path.split("=")[3])
+                            .setHeader("userId", userId)
+                            .build());
                     return new MockResponse().setResponseCode(200);
                 }
                 return new MockResponse().setResponseCode(500);
@@ -298,6 +334,113 @@ public class DirectoryTest {
         checkElementNotFound(subDirStudyUuid, "userId");
     }
 
+    private Set<String> getRequestsDone(int n) {
+        return IntStream.range(0, n).mapToObj(i -> {
+            try {
+                return server.takeRequest(0, TimeUnit.SECONDS).getPath();
+            } catch (InterruptedException e) {
+                LOGGER.error("Error while attempting to get the request done : ", e);
+            }
+            return null;
+        }).collect(Collectors.toSet());
+    }
+
+    @Test
+    public void testInsertStudy() throws JsonProcessingException {
+        String rootDirectoryUuid = insertAndCheckRootDirectory("newRoot", true, "user3");
+        createStudy("user3", "myStudy", UUID.randomUUID(), "description", true, UUID.fromString(rootDirectoryUuid));
+        cleanDB();
+    }
+
+    @Test
+    public void testInsertStudyWithFile() throws JsonProcessingException {
+        String rootDirectoryUuid = insertAndCheckRootDirectory("rootDir", true, "user1");
+        createStudyWithCaseFile("user1", "myStudy", "description", true, UUID.fromString(rootDirectoryUuid), TEST_FILE);
+        cleanDB();
+    }
+
+    private static final String TEST_FILE = "testCase.xiidm";
+
+    @SneakyThrows
+    private void createStudy(String userId, String studyName, UUID caseUuid, String description, boolean isPrivate, UUID parentDirectoryUuid) {
+        webTestClient.post()
+                .uri("/v1/directories/studies/{studyName}/cases/{caseUuid}?description={description}&isPrivate={isPrivate}&parentDirectoryUuid={parentDirectoryUuid}",
+                        studyName, caseUuid, description, isPrivate, parentDirectoryUuid)
+                .header("userId", userId)
+                .exchange()
+                .expectStatus().isOk();
+
+        UUID studyUuid = directoryElementRepository.findAll().get(1).getId();
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent a root directory creation request message
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        // assert that all http requests have been sent to remote services
+        var requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/studies/%s/cases/%s?" +
+                "description=%s&isPrivate=%s&studyUuid=%s", studyName, caseUuid, description, isPrivate, studyUuid)));
+    }
+
+    @SneakyThrows
+    private void createStudyWithCaseFile(String userId, String studyName, String description, boolean isPrivate, UUID parentDirectoryUuid, String fileName) {
+        try (InputStream is = new FileInputStream(ResourceUtils.getFile("classpath:" + fileName))) {
+            MockMultipartFile mockFile = new MockMultipartFile("caseFile", fileName, "text/xml", is);
+            MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+            bodyBuilder.part("caseFile", mockFile.getBytes())
+                    .filename(fileName)
+                    .contentType(MediaType.TEXT_XML);
+
+            webTestClient.post()
+                    .uri("/v1/directories/studies/{studyName}?description={description}&isPrivate={isPrivate}&parentDirectoryUuid={parentDirectoryUuid}",
+                            studyName, description, isPrivate, parentDirectoryUuid)
+                    .header("userId", userId)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                    .exchange()
+                    .expectStatus().isOk();
+        }
+
+        UUID studyUuid = directoryElementRepository.findAll().get(1).getId();
+
+        // assert that the broker message has been sent a study creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent a root directory creation request message
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        // assert that all http requests have been sent to remote services
+        var requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/studies/%s?" +
+                "description=%s&isPrivate=%s&studyUuid=%s", studyName, description, isPrivate, studyUuid)));
+        cleanDB();
+    }
+
     private void checkRootDirectoriesList(String userId, String expected) {
         webTestClient.get()
                 .uri("/v1/root-directories")
@@ -327,6 +470,16 @@ public class DirectoryTest {
         assertEquals(isPrivate, jsonTree.get("accessRights").get("private").asBoolean());
 
         assertElementIsProperlyInserted(uuidNewDirectory, rootDirectoryName, ElementType.DIRECTORY, isPrivate, userId);
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(uuidNewDirectory, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
+        assertEquals(true, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         return uuidNewDirectory;
     }
