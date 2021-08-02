@@ -3,6 +3,22 @@ server :
   forward-headers-strategy: framework
 
 spring:
+
+  rabbitmq:
+    addresses: localhost
+    port: 5672
+
+  cloud:
+    stream:
+      function:
+        definition: consumeStudyUpdate
+      bindings:
+        publishDirectoryUpdate-out-0:
+          destination: directory.update
+        consumeStudyUpdate-in-0:
+          destination: study.update
+      source: publishDirectoryUpdate
+
   datasource:
     url: ${dbApi}:${dbVendor}://${hostPort}/${dbName}${query}
     username: ${login}

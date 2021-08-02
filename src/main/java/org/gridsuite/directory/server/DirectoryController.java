@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
@@ -39,8 +40,9 @@ public class DirectoryController {
     @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Create directory")
     @ApiResponses(@ApiResponse(code = 200, message = "The created directory"))
-    public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createRootDirectory(rootDirectoryAttributes, null));
+    public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes,
+                                                                       @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createRootDirectory(rootDirectoryAttributes, null, userId));
     }
 
     @PostMapping(value = "/directories/{directoryUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -97,6 +99,31 @@ public class DirectoryController {
     public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
+    }
+
+    /* handle STUDY objects */
+    @PostMapping(value = "/directories/studies/{studyName}/cases/{caseUuid}")
+    @ApiOperation(value = "create a study from an existing case")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Study creation request delegated to study server")})
+    public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
+                                                                  @PathVariable("caseUuid") UUID caseUuid,
+                                                                  @RequestParam("description") String description,
+                                                                  @RequestParam("isPrivate") Boolean isPrivate,
+                                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                                  @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.createStudy(studyName, caseUuid, description, userId, isPrivate, parentDirectoryUuid));
+    }
+
+    @PostMapping(value = "/directories/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ApiOperation(value = "create a study and import the case")
+    @ApiResponses(value = {@ApiResponse(code = 200, message = "Study creation request delegated to study server")})
+    public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
+                                                  @RequestPart("caseFile") FilePart caseFile,
+                                                  @RequestParam("description") String description,
+                                                  @RequestParam("isPrivate") Boolean isPrivate,
+                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                  @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, parentDirectoryUuid));
     }
 
 }
