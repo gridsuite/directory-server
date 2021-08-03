@@ -133,8 +133,8 @@ class DirectoryService {
     }
 
     /* methods */
-    public Mono<ElementAttributes> createElementAndEmitNotification(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
-        return createElement(elementAttributes, parentDirectoryUuid, userId).doOnSuccess(unused -> emitDirectoryChanged(
+    public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
+        return insertElement(elementAttributes, parentDirectoryUuid).doOnSuccess(unused -> emitDirectoryChanged(
                parentDirectoryUuid == null ? elementAttributes.getElementUuid() : parentDirectoryUuid,
                userId,
                isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
@@ -142,7 +142,7 @@ class DirectoryService {
     }
 
     /* methods */
-    public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
+    private Mono<ElementAttributes> insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
         return Mono.fromCallable(() -> toElementAttributes(directoryElementRepository.save(new DirectoryElementEntity(
                 elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
                 parentDirectoryUuid,
@@ -152,10 +152,10 @@ class DirectoryService {
                 elementAttributes.getOwner()))));
     }
 
-    public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, UUID directoryUuid, String userId) {
+    public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
         ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY,
                 rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner());
-        return createElement(elementAttributes, directoryUuid, userId).doOnSuccess(element ->
+        return insertElement(elementAttributes, null).doOnSuccess(element ->
                 emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true));
     }
 
@@ -299,7 +299,7 @@ class DirectoryService {
 
         return webClient.post()
                 .uri(studyServerBaseUri + path)
-                .header("userId", userId)
+                .header(HEADER_USER_ID, userId)
                 .body(BodyInserters.fromValue(new RenameStudyAttributes(newElementName)))
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(STUDY_NOT_FOUND)))
@@ -322,7 +322,7 @@ class DirectoryService {
         }
         return webClient.post()
                 .uri(studyServerBaseUri + path)
-                .header("userId", userId)
+                .header(HEADER_USER_ID, userId)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(STUDY_NOT_FOUND)))
                 .onStatus(httpStatus -> httpStatus == HttpStatus.FORBIDDEN, clientResponse -> Mono.error(new DirectoryException(NOT_ALLOWED)))
@@ -356,7 +356,7 @@ class DirectoryService {
     public Mono<Void> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
                 new AccessRightsAttributes(isPrivate), userId);
-        return createElement(elementAttributes, parentDirectoryUuid, userId).flatMap(elementAttributes1 -> {
+        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false);
             return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
                     .doOnError(err -> {
@@ -369,7 +369,7 @@ class DirectoryService {
     public Mono<Void> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
                 new AccessRightsAttributes(isPrivate), userId);
-        return createElement(elementAttributes, parentDirectoryUuid, userId).flatMap(elementAttributes1 -> {
+        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             // notification here
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false);
             return insertStudyWithCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseFile)
