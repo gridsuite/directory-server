@@ -6,7 +6,6 @@
  */
 package org.gridsuite.directory.server;
 
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -78,7 +77,11 @@ public class DirectoryController {
 
     @PutMapping(value = "/directories/{elementUuid}/rename/{newElementName}")
     @Operation(summary = "Rename element/directory")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"),
+            @ApiResponse(responseCode = "404", description = "The element was not found"),
+            @ApiResponse(responseCode = "403", description = "Not authorized to rename this element")
+    })
     public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @PathVariable("newElementName") String newElementName,
                                                     @RequestHeader("userId") String userId) {
@@ -87,6 +90,11 @@ public class DirectoryController {
 
     @PutMapping(value = "/directories/{elementUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Modify directory's access rights")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Element/directory was successfully updated"),
+            @ApiResponse(responseCode = "404", description = "The element was not found"),
+            @ApiResponse(responseCode = "403", description = "Not authorized to update this element access rights")
+    })
     public ResponseEntity<Mono<Void>> setAccessRights(@PathVariable("elementUuid") UUID elementUuid,
                                                       @RequestBody boolean isPrivate,
                                                       @RequestHeader("userId") String userId) {
