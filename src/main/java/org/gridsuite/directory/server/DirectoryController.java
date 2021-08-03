@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.springframework.http.HttpStatus;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
@@ -43,14 +42,16 @@ public class DirectoryController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The created directory"))
     public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes,
                                                                       @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createRootDirectory(rootDirectoryAttributes, null, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createRootDirectory(rootDirectoryAttributes, userId));
     }
 
     @PostMapping(value = "/directories/{directoryUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The created element"))
-    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid, @RequestBody ElementAttributes elementAttributes) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid));
+    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                                 @RequestBody ElementAttributes elementAttributes,
+                                                                 @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
     }
 
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -78,18 +79,28 @@ public class DirectoryController {
 
     @PutMapping(value = "/directories/{elementUuid}/rename/{newElementName}")
     @Operation(summary = "Rename element/directory")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"))
-    public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") String elementUuid,
-                                              @PathVariable("newElementName") String newElementName) {
-        return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName));
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"),
+            @ApiResponse(responseCode = "404", description = "The element was not found"),
+            @ApiResponse(responseCode = "403", description = "Not authorized to rename this element")
+    })
+    public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") UUID elementUuid,
+                                                    @PathVariable("newElementName") String newElementName,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName, userId));
     }
 
-    @PutMapping(value = "/directories/{directoryUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/directories/{elementUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Modify directory's access rights")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "Directory's access rights were successfully modified"))
-    public ResponseEntity<Mono<Void>> setDirectoryAccessRights(@PathVariable("directoryUuid") UUID directoryUuid,
-                                                         @RequestBody AccessRightsAttributes accessRightsAttributes) {
-        return ResponseEntity.ok().body(service.setDirectoryAccessRights(directoryUuid, accessRightsAttributes));
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Element/directory was successfully updated"),
+            @ApiResponse(responseCode = "404", description = "The element was not found"),
+            @ApiResponse(responseCode = "403", description = "Not authorized to update this element access rights")
+    })
+    public ResponseEntity<Mono<Void>> setAccessRights(@PathVariable("elementUuid") UUID elementUuid,
+                                                      @RequestBody boolean isPrivate,
+                                                      @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.setAccessRights(elementUuid, isPrivate, userId));
     }
 
     @DeleteMapping(value = "/directories/{elementUuid}")
