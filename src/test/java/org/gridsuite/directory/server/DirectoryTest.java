@@ -18,6 +18,7 @@ import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -88,6 +89,14 @@ public class DirectoryTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryTest.class);
 
+    private static final String TEST_FILE = "testCase.xiidm";
+    private static final UUID STUDY_RENAME_UUID = UUID.randomUUID();
+    private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
+    private static final UUID STUDY_RENAME_NOT_FOUND_UUID = UUID.randomUUID();
+    private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
+    private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
+    private static final UUID STUDY_UPDATE_ACCESS_RIGHT_NOT_FOUND_UUID = UUID.randomUUID();
+
     private void cleanDB() {
         directoryElementRepository.deleteAll();
     }
@@ -111,9 +120,27 @@ public class DirectoryTest {
                 String path = Objects.requireNonNull(request.getPath());
                 String userId = request.getHeaders().get("userId");
 
-                if (path.matches("/v1/studies/.*") && request.getMethod().equals("DELETE")) {
+                if (path.matches("/v1/studies/.*") && "DELETE".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/studies/.*") && request.getMethod().equals("POST")) {
+                } else if (path.matches("/v1/studies/" + STUDY_RENAME_UUID + "/rename") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/studies/" + STUDY_RENAME_FORBIDDEN_UUID + "/rename") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(403);
+                } else if (path.matches("/v1/studies/" + STUDY_RENAME_NOT_FOUND_UUID + "/rename") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(404);
+                } else if (path.matches("/v1/studies/" + STUDY_UPDATE_ACCESS_RIGHT_UUID + "/public") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/studies/" + STUDY_UPDATE_ACCESS_RIGHT_UUID + "/private") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/studies/" + STUDY_UPDATE_ACCESS_RIGHT_NOT_FOUND_UUID + "/private") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(404);
+                } else if (path.matches("/v1/studies/" + STUDY_UPDATE_ACCESS_RIGHT_NOT_FOUND_UUID + "/public") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(404);
+                } else if (path.matches("/v1/studies/" + STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID + "/private") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(403);
+                } else if (path.matches("/v1/studies/" + STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID + "/public") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(403);
+                } else if (path.matches("/v1/studies/.*") && "POST".equals(request.getMethod())) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("studyUuid", path.split("=")[3])
                             .setHeader("userId", userId)
@@ -143,28 +170,20 @@ public class DirectoryTest {
                 ",{\"elementUuid\":\"" + uuidAddedStudy + "\",\"elementName\":\"newStudy\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"userId\"}]", "userId");
 
         // Delete the sub-directory newSubDir
-        deleteElement(uuidNewSubDirectory, "userId");
+        deleteElement(uuidNewSubDirectory, uuidNewDirectory, "userId", false, false);
         checkDirectoryContent(uuidNewDirectory, "[{\"elementUuid\":\"" + uuidAddedStudy + "\",\"elementName\":\"newStudy\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"userId\"}]", "userId");
 
         // Delete the sub-element newStudy
-        deleteElement(uuidAddedStudy, "userId");
+        deleteElement(uuidAddedStudy, uuidNewDirectory, "userId", false, false);
         assertDirectoryIsEmpty(uuidNewDirectory, "userId");
 
         // Rename the root directory
-        webTestClient.put().uri("/v1/directories/" + uuidNewDirectory + "/rename/newName")
-                .header("userId", "userId")
-                .exchange()
-                .expectStatus().isOk();
+        renameElement(uuidNewDirectory, uuidNewDirectory, "userId", "newName", true, false);
 
         checkRootDirectoriesList("userId", "[{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newName\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"userId\"}]");
 
         // Change root directory access rights
-        webTestClient.put().uri("/v1/directories/" + uuidNewDirectory + "/rights")
-                .header("userId", "userId")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(true))
-                .exchange()
-                .expectStatus().isOk();
+        updateAccessRights(uuidNewDirectory, uuidNewDirectory, "userId", true, true, true);
 
         checkRootDirectoriesList("userId", "[{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newName\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\"}]");
 
@@ -176,11 +195,12 @@ public class DirectoryTest {
         String uuidNewSubSubDirectory = insertAndCheckSubElement(null, uuidNewSubDirectory, "newSubSubDir", ElementType.DIRECTORY, true, "userId");
         checkDirectoryContent(uuidNewSubDirectory, "[{\"elementUuid\":\"" + uuidNewSubSubDirectory + "\",\"elementName\":\"newSubSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\"}" + "]", "userId");
 
-        deleteElement(uuidNewDirectory, "userId");
+        deleteElement(uuidNewDirectory, uuidNewDirectory, "userId", true, true);
         checkRootDirectoriesList("userId", "[]");
 
         checkElementNotFound(uuidNewSubDirectory, "userId");
         checkElementNotFound(uuidNewSubSubDirectory, "userId");
+        cleanDB();
     }
 
     @Test
@@ -196,8 +216,9 @@ public class DirectoryTest {
         checkRootDirectoriesList("user2", "[{\"elementUuid\":\"" + rootDir1Uuid + "\",\"elementName\":\"rootDir1\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}," +
                 "{\"elementUuid\":\"" + rootDir2Uuid + "\",\"elementName\":\"rootDir2\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"user2\"}]");
         //Cleaning Test
-        deleteElement(rootDir1Uuid, "user1");
-        deleteElement(rootDir2Uuid, "user2");
+        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, false);
+        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, false);
+        cleanDB();
     }
 
     @Test
@@ -212,8 +233,9 @@ public class DirectoryTest {
                 "{\"elementUuid\":\"" + rootDir2Uuid + "\",\"elementName\":\"rootDir2\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"user2\"}]");
         checkRootDirectoriesList("user2", "[{\"elementUuid\":\"" + rootDir2Uuid + "\",\"elementName\":\"rootDir2\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"user2\"}]");
         //Cleaning Test
-        deleteElement(rootDir1Uuid, "user1");
-        deleteElement(rootDir2Uuid, "user2");
+        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true);
+        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, false);
+        cleanDB();
     }
 
     @Test
@@ -227,8 +249,9 @@ public class DirectoryTest {
         checkRootDirectoriesList("user1", "[{\"elementUuid\":\"" + rootDir1Uuid + "\",\"elementName\":\"rootDir1\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"user1\"}]");
         checkRootDirectoriesList("user2", "[{\"elementUuid\":\"" + rootDir2Uuid + "\",\"elementName\":\"rootDir2\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"user2\"}]");
         //Cleaning Test
-        deleteElement(rootDir1Uuid, "user1");
-        deleteElement(rootDir2Uuid, "user2");
+        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true);
+        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, true);
+        cleanDB();
     }
 
     @Test
@@ -248,14 +271,15 @@ public class DirectoryTest {
         // check user2 visible studies
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}," +
                 "{\"elementUuid\":\"" + study2Uuid + "\",\"elementName\":\"study2\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user2\"}]", "user2");
-        deleteElement(study1Uuid, "user1");
+        deleteElement(study1Uuid, rootDirUuid, "user1", false, false);
         checkElementNotFound(study1Uuid, "user1");
 
-        deleteElement(study2Uuid, "user2");
+        deleteElement(study2Uuid, rootDirUuid, "user2", false, false);
         checkElementNotFound(study2Uuid, "user2");
 
-        deleteElement(rootDirUuid, "Doe");
+        deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
         checkElementNotFound(rootDirUuid, "Doe");
+        cleanDB();
     }
 
     @Test
@@ -275,14 +299,15 @@ public class DirectoryTest {
         // check user2 visible studies
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study2Uuid + "\",\"elementName\":\"study2\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user2\"}]", "user2");
 
-        deleteElement(study1Uuid, "user1");
+        deleteElement(study1Uuid, rootDirUuid, "user1", false, false);
         checkElementNotFound(study1Uuid, "user1");
 
-        deleteElement(study2Uuid, "user2");
+        deleteElement(study2Uuid, rootDirUuid, "user2", false, false);
         checkElementNotFound(study2Uuid, "user2");
 
-        deleteElement(rootDirUuid, "Doe");
+        deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
         checkElementNotFound(rootDirUuid, "Doe");
+        cleanDB();
     }
 
     @Test
@@ -301,14 +326,15 @@ public class DirectoryTest {
         // check user2 visible studies
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study2Uuid + "\",\"elementName\":\"study2\",\"type\":\"STUDY\",\"accessRights\":{\"private\":true},\"owner\":\"user2\"}]", "user2");
 
-        deleteElement(study1Uuid, "user1");
+        deleteElement(study1Uuid, rootDirUuid, "user1", false, false);
         checkElementNotFound(study1Uuid, "user1");
 
-        deleteElement(study2Uuid, "user2");
+        deleteElement(study2Uuid, rootDirUuid, "user2", false, false);
         checkElementNotFound(study2Uuid, "user2");
 
-        deleteElement(rootDirUuid, "Doe");
+        deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
         checkElementNotFound(rootDirUuid, "Doe");
+        cleanDB();
     }
 
     @Test
@@ -325,24 +351,14 @@ public class DirectoryTest {
         // Insert a public study in the root directory bu the userId
         String subDirStudyUuid = insertAndCheckSubElement(UUID.randomUUID(),  subDirUuid, "study3",  ElementType.STUDY, true, "userId");
 
-        deleteElement(rootDirUuid, "userId");
+        deleteElement(rootDirUuid, rootDirUuid, "userId", true, true);
 
         checkElementNotFound(rootDirUuid, "userId");
         checkElementNotFound(study1Uuid, "userId");
         checkElementNotFound(study2Uuid, "userId");
         checkElementNotFound(subDirUuid, "userId");
         checkElementNotFound(subDirStudyUuid, "userId");
-    }
-
-    private Set<String> getRequestsDone(int n) {
-        return IntStream.range(0, n).mapToObj(i -> {
-            try {
-                return server.takeRequest(0, TimeUnit.SECONDS).getPath();
-            } catch (InterruptedException e) {
-                LOGGER.error("Error while attempting to get the request done : ", e);
-            }
-            return null;
-        }).collect(Collectors.toSet());
+        cleanDB();
     }
 
     @Test
@@ -359,7 +375,95 @@ public class DirectoryTest {
         cleanDB();
     }
 
-    private static final String TEST_FILE = "testCase.xiidm";
+    @Test
+    public void testRenameStudy() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1");
+
+        renameElement(study1Uuid, rootDirUuid, "user1", "newName1", false, false);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"newName1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+    }
+
+    @Test
+    public void testRenameStudyForbiddenFail() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_FORBIDDEN_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1");
+
+        //the name should not change
+        renameStudyExpectFail(study1Uuid, "user1", "newName1", 403);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+    }
+
+    @Test
+    public void testRenameStudyNotFoundFail() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_NOT_FOUND_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1");
+
+        //the name should not change
+        renameStudyExpectFail(study1Uuid, "user1", "newName1", 404);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+        cleanDB();
+    }
+
+    @Test
+    public void testUpdateStudyAccessRight() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1");
+
+        //set study to private
+        updateAccessRights(study1Uuid, rootDirUuid, "user1", true, false, false);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":true},\"owner\":\"user1\"}" + "]", "user1");
+
+        //set study back to public
+        updateAccessRights(study1Uuid, rootDirUuid, "user1", false, false, false);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "user1");
+    }
+
+    @Test
+    public void testUpdateStudyAccessRightForbiddenFail() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1");
+
+        //the access rights should not change
+        updateStudyAccessRightFail(study1Uuid, "user1", true, 403);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+
+        //the access rights should not change (it's already private anyway)
+        updateStudyAccessRightFail(study1Uuid, "user1", false, 403);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+    }
+
+    @Test
+    public void testUpdateStudyAccessRightNotFoundFail() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_NOT_FOUND_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1");
+
+        //the access rights should not change
+        updateStudyAccessRightFail(study1Uuid, "user1", true, 404);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+
+        //the access rights should not change (it's already private anyway)
+        updateStudyAccessRightFail(study1Uuid, "user1", false, 404);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+    }
 
     @SneakyThrows
     private void createStudy(String userId, String studyName, UUID caseUuid, String description, boolean isPrivate, UUID parentDirectoryUuid) {
@@ -394,6 +498,17 @@ public class DirectoryTest {
         var requests = getRequestsDone(1);
         assertTrue(requests.contains(String.format("/v1/studies/%s/cases/%s?" +
                 "description=%s&isPrivate=%s&studyUuid=%s", studyName, caseUuid, description, isPrivate, studyUuid)));
+    }
+
+    private Set<String> getRequestsDone(int n) {
+        return IntStream.range(0, n).mapToObj(i -> {
+            try {
+                return server.takeRequest(0, TimeUnit.SECONDS).getPath();
+            } catch (InterruptedException e) {
+                LOGGER.error("Error while attempting to get the request done : ", e);
+            }
+            return null;
+        }).collect(Collectors.toSet());
     }
 
     @SneakyThrows
@@ -506,6 +621,78 @@ public class DirectoryTest {
         return uuidSubElement;
     }
 
+    private void renameElement(String elementUuidToRename, String elementUuidHeader, String userId, String newName, boolean isRoot, boolean isPrivate) {
+        webTestClient.put().uri("/v1/directories/" + elementUuidToRename + "/rename/" + newName)
+                .header("userId", userId)
+                .exchange()
+                .expectStatus().isOk();
+
+        // assert that the broker message has been sent a notif for rename
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(elementUuidHeader, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
+        assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+    }
+
+    private void renameStudyExpectFail(String elementUuidToRename, String userId, String newName, int httpCodeExpected) {
+        if (httpCodeExpected == 403) {
+            webTestClient.put().uri("/v1/directories/" + elementUuidToRename + "/rename/" + newName)
+                    .header("userId", userId)
+                    .exchange()
+                    .expectStatus().isForbidden();
+        } else if (httpCodeExpected == 404) {
+            webTestClient.put().uri("/v1/directories/" + elementUuidToRename + "/rename/" + newName)
+                    .header("userId", userId)
+                    .exchange()
+                    .expectStatus().isNotFound();
+        } else {
+            fail("unexpected case");
+        }
+    }
+
+    private void updateAccessRights(String elementUuidToUpdate, String elementUuidHeader, String userId, boolean newIsPrivate, boolean isRoot, boolean isPrivate) throws JsonProcessingException {
+        webTestClient.put().uri("/v1/directories/" + elementUuidToUpdate + "/rights")
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(objectMapper.writeValueAsString(newIsPrivate))
+                .exchange()
+                .expectStatus().isOk();
+
+        // assert that the broker message has been sent a notif for rename
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(elementUuidHeader, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
+        assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+    }
+
+    private void updateStudyAccessRightFail(String elementUuidToUpdate, String userId, boolean newisPrivate, int httpCodeExpected) throws JsonProcessingException {
+        if (httpCodeExpected == 403) {
+            webTestClient.put().uri("/v1/directories/" + elementUuidToUpdate + "/rights")
+                    .header("userId", userId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(objectMapper.writeValueAsString(newisPrivate))
+                    .exchange()
+                    .expectStatus().isForbidden();
+        } else if (httpCodeExpected == 404) {
+            webTestClient.put().uri("/v1/directories/" + elementUuidToUpdate + "/rights")
+                    .header("userId", userId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(objectMapper.writeValueAsString(newisPrivate))
+                    .exchange()
+                    .expectStatus().isNotFound();
+        } else {
+            fail("unexpected case");
+        }
+    }
+
     private void assertDirectoryIsEmpty(String uuidDir, String userId) {
         webTestClient.get()
                 .uri("/v1/directories/" + uuidDir + "/content")
@@ -547,11 +734,27 @@ public class DirectoryTest {
                 .expectStatus().isNotFound();
     }
 
-    private void deleteElement(String elementUuid, String userId) {
+    private void deleteElement(String elementUuidToBeDeleted, String elementUuidHeader, String userId, boolean isRoot, boolean isPrivate) {
         webTestClient.delete()
-                .uri("/v1/directories/" + elementUuid)
+                .uri("/v1/directories/" + elementUuidToBeDeleted)
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isOk();
+
+        // assert that the broker message has been sent a delete
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(elementUuidHeader, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
+        assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+    }
+
+    @After
+    public void tearDown() {
+        cleanDB();
+        assertNull("Should not be any messages", output.receive(1000));
     }
 }

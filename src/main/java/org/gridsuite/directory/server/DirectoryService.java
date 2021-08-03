@@ -28,7 +28,6 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -89,14 +88,18 @@ class DirectoryService {
     @Bean
     public Consumer<Flux<Message<String>>> consumeStudyUpdate() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            UUID studyUuid = UUID.fromString(message.getHeaders().get(HEADER_STUDY_UUID, String.class));
+            String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
             String error = message.getHeaders().get(HEADER_ERROR, String.class);
             String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            UUID parentUuid = getParentUuid(studyUuid);
-            if (error != null) {
-                deleteElement(studyUuid, userId).subscribe();
+            if (studyUuidHeader != null) {
+                UUID studyUuid = UUID.fromString(studyUuidHeader);
+                UUID parentUuid = getParentUuid(studyUuid);
+                if (error != null) {
+                    deleteElement(studyUuid, userId).subscribe();
+                }
+                boolean isPrivate = isPrivateForNotification(parentUuid, isPrivateDirectory(studyUuid));
+                emitDirectoryChanged(parentUuid, userId, error, isPrivate, parentUuid == null);
             }
-            emitDirectoryChanged(parentUuid, userId, error);
             return Mono.empty();
         })
                 .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
@@ -108,32 +111,19 @@ class DirectoryService {
         studyUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
-    private void emitDirectoryChanged(UUID directoryUuid, String userId) {
-        emitDirectoryChanged(directoryUuid, userId, null);
+    private void emitDirectoryChanged(UUID directoryUuid, String userId, boolean isPrivate, boolean isRoot) {
+        emitDirectoryChanged(directoryUuid, userId, null, isPrivate, isRoot);
     }
 
-    private void emitDirectoryChanged(UUID directoryUuid, String userId, String error) {
+    private void emitDirectoryChanged(UUID directoryUuid, String userId, String error, boolean isPrivate, boolean isRoot) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
-                .setHeader(HEADER_IS_PUBLIC_DIRECTORY, isPublicDirectory(directoryUuid))
-                .setHeader(HEADER_IS_ROOT_DIRECTORY, false)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES);
-        if (error != null) {
-            messageBuilder.setHeader(HEADER_ERROR, error);
-        }
-
-        sendUpdateMessage(messageBuilder.build());
-    }
-
-    private void emitRootDirectoriesChanged(UUID directoryUuid, String userId, boolean isPrivate) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
+                .setHeader(HEADER_IS_ROOT_DIRECTORY, isRoot)
                 .setHeader(HEADER_IS_PUBLIC_DIRECTORY, !isPrivate)
-                .setHeader(HEADER_IS_ROOT_DIRECTORY, true)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
-                .build());
+                .setHeader(HEADER_ERROR, error);
+        sendUpdateMessage(messageBuilder.build());
     }
 
     /* converters */
@@ -157,8 +147,7 @@ class DirectoryService {
         ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY,
                 rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner());
         return createElement(elementAttributes, directoryUuid).doOnSuccess(element ->
-                emitRootDirectoriesChanged(element.getElementUuid(), userId, rootDirectoryAttributes.getAccessRights().isPrivate())
-        );
+                emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true));
     }
 
     public Flux<ElementAttributes> listDirectoryContent(UUID directoryUuid, String userId) {
@@ -182,25 +171,44 @@ class DirectoryService {
             }
         }).doOnSuccess(unused -> {
             directoryElementRepository.updateElementName(elementUuid, newElementName);
-            //todo emit
+            directoryElementRepository.findById(elementUuid)
+                    .ifPresent(directoryElementEntity -> {
+                        boolean isPrivate = isPrivateForNotification(directoryElementEntity.getParentId(), directoryElementEntity.isPrivate());
+                        emitDirectoryChanged(
+                                directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(),
+                                userId,
+                                isPrivate,
+                                directoryElementEntity.getParentId() == null
+                        );
+                    });
         });
     }
 
-    public Mono<Void> setAccessRights(UUID elementUuid, boolean isPrivate, String userId) {
+    public Mono<Void> setAccessRights(UUID elementUuid, boolean newIsPrivate, String userId) {
         return getElementInfos(elementUuid).flatMap(elementAttributes -> {
             if (elementAttributes.getType().equals(ElementType.STUDY)) {
-                return setStudyAccessRight(elementUuid, userId, isPrivate);
+                return setStudyAccessRight(elementUuid, userId, newIsPrivate);
             }
             return Mono.empty();
         }).doOnSuccess(unused -> {
-            directoryElementRepository.updateElementAccessRights(elementUuid, isPrivate);
-            //TODO emit
+            directoryElementRepository.updateElementAccessRights(elementUuid, newIsPrivate);
+            directoryElementRepository.findById(elementUuid).ifPresent(directoryElementEntity -> {
+                boolean isPrivate = isPrivateForNotification(directoryElementEntity.getParentId(), directoryElementEntity.isPrivate());
+                emitDirectoryChanged(
+                        directoryElementEntity.getParentId() == null ? directoryElementEntity.getId() : directoryElementEntity.getParentId(),
+                        userId,
+                        isPrivate,
+                        directoryElementEntity.getParentId() == null);
+            });
         });
     }
 
     public Mono<Void> deleteElement(UUID elementUuid, String userId) {
         return getElementInfos(elementUuid).map(elementAttributes -> {
+            UUID parentUuid = getParentUuid(elementUuid);
             deleteObject(elementAttributes, userId);
+            boolean isPrivate = isPrivateForNotification(parentUuid, elementAttributes.getAccessRights().isPrivate());
+            emitDirectoryChanged(parentUuid == null ? elementUuid : parentUuid, userId, isPrivate, parentUuid == null);
             return elementAttributes;
         }).then();
     }
@@ -231,8 +239,16 @@ class DirectoryService {
         return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::getParentId).orElse(null);
     }
 
-    private boolean isPublicDirectory(UUID directoryUuid) {
+    private boolean isPrivateDirectory(UUID directoryUuid) {
         return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::isPrivate).orElseThrow(() -> new DirectoryServerException(directoryUuid + " not found!"));
+    }
+
+    private boolean isPrivateForNotification(UUID parentDirectoryUuid, boolean isCurrentElementPrivate) {
+        if (parentDirectoryUuid == null) {
+            return isCurrentElementPrivate;
+        } else {
+            return isPrivateDirectory(parentDirectoryUuid);
+        }
     }
 
     /* handle STUDY objects */
@@ -266,10 +282,14 @@ class DirectoryService {
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
-  
-  private Mono<Void> renameStudy(UUID studyUuid, String userId, String newElementName) {
+
+    private Mono<Void> renameStudy(UUID studyUuid, String userId, String newElementName) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}/rename")
                 .buildAndExpand(studyUuid)
+                .toUriString();
+
+        return webClient.post()
+                .uri(studyServerBaseUri + path)
                 .header("userId", userId)
                 .body(BodyInserters.fromValue(new RenameStudyAttributes(newElementName)))
                 .retrieve()
@@ -302,10 +322,6 @@ class DirectoryService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    public void setStudyServerBaseUri(String studyServerBaseUri) {
-        this.studyServerBaseUri = studyServerBaseUri;
-    }
-
     private Mono<Void> insertStudyWithCaseFile(UUID studyUuid, String studyName, String description, String userId, Boolean isPrivate, Mono<FilePart> caseFile) {
         return caseFile.flatMap(file -> {
             MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
@@ -332,11 +348,11 @@ class DirectoryService {
         ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
                 new AccessRightsAttributes(isPrivate), userId);
         return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
-            emitDirectoryChanged(parentDirectoryUuid, userId);
+            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false);
             return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
                     .doOnError(err -> {
                         deleteElement(elementAttributes1.getElementUuid(), userId);
-                        emitDirectoryChanged(parentDirectoryUuid, userId);
+                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false);
                     });
         });
     }
@@ -346,11 +362,11 @@ class DirectoryService {
                 new AccessRightsAttributes(isPrivate), userId);
         return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             // notification here
-            emitDirectoryChanged(parentDirectoryUuid, userId);
+            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false);
             return insertStudyWithCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseFile)
                     .doOnError(err -> {
                         deleteElement(elementAttributes1.getElementUuid(), userId).subscribe();
-                        emitDirectoryChanged(parentDirectoryUuid, userId);
+                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false);
                     });
         });
     }
