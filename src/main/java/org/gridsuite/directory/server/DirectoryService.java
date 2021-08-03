@@ -133,10 +133,19 @@ class DirectoryService {
     }
 
     /* methods */
-    public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID directoryUuid) {
+    public Mono<ElementAttributes> createElementAndEmitNotification(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
+        return createElement(elementAttributes, parentDirectoryUuid, userId).doOnSuccess(unused -> emitDirectoryChanged(
+               parentDirectoryUuid == null ? elementAttributes.getElementUuid() : parentDirectoryUuid,
+               userId,
+               isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
+               parentDirectoryUuid == null));
+    }
+
+    /* methods */
+    public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
         return Mono.fromCallable(() -> toElementAttributes(directoryElementRepository.save(new DirectoryElementEntity(
                 elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
-                directoryUuid,
+                parentDirectoryUuid,
                 elementAttributes.getElementName(),
                 elementAttributes.getType().toString(),
                 elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
@@ -146,7 +155,7 @@ class DirectoryService {
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, UUID directoryUuid, String userId) {
         ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY,
                 rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner());
-        return createElement(elementAttributes, directoryUuid).doOnSuccess(element ->
+        return createElement(elementAttributes, directoryUuid, userId).doOnSuccess(element ->
                 emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true));
     }
 
@@ -347,7 +356,7 @@ class DirectoryService {
     public Mono<Void> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
                 new AccessRightsAttributes(isPrivate), userId);
-        return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+        return createElement(elementAttributes, parentDirectoryUuid, userId).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false);
             return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
                     .doOnError(err -> {
@@ -360,7 +369,7 @@ class DirectoryService {
     public Mono<Void> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
                 new AccessRightsAttributes(isPrivate), userId);
-        return createElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+        return createElement(elementAttributes, parentDirectoryUuid, userId).flatMap(elementAttributes1 -> {
             // notification here
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false);
             return insertStudyWithCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseFile)

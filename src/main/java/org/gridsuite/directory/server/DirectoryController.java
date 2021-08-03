@@ -48,8 +48,10 @@ public class DirectoryController {
     @PostMapping(value = "/directories/{directoryUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The created element"))
-    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid, @RequestBody ElementAttributes elementAttributes) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid));
+    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                                 @RequestBody ElementAttributes elementAttributes,
+                                                                 @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElementAndEmitNotification(elementAttributes, directoryUuid, userId));
     }
 
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
