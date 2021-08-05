@@ -249,7 +249,10 @@ class DirectoryService {
     }
 
     private boolean isPrivateDirectory(UUID directoryUuid) {
-        return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::isPrivate).orElseThrow(() -> new DirectoryServerException(directoryUuid + " not found!"));
+        // TODO replace orElse by the commented line (orElseThrow)
+        // Should be done after deleting the notification sent by the study server on delete (!)
+        return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::isPrivate).orElse(false);
+                //.orElseThrow(() -> new DirectoryServerException(directoryUuid + " not found!"));
     }
 
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, boolean isCurrentElementPrivate) {
