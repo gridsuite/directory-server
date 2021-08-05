@@ -483,6 +483,7 @@ public class DirectoryTest {
         assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
         assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
         assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a root directory creation request message
@@ -492,6 +493,7 @@ public class DirectoryTest {
         assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
         assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
         assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
@@ -538,6 +540,7 @@ public class DirectoryTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
         assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a root directory creation request message
@@ -547,6 +550,7 @@ public class DirectoryTest {
         assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
         assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
         assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         // assert that all http requests have been sent to remote services
@@ -594,6 +598,7 @@ public class DirectoryTest {
         assertEquals(uuidNewDirectory, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
         assertEquals(true, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
         assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.ADD_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         return uuidNewDirectory;
@@ -625,6 +630,7 @@ public class DirectoryTest {
         assertEquals(parentDirectoryUUid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
         assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
         assertEquals(!isParentPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         assertElementIsProperlyInserted(uuidSubElement, subElementName, type, isPrivate, userId);
@@ -645,6 +651,7 @@ public class DirectoryTest {
         assertEquals(elementUuidHeader, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
         assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
         assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
     }
 
@@ -680,6 +687,7 @@ public class DirectoryTest {
         assertEquals(elementUuidHeader, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
         assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
         assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
     }
 
@@ -760,6 +768,7 @@ public class DirectoryTest {
         assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
         assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals(isRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
     }
 
     @After
