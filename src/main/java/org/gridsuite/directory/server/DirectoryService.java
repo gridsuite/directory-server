@@ -176,6 +176,9 @@ class DirectoryService {
 
     public Mono<Void> renameElement(UUID elementUuid, String newElementName, String userId) {
         return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+            if (!userId.equals(elementAttributes.getOwner())) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
             if (elementAttributes.getType().equals(ElementType.STUDY)) {
                 return renameStudy(elementUuid, userId, newElementName);
             } else {
