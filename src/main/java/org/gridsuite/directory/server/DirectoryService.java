@@ -199,6 +199,9 @@ class DirectoryService {
 
     public Mono<Void> setAccessRights(UUID elementUuid, boolean newIsPrivate, String userId) {
         return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+            if (!userId.equals(elementAttributes.getOwner())) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
             if (elementAttributes.getType().equals(ElementType.STUDY)) {
                 return setStudyAccessRight(elementUuid, userId, newIsPrivate);
             }
@@ -218,14 +221,17 @@ class DirectoryService {
     }
 
     public Mono<Void> deleteElement(UUID elementUuid, String userId) {
-        return getElementInfos(elementUuid).map(elementAttributes -> {
+        return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+            if (!userId.equals(elementAttributes.getOwner())) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
             UUID parentUuid = getParentUuid(elementUuid);
             deleteObject(elementAttributes, userId);
             boolean isPrivate = isPrivateForNotification(parentUuid, elementAttributes.getAccessRights().isPrivate());
             emitDirectoryChanged(parentUuid == null ? elementUuid : parentUuid, userId, isPrivate, parentUuid == null,
                     parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY);
-            return elementAttributes;
-        }).then();
+            return Mono.empty();
+        });
     }
 
     private void deleteObject(ElementAttributes elementAttributes, String userId) {

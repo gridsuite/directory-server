@@ -449,6 +449,19 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testUpdateStudyAccessRightWithWrongUser() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false);
+
+        //try to update the study1 (of user1) with the user2 -> the access rights should not change because it's not allowed
+        updateStudyAccessRightFail(study1Uuid, "user2", true, 403);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+    }
+
+    @Test
     public void testUpdateStudyAccessRightNotFoundFail() throws Exception {
         checkRootDirectoriesList("Doe", "[]");
         // Insert a public root directory user1
@@ -462,6 +475,19 @@ public class DirectoryTest {
 
         //the access rights should not change (it's already private anyway)
         updateStudyAccessRightFail(study1Uuid, "user1", false, 404);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+    }
+
+    @Test
+    public void testDeleteStudyWithWrongUser() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false);
+
+        //try to delete the study1 (of user1) with the user2 -> the should still be here
+        deleteStudyFail(study1Uuid, "user2", 403);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
     }
 
@@ -769,6 +795,18 @@ public class DirectoryTest {
         assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
         assertEquals(isRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+    }
+
+    private void deleteStudyFail(String elementUuidToBeDeleted, String userId, int httpCodeExpected) {
+        if (httpCodeExpected == 403) {
+            webTestClient.delete()
+                    .uri("/v1/directories/" + elementUuidToBeDeleted)
+                    .header("userId", userId)
+                    .exchange()
+                    .expectStatus().isForbidden();
+        } else {
+            fail("unexpected case");
+        }
     }
 
     @After
