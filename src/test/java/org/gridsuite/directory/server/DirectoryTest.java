@@ -200,7 +200,6 @@ public class DirectoryTest {
 
         checkElementNotFound(uuidNewSubDirectory, "userId");
         checkElementNotFound(uuidNewSubSubDirectory, "userId");
-        cleanDB();
     }
 
     @Test
@@ -218,7 +217,6 @@ public class DirectoryTest {
         //Cleaning Test
         deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, false);
         deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, false);
-        cleanDB();
     }
 
     @Test
@@ -235,7 +233,6 @@ public class DirectoryTest {
         //Cleaning Test
         deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true);
         deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, false);
-        cleanDB();
     }
 
     @Test
@@ -251,7 +248,6 @@ public class DirectoryTest {
         //Cleaning Test
         deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true);
         deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, true);
-        cleanDB();
     }
 
     @Test
@@ -279,7 +275,6 @@ public class DirectoryTest {
 
         deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
         checkElementNotFound(rootDirUuid, "Doe");
-        cleanDB();
     }
 
     @Test
@@ -307,7 +302,6 @@ public class DirectoryTest {
 
         deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
         checkElementNotFound(rootDirUuid, "Doe");
-        cleanDB();
     }
 
     @Test
@@ -334,7 +328,6 @@ public class DirectoryTest {
 
         deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
         checkElementNotFound(rootDirUuid, "Doe");
-        cleanDB();
     }
 
     @Test
@@ -358,21 +351,18 @@ public class DirectoryTest {
         checkElementNotFound(study2Uuid, "userId");
         checkElementNotFound(subDirUuid, "userId");
         checkElementNotFound(subDirStudyUuid, "userId");
-        cleanDB();
     }
 
     @Test
     public void testInsertStudy() throws JsonProcessingException {
         String rootDirectoryUuid = insertAndCheckRootDirectory("newRoot", true, "user3");
         createStudy("user3", "myStudy", UUID.randomUUID(), "description", true, UUID.fromString(rootDirectoryUuid));
-        cleanDB();
     }
 
     @Test
     public void testInsertStudyWithFile() throws JsonProcessingException {
         String rootDirectoryUuid = insertAndCheckRootDirectory("rootDir", true, "user1");
         createStudyWithCaseFile("user1", "myStudy", "description", true, UUID.fromString(rootDirectoryUuid), TEST_FILE);
-        cleanDB();
     }
 
     @Test
@@ -396,7 +386,7 @@ public class DirectoryTest {
         String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_FORBIDDEN_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false);
 
         //the name should not change
-        renameStudyExpectFail(study1Uuid, "user1", "newName1", 403);
+        renameElementExpectFail(study1Uuid, "user1", "newName1", 403);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
     }
 
@@ -409,9 +399,19 @@ public class DirectoryTest {
         String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_NOT_FOUND_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false);
 
         //the name should not change
-        renameStudyExpectFail(study1Uuid, "user1", "newName1", 404);
+        renameElementExpectFail(study1Uuid, "user1", "newName1", 404);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
-        cleanDB();
+    }
+
+    @Test
+    public void testRenameDirectoryNotAllowed() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        //the name should not change
+        renameElementExpectFail(rootDirUuid, "user1", "newName1", 403);
+        checkRootDirectoriesList("Doe", "[{\"elementUuid\":\"" + rootDirUuid + "\",\"elementName\":\"rootDir1\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"Doe\"}" + "]");
     }
 
     @Test
@@ -449,6 +449,19 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testUpdateStudyAccessRightWithWrongUser() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false);
+
+        //try to update the study1 (of user1) with the user2 -> the access rights should not change because it's not allowed
+        updateStudyAccessRightFail(study1Uuid, "user2", true, 403);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+    }
+
+    @Test
     public void testUpdateStudyAccessRightNotFoundFail() throws Exception {
         checkRootDirectoriesList("Doe", "[]");
         // Insert a public root directory user1
@@ -462,6 +475,19 @@ public class DirectoryTest {
 
         //the access rights should not change (it's already private anyway)
         updateStudyAccessRightFail(study1Uuid, "user1", false, 404);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+    }
+
+    @Test
+    public void testDeleteStudyWithWrongUser() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false);
+
+        //try to delete the study1 (of user1) with the user2 -> the should still be here
+        deleteStudyFail(study1Uuid, "user2", 403);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
     }
 
@@ -557,7 +583,6 @@ public class DirectoryTest {
         var requests = getRequestsDone(1);
         assertTrue(requests.contains(String.format("/v1/studies/%s?" +
                 "description=%s&isPrivate=%s&studyUuid=%s", studyName, description, isPrivate, studyUuid)));
-        cleanDB();
     }
 
     private void checkRootDirectoriesList(String userId, String expected) {
@@ -655,7 +680,7 @@ public class DirectoryTest {
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
     }
 
-    private void renameStudyExpectFail(String elementUuidToRename, String userId, String newName, int httpCodeExpected) {
+    private void renameElementExpectFail(String elementUuidToRename, String userId, String newName, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
             webTestClient.put().uri("/v1/directories/" + elementUuidToRename + "/rename/" + newName)
                     .header("userId", userId)
@@ -769,6 +794,18 @@ public class DirectoryTest {
         assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
         assertEquals(isRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+    }
+
+    private void deleteStudyFail(String elementUuidToBeDeleted, String userId, int httpCodeExpected) {
+        if (httpCodeExpected == 403) {
+            webTestClient.delete()
+                    .uri("/v1/directories/" + elementUuidToBeDeleted)
+                    .header("userId", userId)
+                    .exchange()
+                    .expectStatus().isForbidden();
+        } else {
+            fail("unexpected case");
+        }
     }
 
     @After
