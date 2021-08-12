@@ -212,7 +212,8 @@ class DirectoryService {
         }).doOnSuccess(unused -> {
             directoryElementRepository.updateElementAccessRights(elementUuid, newIsPrivate);
             directoryElementRepository.findById(elementUuid).ifPresent(directoryElementEntity -> {
-                boolean isPrivate = isPrivateForNotification(directoryElementEntity.getParentId(), directoryElementEntity.isPrivate());
+                boolean isPrivate = isPrivateForNotification(directoryElementEntity.getParentId(), false);
+                // second parameter should be always false because when we pass a root folder from public -> private we should notify all clients
                 emitDirectoryChanged(
                         directoryElementEntity.getParentId() == null ? directoryElementEntity.getId() : directoryElementEntity.getParentId(),
                         userId,

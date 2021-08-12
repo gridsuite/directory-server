@@ -182,8 +182,9 @@ public class DirectoryTest {
 
         checkRootDirectoriesList("userId", "[{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newName\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":false},\"owner\":\"userId\"}]");
 
-        // Change root directory access rights
-        updateAccessRights(uuidNewDirectory, uuidNewDirectory, "userId", true, true, true);
+        // Change root directory access rights public => private
+        // change access of a root directory from public to private => we should receive a notification with isPrivate= false to notify all clients
+        updateAccessRights(uuidNewDirectory, uuidNewDirectory, "userId", true, true, false);
 
         checkRootDirectoriesList("userId", "[{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newName\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\"}]");
 
