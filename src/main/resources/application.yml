@@ -51,7 +51,8 @@ spring:
               create-target: src/main/resources/directory.sql
               create-source: metadata
 
-dbName: directory
+dbName: gridsuite
+query: ?currentSchema=directory
 dbApi: jdbc
 
 backing-services:
