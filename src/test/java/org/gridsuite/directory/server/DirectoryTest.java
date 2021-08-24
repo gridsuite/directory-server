@@ -76,6 +76,9 @@ public class DirectoryTest {
     @Autowired
     private DirectoryService directoryService;
 
+    @Autowired
+    private ContingencyListService contingencyListService;
+
     private MockWebServer server;
 
     @Autowired
@@ -96,6 +99,7 @@ public class DirectoryTest {
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_NOT_FOUND_UUID = UUID.randomUUID();
+    private static final UUID CONTINGENCY_LIST_UUID = UUID.randomUUID();
 
     private void cleanDB() {
         directoryElementRepository.deleteAll();
@@ -112,6 +116,7 @@ public class DirectoryTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         directoryService.setStudyServerBaseUri(baseUrl);
+        contingencyListService.setActionsServerBaseUri(baseUrl);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -145,6 +150,8 @@ public class DirectoryTest {
                             .setHeader("studyUuid", path.split("=")[3])
                             .setHeader("userId", userId)
                             .build());
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_UUID + "/rename") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 }
                 return new MockResponse().setResponseCode(500);
@@ -491,8 +498,35 @@ public class DirectoryTest {
         String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false);
 
         //try to delete the study1 (of user1) with the user2 -> the should still be here
+<<<<<<< HEAD
         deleteStudyFail(study1Uuid, "user2", 403);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
+=======
+        deleteElementFail(study1Uuid, "user2", 403);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+>>>>>>> 82a28c7... Manage contingencies (in progress)
+    }
+
+    @Test
+    public void testContingencyList() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a public contingency list in the root directory by the user1
+        String contingencyListUuid = insertAndCheckSubElement(CONTINGENCY_LIST_UUID, rootDirUuid, "contingencyList1", ElementType.SCRIPT_CONTINGENCY_LIST, false, "user1", false);
+
+        // try to delete the contingency list (of user1) with the user2 -> the list should still be here
+        deleteElementFail(contingencyListUuid, "user2", 403);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + contingencyListUuid + "\",\"elementName\":\"contingencyList1\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+
+        renameElement(contingencyListUuid, rootDirUuid, "user1", "newContingencyListName", false, false);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + contingencyListUuid + "\",\"elementName\":\"newContingencyListName\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+
+        // delete the contingency list -> the list is not there anymore
+        deleteElement(contingencyListUuid, rootDirUuid, "user1", false, false);
+        checkElementNotFound(contingencyListUuid, "user1");
     }
 
     @SneakyThrows
@@ -800,7 +834,7 @@ public class DirectoryTest {
         assertEquals(isRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
     }
 
-    private void deleteStudyFail(String elementUuidToBeDeleted, String userId, int httpCodeExpected) {
+    private void deleteElementFail(String elementUuidToBeDeleted, String userId, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
             webTestClient.delete()
                     .uri("/v1/directories/" + elementUuidToBeDeleted)

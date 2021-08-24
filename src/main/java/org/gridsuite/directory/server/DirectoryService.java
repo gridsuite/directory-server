@@ -8,7 +8,7 @@ package org.gridsuite.directory.server;
 
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.RenameStudyAttributes;
+import org.gridsuite.directory.server.dto.RenameElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -48,6 +48,7 @@ import static org.gridsuite.directory.server.DirectoryException.Type.STUDY_NOT_F
 class DirectoryService {
     private static final String DELIMITER = "/";
     private static final String STUDY_SERVER_API_VERSION = "v1";
+    private static final String ACTIONS_SERVER_API_VERSION = "v1";
     private static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
     private final WebClient webClient;
@@ -72,17 +73,21 @@ class DirectoryService {
 
     private final StreamBridge studyUpdatePublisher;
 
+    private ContingencyListService actionsService;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
 
     public DirectoryService(
             DirectoryElementRepository directoryElementRepository,
             @Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri,
-            WebClient.Builder webClientBuilder, StreamBridge studyUpdatePublisher) {
+            WebClient.Builder webClientBuilder, StreamBridge studyUpdatePublisher,
+            ContingencyListService actionsService) {
         this.directoryElementRepository = directoryElementRepository;
         this.studyServerBaseUri = studyServerBaseUri;
 
         this.webClient = webClientBuilder.build();
         this.studyUpdatePublisher = studyUpdatePublisher;
+        this.actionsService = actionsService;
     }
 
     /* notifications */
@@ -138,7 +143,7 @@ class DirectoryService {
                 new AccessRightsAttributes(
                     entity.isPrivate()),
                     entity.getOwner(),
-                    entity.getType().equals(ElementType.STUDY.name()) ? 0 : directoryElementRepository.findDirectoryContentByUserId(entity.getId(), entity.getOwner()).stream().filter(e -> e.getType().equals(ElementType.DIRECTORY.name())).count()
+                    !entity.getType().equals(ElementType.DIRECTORY.name()) ? 0 : directoryElementRepository.findDirectoryContentByUserId(entity.getId(), entity.getOwner()).stream().filter(e -> e.getType().equals(ElementType.DIRECTORY.name())).count()
         );
     }
 
@@ -189,6 +194,9 @@ class DirectoryService {
             }
             if (elementAttributes.getType().equals(ElementType.STUDY)) {
                 return renameStudy(elementUuid, userId, newElementName);
+            } else if (elementAttributes.getType().equals(ElementType.SCRIPT_CONTINGENCY_LIST)
+                       || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
+                return actionsService.renameContingencyList(elementUuid, newElementName);
             } else {
                 return Mono.empty();
             }
@@ -249,6 +257,9 @@ class DirectoryService {
     private void deleteObject(ElementAttributes elementAttributes, String userId) {
         if (elementAttributes.getType().equals(ElementType.STUDY)) {
             deleteFromStudyServer(elementAttributes.getElementUuid(), userId).subscribe();
+        } else if (elementAttributes.getType().equals(ElementType.SCRIPT_CONTINGENCY_LIST)
+                || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
+            actionsService.deleteContingencyList(elementAttributes.getElementUuid()).subscribe();
         } else {
             // directory
             deleteSubElements(elementAttributes.getElementUuid(), userId);
@@ -327,7 +338,7 @@ class DirectoryService {
         return webClient.post()
                 .uri(studyServerBaseUri + path)
                 .header(HEADER_USER_ID, userId)
-                .body(BodyInserters.fromValue(new RenameStudyAttributes(newElementName)))
+                .body(BodyInserters.fromValue(new RenameElementAttributes(newElementName)))
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(STUDY_NOT_FOUND)))
                 .onStatus(httpStatus -> httpStatus == HttpStatus.FORBIDDEN, clientResponse -> Mono.error(new DirectoryException(NOT_ALLOWED)))
@@ -404,6 +415,53 @@ class DirectoryService {
                         deleteElement(elementAttributes1.getElementUuid(), userId).subscribe();
                         emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
                     });
+        });
+    }
+
+    /* handle CONTINGENCY LISTS objects */
+
+    public Mono<Void> createScriptContingencyList(String listName, String content, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+        ElementAttributes elementAttributes = new ElementAttributes(null, listName, ElementType.SCRIPT_CONTINGENCY_LIST,
+            new AccessRightsAttributes(isPrivate), userId, 0);
+        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+            return actionsService.insertScriptContingencyList(elementAttributes1.getElementUuid(), content, description)
+                .doOnError(err -> {
+                    deleteElement(elementAttributes1.getElementUuid(), userId);
+                    emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+                });
+        });
+    }
+
+    public Mono<Void> createFiltersContingencyList(String listName, String content, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+        ElementAttributes elementAttributes = new ElementAttributes(null, listName, ElementType.FILTERS_CONTINGENCY_LIST,
+            new AccessRightsAttributes(isPrivate), userId, 0);
+        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+            return actionsService.insertFiltersContingencyList(elementAttributes1.getElementUuid(), content, description)
+                .doOnError(err -> {
+                    deleteElement(elementAttributes1.getElementUuid(), userId);
+                    emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+                });
+        });
+    }
+
+    public Mono<Void> newScriptFromFiltersContingencyList(UUID id, String scriptName, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+        return getElementInfos(id).flatMap(elementAttributes -> {
+            if (elementAttributes.getType() != ElementType.FILTERS_CONTINGENCY_LIST) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
+            ElementAttributes newElementAttributes = new ElementAttributes(null, scriptName,
+                ElementType.SCRIPT_CONTINGENCY_LIST, new AccessRightsAttributes(isPrivate), userId, 0);
+
+            return insertElement(newElementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+                emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+                return actionsService.newScriptFromFiltersContingencyList(id, scriptName, elementAttributes1.getElementUuid())
+                    .doOnError(err -> {
+                        deleteElement(elementAttributes1.getElementUuid(), userId);
+                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+                    });
+            });
         });
     }
 }

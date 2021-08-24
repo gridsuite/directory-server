@@ -18,6 +18,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RenameStudyAttributes {
-    private String newStudyName;
+public class RenameElementAttributes {
+    private String newElementName;
 }

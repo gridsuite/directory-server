@@ -15,6 +15,7 @@ class DirectoryException extends RuntimeException {
 
     public enum Type {
         STUDY_NOT_FOUND,
+        CONTINGENCY_LIST_NOT_FOUND,
         NOT_ALLOWED;
     }
 

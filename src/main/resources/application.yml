@@ -57,3 +57,5 @@ dbApi: jdbc
 backing-services:
   study-server:
     base-uri: http://localhost:5001
+  actions-server:
+    base-uri: http://localhost:5022
