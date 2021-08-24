@@ -137,7 +137,7 @@ public class DirectoryController {
     }
 
     /* handle CONTINGENCY_LIST objects */
-    @PostMapping(value = "/directories/script-contingency-lists/{listName}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/directories/script-contingency-lists/{listName}")
     @Operation(summary = "create a script contingency list")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Script contingency list has been created")})
     public ResponseEntity<Mono<Void>> createScriptContingencyList(@PathVariable("listName") String listName,
@@ -149,7 +149,7 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.createScriptContingencyList(listName, content, description, userId, isPrivate, parentDirectoryUuid));
     }
 
-    @PostMapping(value = "/directories/filters-contingency-lists/{listName}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/directories/filters-contingency-lists/{listName}")
     @Operation(summary = "create a filters contingency list")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Script contingency list has been created")})
     public ResponseEntity<Mono<Void>> createFiltersContingencyList(@PathVariable("listName") String listName,

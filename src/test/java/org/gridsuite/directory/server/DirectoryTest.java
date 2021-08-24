@@ -153,8 +153,12 @@ public class DirectoryTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/contingency-lists/" + CONTINGENCY_LIST_UUID + "/rename") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/script-contingency-lists.*") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/filters-contingency-lists.*") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
                 }
-                return new MockResponse().setResponseCode(500);
+                return  new MockResponse().setResponseCode(500);
             }
         };
         server.setDispatcher(dispatcher);
@@ -514,7 +518,7 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a public contingency list in the root directory by the user1
+        // Insert a public script contingency list in the root directory by the user1
         String contingencyListUuid = insertAndCheckSubElement(CONTINGENCY_LIST_UUID, rootDirUuid, "contingencyList1", ElementType.SCRIPT_CONTINGENCY_LIST, false, "user1", false);
 
         // try to delete the contingency list (of user1) with the user2 -> the list should still be here
@@ -523,10 +527,29 @@ public class DirectoryTest {
 
         renameElement(contingencyListUuid, rootDirUuid, "user1", "newContingencyListName", false, false);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + contingencyListUuid + "\",\"elementName\":\"newContingencyListName\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\"}" + "]", "userId");
+        var requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/contingency-lists/" + contingencyListUuid + "/rename")));
 
         // delete the contingency list -> the list is not there anymore
         deleteElement(contingencyListUuid, rootDirUuid, "user1", false, false);
         checkElementNotFound(contingencyListUuid, "user1");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/contingency-lists/" + contingencyListUuid)));
+
+        UUID newScriptListUuid = createContingencyList(ElementType.SCRIPT_CONTINGENCY_LIST, "user3", "scriptList1", "contentScriptList1", "description", false, UUID.fromString(rootDirUuid));
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + newScriptListUuid + "\",\"elementName\":\"scriptList1\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user3\"}]", "userId");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/script-contingency-lists?id=%s", newScriptListUuid)));
+
+        deleteElement(newScriptListUuid.toString(), rootDirUuid, "user3", false, false);
+        checkElementNotFound(newScriptListUuid.toString(), "user3");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/contingency-lists/" + newScriptListUuid)));
+
+        UUID newFiltersListUuid = createContingencyList(ElementType.FILTERS_CONTINGENCY_LIST, "user5", "filterList1", "contentFilterList1", "description", false, UUID.fromString(rootDirUuid));
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + newFiltersListUuid + "\",\"elementName\":\"filterList1\",\"type\":\"FILTERS_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user5\"}]", "userId");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/filters-contingency-lists?id=%s", newFiltersListUuid)));
     }
 
     @SneakyThrows
@@ -621,6 +644,32 @@ public class DirectoryTest {
         var requests = getRequestsDone(1);
         assertTrue(requests.contains(String.format("/v1/studies/%s?" +
                 "description=%s&isPrivate=%s&studyUuid=%s", studyName, description, isPrivate, studyUuid)));
+    }
+
+    @SneakyThrows
+    private UUID createContingencyList(ElementType eltType, String userId, String listName, String content, String description, boolean isPrivate, UUID parentDirectoryUuid) {
+        webTestClient.post()
+            .uri("/v1/directories/" +
+                    (eltType == ElementType.SCRIPT_CONTINGENCY_LIST ? "script" : "filters") + "-contingency-lists/{listName}?description={description}&isPrivate={isPrivate}&parentDirectoryUuid={parentDirectoryUuid}",
+                listName, description, isPrivate, parentDirectoryUuid)
+            .header("userId", userId)
+            .body(BodyInserters.fromValue(content))
+            .exchange()
+            .expectStatus().isOk();
+
+        UUID listUuid = directoryElementRepository.findAll().get(1).getId();
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        return listUuid;
     }
 
     private void checkRootDirectoriesList(String userId, String expected) {
