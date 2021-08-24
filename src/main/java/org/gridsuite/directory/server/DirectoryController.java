@@ -171,4 +171,13 @@ public class DirectoryController {
                                                                           @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.newScriptFromFiltersContingencyList(id, scriptName, userId, isPrivate, parentDirectoryUuid));
     }
+
+    @PostMapping(value = "/directories/filters-contingency-lists/{id}/replace-with-script")
+    @Operation(summary = "Replace a filters contingency list with a script contingency list")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The filters contingency list has been replaced successfully")})
+    public ResponseEntity<Mono<Void>> replaceFilterContingencyListWithScript(@PathVariable("id") UUID id,
+                                                                          @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                                          @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.replaceFilterContingencyListWithScript(id, userId, parentDirectoryUuid));
+    }
 }

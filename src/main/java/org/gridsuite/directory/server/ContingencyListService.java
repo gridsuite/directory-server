@@ -110,4 +110,16 @@ public class ContingencyListService {
             .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
+    public Mono<Void> replaceFilterContingencyListWithScript(UUID id) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/filters-contingency-lists/{id}/replace-with-script")
+            .buildAndExpand(id)
+            .toUriString();
+
+        return webClient.post()
+            .uri(actionsServerBaseUri + path)
+            .retrieve()
+            .bodyToMono(Void.class)
+            .publishOn(Schedulers.boundedElastic())
+            .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
 }

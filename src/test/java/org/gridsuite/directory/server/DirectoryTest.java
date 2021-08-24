@@ -155,6 +155,10 @@ public class DirectoryTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/script-contingency-lists.*") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/filters-contingency-lists.*/new-script/.*") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/filters-contingency-lists.*/replace-with-script") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/filters-contingency-lists.*") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 }
@@ -550,6 +554,24 @@ public class DirectoryTest {
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + newFiltersListUuid + "\",\"elementName\":\"filterList1\",\"type\":\"FILTERS_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user5\"}]", "userId");
         requests = getRequestsDone(1);
         assertTrue(requests.contains(String.format("/v1/filters-contingency-lists?id=%s", newFiltersListUuid)));
+
+        // create new script from filters
+        UUID newScriptFromFiltersListUuid = newScriptFromFiltersContingencyList("user5", newFiltersListUuid.toString(), "newScriptFromFilters", false, UUID.fromString(rootDirUuid));
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + newFiltersListUuid + "\",\"elementName\":\"filterList1\",\"type\":\"FILTERS_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user5\"},{\"elementUuid\":\"" + newScriptFromFiltersListUuid + "\",\"elementName\":\"newScriptFromFilters\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user5\"}]", "userId");
+
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/filters-contingency-lists/%s/new-script/newScriptFromFilters?newId=%s", newFiltersListUuid, newScriptFromFiltersListUuid)));
+
+        deleteElement(newScriptFromFiltersListUuid.toString(), rootDirUuid, "user5", false, false);
+        checkElementNotFound(newScriptFromFiltersListUuid.toString(), "user5");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/contingency-lists/" + newScriptFromFiltersListUuid)));
+
+        // replace filters with script
+        UUID replaceWithScriptFromFiltersListUuid = replaceFiltersWithScriptContingencyList("user5", newFiltersListUuid.toString(), UUID.fromString(rootDirUuid));
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + replaceWithScriptFromFiltersListUuid + "\",\"elementName\":\"filterList1\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user5\"}]", "userId");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/filters-contingency-lists/%s/replace-with-script", newFiltersListUuid)));
     }
 
     @SneakyThrows
@@ -654,6 +676,54 @@ public class DirectoryTest {
                 listName, description, isPrivate, parentDirectoryUuid)
             .header("userId", userId)
             .body(BodyInserters.fromValue(content))
+            .exchange()
+            .expectStatus().isOk();
+
+        UUID listUuid = directoryElementRepository.findAll().get(1).getId();
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        return listUuid;
+    }
+
+    @SneakyThrows
+    private UUID newScriptFromFiltersContingencyList(String userId, String id, String scriptName, boolean isPrivate, UUID parentDirectoryUuid) {
+        webTestClient.post()
+            .uri("/v1/directories/filters-contingency-lists/{id}/new-script/{scriptName}?isPrivate={isPrivate}&parentDirectoryUuid={parentDirectoryUuid}",
+                id, scriptName, isPrivate, parentDirectoryUuid)
+            .header("userId", userId)
+            .exchange()
+            .expectStatus().isOk();
+
+        UUID listUuid = directoryElementRepository.findAll().stream().filter(elt -> ElementType.valueOf(elt.getType()) != ElementType.DIRECTORY && !elt.getId().equals(UUID.fromString(id))).collect(Collectors.toList()).get(0).getId();
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        return listUuid;
+    }
+
+    @SneakyThrows
+    private UUID replaceFiltersWithScriptContingencyList(String userId, String id, UUID parentDirectoryUuid) {
+        webTestClient.post()
+            .uri("/v1/directories/filters-contingency-lists/{id}/replace-with-script?parentDirectoryUuid={parentDirectoryUuid}",
+                id, parentDirectoryUuid)
+            .header("userId", userId)
             .exchange()
             .expectStatus().isOk();
 

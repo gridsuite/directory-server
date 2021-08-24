@@ -464,4 +464,21 @@ class DirectoryService {
             });
         });
     }
+
+    public Mono<Void> replaceFilterContingencyListWithScript(UUID id, String userId, UUID parentDirectoryUuid) {
+        return getElementInfos(id).flatMap(elementAttributes -> {
+            if (!userId.equals(elementAttributes.getOwner())) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
+            if (elementAttributes.getType() != ElementType.FILTERS_CONTINGENCY_LIST) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
+            return actionsService.replaceFilterContingencyListWithScript(id)
+                .doOnSuccess(unused -> {
+                    directoryElementRepository.updateElementType(id, ElementType.SCRIPT_CONTINGENCY_LIST.name());
+                    emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false,
+                        NotificationType.UPDATE_DIRECTORY);
+                });
+        });
+    }
 }
