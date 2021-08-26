@@ -420,12 +420,12 @@ class DirectoryService {
 
     /* handle CONTINGENCY LISTS objects */
 
-    public Mono<Void> createScriptContingencyList(String listName, String content, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+    public Mono<Void> createScriptContingencyList(String listName, String content, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, listName, ElementType.SCRIPT_CONTINGENCY_LIST,
             new AccessRightsAttributes(isPrivate), userId, 0);
         return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-            return actionsService.insertScriptContingencyList(elementAttributes1.getElementUuid(), content, description)
+            return actionsService.insertScriptContingencyList(elementAttributes1.getElementUuid(), content)
                 .doOnError(err -> {
                     deleteElement(elementAttributes1.getElementUuid(), userId);
                     emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
@@ -433,12 +433,12 @@ class DirectoryService {
         });
     }
 
-    public Mono<Void> createFiltersContingencyList(String listName, String content, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+    public Mono<Void> createFiltersContingencyList(String listName, String content, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, listName, ElementType.FILTERS_CONTINGENCY_LIST,
             new AccessRightsAttributes(isPrivate), userId, 0);
         return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-            return actionsService.insertFiltersContingencyList(elementAttributes1.getElementUuid(), content, description)
+            return actionsService.insertFiltersContingencyList(elementAttributes1.getElementUuid(), content)
                 .doOnError(err -> {
                     deleteElement(elementAttributes1.getElementUuid(), userId);
                     emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);

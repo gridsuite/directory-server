@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -69,13 +70,14 @@ public class ContingencyListService {
             .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    public Mono<Void> insertScriptContingencyList(UUID id, String content, String description) {
+    public Mono<Void> insertScriptContingencyList(UUID id, String content) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/script-contingency-lists?id={id}")
             .buildAndExpand(id)
             .toUriString();
 
         return webClient.post()
             .uri(actionsServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(content))
             .retrieve()
             .bodyToMono(Void.class)
@@ -83,13 +85,14 @@ public class ContingencyListService {
             .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    public Mono<Void> insertFiltersContingencyList(UUID id, String content, String description) {
+    public Mono<Void> insertFiltersContingencyList(UUID id, String content) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/filters-contingency-lists?id={id}")
             .buildAndExpand(id)
             .toUriString();
 
         return webClient.post()
             .uri(actionsServerBaseUri + path)
+            .contentType(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromValue(content))
             .retrieve()
             .bodyToMono(Void.class)
