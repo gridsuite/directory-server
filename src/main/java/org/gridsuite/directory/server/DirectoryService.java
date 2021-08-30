@@ -446,14 +446,13 @@ class DirectoryService {
         });
     }
 
-    public Mono<Void> newScriptFromFiltersContingencyList(UUID id, String scriptName, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+    public Mono<Void> newScriptFromFiltersContingencyList(UUID id, String scriptName, String userId, UUID parentDirectoryUuid) {
         return getElementInfos(id).flatMap(elementAttributes -> {
             if (elementAttributes.getType() != ElementType.FILTERS_CONTINGENCY_LIST) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }
             ElementAttributes newElementAttributes = new ElementAttributes(null, scriptName,
-                ElementType.SCRIPT_CONTINGENCY_LIST, new AccessRightsAttributes(isPrivate), userId, 0);
-
+                ElementType.SCRIPT_CONTINGENCY_LIST, new AccessRightsAttributes(elementAttributes.getAccessRights().isPrivate()), userId, 0);
             return insertElement(newElementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
                 emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
                 return actionsService.newScriptFromFiltersContingencyList(id, scriptName, elementAttributes1.getElementUuid())

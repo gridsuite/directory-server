@@ -164,10 +164,9 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The script contingency list have been created successfully")})
     public ResponseEntity<Mono<Void>> newScriptFromFiltersContingencyList(@PathVariable("id") UUID id,
                                                                           @PathVariable("scriptName") String scriptName,
-                                                                          @RequestParam("isPrivate") Boolean isPrivate,
                                                                           @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
                                                                           @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.newScriptFromFiltersContingencyList(id, scriptName, userId, isPrivate, parentDirectoryUuid));
+        return ResponseEntity.ok().body(service.newScriptFromFiltersContingencyList(id, scriptName, userId, parentDirectoryUuid));
     }
 
     @PostMapping(value = "/directories/filters-contingency-lists/{id}/replace-with-script")
