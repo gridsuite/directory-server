@@ -150,7 +150,7 @@ public class DirectoryController {
 
     @PostMapping(value = "/directories/filters-contingency-lists/{listName}")
     @Operation(summary = "create a filters contingency list")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Script contingency list has been created")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Filters contingency list has been created")})
     public ResponseEntity<Mono<Void>> createFiltersContingencyList(@PathVariable("listName") String listName,
                                                                   @RequestBody(required = false) String content,
                                                                   @RequestParam("isPrivate") Boolean isPrivate,
