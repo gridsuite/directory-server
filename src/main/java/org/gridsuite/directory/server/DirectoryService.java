@@ -131,7 +131,15 @@ class DirectoryService {
     /* converters */
 
     private ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
-        return new ElementAttributes(entity.getId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner(), directoryElementRepository.findDirectoryContentByUserId(entity.getId(), entity.getOwner()).stream().filter(e -> e.getType().equals(ElementType.DIRECTORY.name())).count());
+        return new ElementAttributes(
+                entity.getId(),
+                entity.getName(),
+                ElementType.valueOf(entity.getType()),
+                new AccessRightsAttributes(
+                    entity.isPrivate()),
+                    entity.getOwner(),
+                    entity.getType().equals(ElementType.STUDY.name()) ? 0 : directoryElementRepository.findDirectoryContentByUserId(entity.getId(), entity.getOwner()).stream().filter(e -> e.getType().equals(ElementType.DIRECTORY.name())).count()
+        );
     }
 
     /* methods */
