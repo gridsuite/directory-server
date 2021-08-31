@@ -31,4 +31,6 @@ public class ElementAttributes {
     private AccessRightsAttributes accessRights;
 
     private String owner;
+
+    private long subdirectoriesNumber;
 }
