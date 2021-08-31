@@ -1,8 +1,6 @@
 package org.gridsuite.directory.server;
 
 import org.gridsuite.directory.server.dto.RenameElementAttributes;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -21,7 +19,6 @@ import static org.gridsuite.directory.server.DirectoryException.Type.CONTINGENCY
 
 @Service
 public class ContingencyListService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ContingencyListService.class);
     private static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
     private static final String ACTIONS_API_VERSION = "v1";

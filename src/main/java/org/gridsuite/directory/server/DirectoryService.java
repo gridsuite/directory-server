@@ -48,7 +48,6 @@ import static org.gridsuite.directory.server.DirectoryException.Type.STUDY_NOT_F
 class DirectoryService {
     private static final String DELIMITER = "/";
     private static final String STUDY_SERVER_API_VERSION = "v1";
-    private static final String ACTIONS_SERVER_API_VERSION = "v1";
     private static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
     private final WebClient webClient;
