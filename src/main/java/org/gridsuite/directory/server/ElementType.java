@@ -12,5 +12,7 @@ package org.gridsuite.directory.server;
  */
 public enum ElementType {
     DIRECTORY,
-    STUDY
+    STUDY,
+    SCRIPT_CONTINGENCY_LIST,
+    FILTERS_CONTINGENCY_LIST
 }

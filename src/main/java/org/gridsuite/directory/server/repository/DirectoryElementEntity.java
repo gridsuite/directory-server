@@ -33,7 +33,7 @@ public class DirectoryElementEntity {
     @Column(name = "name", length = 80)
     private String name;
 
-    @Column(name = "type", length = 20, nullable = false)
+    @Column(name = "type", length = 30, nullable = false)
     private String type;
 
     @Column(name = "isPrivate", nullable = false)

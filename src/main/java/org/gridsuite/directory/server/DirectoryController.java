@@ -91,7 +91,7 @@ public class DirectoryController {
     }
 
     @PutMapping(value = "/directories/{elementUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Modify directory's access rights")
+    @Operation(summary = "Modify element/directory's access rights")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Element/directory was successfully updated"),
             @ApiResponse(responseCode = "404", description = "The element was not found"),
@@ -136,4 +136,45 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, parentDirectoryUuid));
     }
 
+    /* handle CONTINGENCY_LIST objects */
+    @PostMapping(value = "/directories/script-contingency-lists/{listName}")
+    @Operation(summary = "create a script contingency list")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Script contingency list has been created")})
+    public ResponseEntity<Mono<Void>> createScriptContingencyList(@PathVariable("listName") String listName,
+                                                                  @RequestBody(required = false) String content,
+                                                                  @RequestParam("isPrivate") Boolean isPrivate,
+                                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                                  @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.createScriptContingencyList(listName, content, userId, isPrivate, parentDirectoryUuid));
+    }
+
+    @PostMapping(value = "/directories/filters-contingency-lists/{listName}")
+    @Operation(summary = "create a filters contingency list")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Filters contingency list has been created")})
+    public ResponseEntity<Mono<Void>> createFiltersContingencyList(@PathVariable("listName") String listName,
+                                                                  @RequestBody(required = false) String content,
+                                                                  @RequestParam("isPrivate") Boolean isPrivate,
+                                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                                  @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.createFiltersContingencyList(listName, content, userId, isPrivate, parentDirectoryUuid));
+    }
+
+    @PostMapping(value = "/directories/filters-contingency-lists/{id}/new-script/{scriptName}")
+    @Operation(summary = "Create a new script contingency list from a filters contingency list")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The script contingency list have been created successfully")})
+    public ResponseEntity<Mono<Void>> newScriptFromFiltersContingencyList(@PathVariable("id") UUID id,
+                                                                          @PathVariable("scriptName") String scriptName,
+                                                                          @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                                          @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.newScriptFromFiltersContingencyList(id, scriptName, userId, parentDirectoryUuid));
+    }
+
+    @PostMapping(value = "/directories/filters-contingency-lists/{id}/replace-with-script")
+    @Operation(summary = "Replace a filters contingency list with a script contingency list")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The filters contingency list has been replaced successfully")})
+    public ResponseEntity<Mono<Void>> replaceFilterContingencyListWithScript(@PathVariable("id") UUID id,
+                                                                          @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                                          @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.replaceFilterContingencyListWithScript(id, userId, parentDirectoryUuid));
+    }
 }

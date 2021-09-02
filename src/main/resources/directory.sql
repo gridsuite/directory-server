@@ -5,6 +5,6 @@
         name varchar(80),
         owner varchar(80) not null,
         parentId uuid,
-        type varchar(20) not null,
+        type varchar(30) not null,
         primary key (id)
     );
