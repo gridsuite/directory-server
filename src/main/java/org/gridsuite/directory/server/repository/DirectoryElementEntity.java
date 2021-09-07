@@ -21,7 +21,7 @@ import javax.persistence.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "element")
+@Table(name = "element", indexes = {@Index(name = "directoryElementEntity_parentId_index", columnList = "parentId")})
 public class DirectoryElementEntity {
     @Id
     @Column(name = "id")

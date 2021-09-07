@@ -32,9 +32,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
@@ -133,16 +134,14 @@ class DirectoryService {
     }
 
     /* converters */
-
-    private ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
+    private ElementAttributes toElementAttributes(DirectoryElementEntity entity, long subDirectoriesCount) {
         return new ElementAttributes(
                 entity.getId(),
                 entity.getName(),
                 ElementType.valueOf(entity.getType()),
-                new AccessRightsAttributes(
-                    entity.isPrivate()),
-                    entity.getOwner(),
-                    !entity.getType().equals(ElementType.DIRECTORY.name()) ? 0 : directoryElementRepository.findDirectoryContentByUserId(entity.getId(), entity.getOwner()).stream().filter(e -> e.getType().equals(ElementType.DIRECTORY.name())).count()
+                new AccessRightsAttributes(entity.isPrivate()),
+                entity.getOwner(),
+                subDirectoriesCount
         );
     }
 
@@ -164,12 +163,12 @@ class DirectoryService {
                 elementAttributes.getElementName(),
                 elementAttributes.getType().toString(),
                 elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
-                elementAttributes.getOwner()))));
+                elementAttributes.getOwner())), 0L));
     }
 
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
         ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY,
-                rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0);
+                rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L);
         return insertElement(elementAttributes, null).doOnSuccess(element ->
                 emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true, NotificationType.ADD_DIRECTORY));
     }
@@ -178,12 +177,23 @@ class DirectoryService {
         return Flux.fromStream(directoryContentStream(directoryUuid, userId));
     }
 
+    public Map<UUID, Long> getSubDirectoriesInfos(List<UUID> subDirectories, String userId) {
+        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = directoryElementRepository.getSubdirectoriesCounts(subDirectories, userId);
+        Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
+        subdirectoriesCountsList.forEach(e -> subdirectoriesCountsMap.put(e.getId(), e.getCount()));
+        return subdirectoriesCountsMap;
+    }
+
     private Stream<ElementAttributes> directoryContentStream(UUID directoryUuid, String userId) {
-        return directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId).stream().map(this::toElementAttributes);
+        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(e -> e.getId()).collect(Collectors.toList()), userId);
+        return directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId).stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
     public Flux<ElementAttributes> getRootDirectories(String userId) {
-        return Flux.fromStream(directoryElementRepository.findRootDirectoriesByUserId(userId).stream().map(this::toElementAttributes));
+        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findRootDirectoriesByUserId(userId);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(e -> e.getId()).collect(Collectors.toList()), userId);
+        return Flux.fromStream(directoryElementRepository.findRootDirectoriesByUserId(userId).stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L))));
     }
 
     public Mono<Void> renameElement(UUID elementUuid, String newElementName, String userId) {
@@ -275,7 +285,7 @@ class DirectoryService {
     }
 
     public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
-        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(this::toElementAttributes).orElse(null));
+        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(e -> toElementAttributes(e, 0L)).orElse(null));
     }
 
     private UUID getParentUuid(UUID directoryUuid) {
@@ -392,7 +402,7 @@ class DirectoryService {
 
     public Mono<Void> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
-                new AccessRightsAttributes(isPrivate), userId, 0);
+                new AccessRightsAttributes(isPrivate), userId, 0L);
         return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
             return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
@@ -405,7 +415,7 @@ class DirectoryService {
 
     public Mono<Void> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
-                new AccessRightsAttributes(isPrivate), userId, 0);
+                new AccessRightsAttributes(isPrivate), userId, 0L);
         return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             // notification here
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
@@ -421,7 +431,7 @@ class DirectoryService {
 
     public Mono<Void> createScriptContingencyList(String listName, String content, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, listName, ElementType.SCRIPT_CONTINGENCY_LIST,
-            new AccessRightsAttributes(isPrivate), userId, 0);
+            new AccessRightsAttributes(isPrivate), userId, 0L);
         return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
             return actionsService.insertScriptContingencyList(elementAttributes1.getElementUuid(), content)
@@ -434,7 +444,7 @@ class DirectoryService {
 
     public Mono<Void> createFiltersContingencyList(String listName, String content, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
         ElementAttributes elementAttributes = new ElementAttributes(null, listName, ElementType.FILTERS_CONTINGENCY_LIST,
-            new AccessRightsAttributes(isPrivate), userId, 0);
+            new AccessRightsAttributes(isPrivate), userId, 0L);
         return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
             return actionsService.insertFiltersContingencyList(elementAttributes1.getElementUuid(), content)
@@ -451,7 +461,7 @@ class DirectoryService {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }
             ElementAttributes newElementAttributes = new ElementAttributes(null, scriptName,
-                ElementType.SCRIPT_CONTINGENCY_LIST, new AccessRightsAttributes(elementAttributes.getAccessRights().isPrivate()), userId, 0);
+                ElementType.SCRIPT_CONTINGENCY_LIST, new AccessRightsAttributes(elementAttributes.getAccessRights().isPrivate()), userId, 0L);
             return insertElement(newElementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
                 emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
                 return actionsService.newScriptFromFiltersContingencyList(id, scriptName, elementAttributes1.getElementUuid())
