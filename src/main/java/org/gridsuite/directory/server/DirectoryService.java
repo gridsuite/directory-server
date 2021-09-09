@@ -187,13 +187,13 @@ class DirectoryService {
     private Stream<ElementAttributes> directoryContentStream(UUID directoryUuid, String userId) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), userId);
-        return directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId).stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
+        return directoryElements.stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
     public Flux<ElementAttributes> getRootDirectories(String userId) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findRootDirectoriesByUserId(userId);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), userId);
-        return Flux.fromStream(directoryElementRepository.findRootDirectoriesByUserId(userId).stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L))));
+        return Flux.fromStream(directoryElements.stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L))));
     }
 
     public Mono<Void> renameElement(UUID elementUuid, String newElementName, String userId) {
