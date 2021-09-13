@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.experimental.SuperBuilder;
 
 /**
  * @author Borsenberger jacques <borsenberger.jacques at rte-france.com>
@@ -19,7 +18,6 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @Setter
 @NoArgsConstructor
-@SuperBuilder
 @Schema(description = "filter contingency list attributes", allOf = AbstractFilter.class)
 public abstract class AbstractGenericFilter extends AbstractFilter {
 

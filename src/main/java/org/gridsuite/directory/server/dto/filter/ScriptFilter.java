@@ -9,7 +9,6 @@ package org.gridsuite.directory.server.dto.filter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.utils.FilterType;
 
 /**
@@ -17,7 +16,6 @@ import org.gridsuite.directory.server.utils.FilterType;
  */
 @Getter
 @Schema(description = "Script Filters", allOf = AbstractFilter.class)
-@SuperBuilder
 @NoArgsConstructor
 public class ScriptFilter extends AbstractFilter {
 

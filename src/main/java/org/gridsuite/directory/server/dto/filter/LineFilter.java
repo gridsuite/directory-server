@@ -9,7 +9,6 @@ package org.gridsuite.directory.server.dto.filter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.utils.FilterType;
 import org.springframework.util.CollectionUtils;
 
@@ -20,7 +19,6 @@ import java.util.Set;
  */
 @Getter
 @NoArgsConstructor
-@SuperBuilder
 @Schema(description = "Line Filters", allOf = AbstractGenericFilter.class)
 public class LineFilter extends AbstractGenericFilter {
     @Override

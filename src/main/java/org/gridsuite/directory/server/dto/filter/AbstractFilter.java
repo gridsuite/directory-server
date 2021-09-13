@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.experimental.SuperBuilder;
 
 import java.util.Date;
 import java.util.UUID;
@@ -35,7 +34,6 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@SuperBuilder
 public abstract class AbstractFilter implements IFilterAttributes {
 
     UUID id;

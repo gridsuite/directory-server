@@ -36,8 +36,7 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
-import static org.gridsuite.directory.server.DirectoryException.Type.STUDY_NOT_FOUND;
+import static org.gridsuite.directory.server.DirectoryException.Type.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -199,6 +198,9 @@ class DirectoryService {
             } else if (elementAttributes.getType().equals(ElementType.SCRIPT_CONTINGENCY_LIST)
                        || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
                 return actionsService.renameContingencyList(elementUuid, newElementName);
+            } else if (elementAttributes.getType().equals(ElementType.FILTER)
+                    || elementAttributes.getType().equals(ElementType.SCRIPT)) {
+                return renameFilter(elementUuid, newElementName);
             } else {
                 return Mono.empty();
             }
@@ -292,6 +294,10 @@ class DirectoryService {
 
     public void setStudyServerBaseUri(String studyServerBaseUri) {
         this.studyServerBaseUri = studyServerBaseUri;
+    }
+
+    public void setFilterServerBaseUri(String filterServerBaseUri) {
+        this.filterServerBaseUri = filterServerBaseUri;
     }
 
     public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
@@ -592,4 +598,19 @@ class DirectoryService {
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
+
+    public Mono<Void> renameFilter(UUID filterId, String newName) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/rename/{id}/{newName}")
+                .buildAndExpand(filterId, newName)
+                .toUriString();
+
+        return webClient.post()
+                .uri(filterServerBaseUri + path)
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(FILTER_NOT_FOUND)))
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
 }
