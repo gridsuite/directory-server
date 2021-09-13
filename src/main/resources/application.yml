@@ -59,3 +59,5 @@ backing-services:
     base-uri: http://localhost:5001
   actions-server:
     base-uri: http://localhost:5022
+  filter-server:
+    base-uri: http://localhost:5027

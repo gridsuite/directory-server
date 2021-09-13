@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.filter.AbstractFilter;
 import org.springframework.http.HttpStatus;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.springframework.http.MediaType;
@@ -177,4 +178,34 @@ public class DirectoryController {
                                                                           @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.replaceFilterContingencyListWithScript(id, userId, parentDirectoryUuid));
     }
+
+    @PostMapping(value = "/directories/filters", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "create a filter")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Filter creation request delegated to filter server")})
+    public ResponseEntity<Mono<Void>> createFilter(@RequestBody AbstractFilter filter,
+                                                   @RequestParam("isPrivate") Boolean isPrivate,
+                                                   @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                   @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.createFilter(filter, isPrivate, parentDirectoryUuid, userId));
+    }
+
+    @PostMapping(value = "/directories/filters/{id}/new-script/{scriptName}")
+    @Operation(summary = "Create a new script from a filter")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The script has been created successfully")})
+    public ResponseEntity<Mono<Void>> newScriptFromFilter(@PathVariable("id") UUID filterId,
+                                                          @PathVariable("scriptName") String scriptName,
+                                                          @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                          @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.newScriptFromFilter(filterId, scriptName, userId, parentDirectoryUuid));
+    }
+
+    @PostMapping(value = "/directories/filters/{id}/replace-with-script")
+    @Operation(summary = "Replace a filter with a script")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The filter has been replaced successfully")})
+    public ResponseEntity<Mono<Void>> replaceFilterWithScript(@PathVariable("id") UUID id,
+                                                              @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+                                                              @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.replaceFilterWithScript(id, userId, parentDirectoryUuid));
+    }
+
 }

@@ -6,12 +6,11 @@
  */
 package org.gridsuite.directory.server;
 
-import org.gridsuite.directory.server.dto.AccessRightsAttributes;
-import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.RenameElementAttributes;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.filter.AbstractFilter;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.utils.FilterType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
@@ -48,10 +47,12 @@ import static org.gridsuite.directory.server.DirectoryException.Type.STUDY_NOT_F
 class DirectoryService {
     private static final String DELIMITER = "/";
     private static final String STUDY_SERVER_API_VERSION = "v1";
+    private static final String FILTER_SERVER_API_VERSION = "v1";
     private static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
     private final WebClient webClient;
     private String studyServerBaseUri;
+    private String filterServerBaseUri;
 
     private final DirectoryElementRepository directoryElementRepository;
 
@@ -79,10 +80,12 @@ class DirectoryService {
     public DirectoryService(
             DirectoryElementRepository directoryElementRepository,
             @Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri,
+            @Value("${backing-services.filter-server.base-uri:http://filter-server/}") String filterServerBaseUri,
             WebClient.Builder webClientBuilder, StreamBridge studyUpdatePublisher,
             ContingencyListService actionsService) {
         this.directoryElementRepository = directoryElementRepository;
         this.studyServerBaseUri = studyServerBaseUri;
+        this.filterServerBaseUri = filterServerBaseUri;
 
         this.webClient = webClientBuilder.build();
         this.studyUpdatePublisher = studyUpdatePublisher;
@@ -259,6 +262,9 @@ class DirectoryService {
         } else if (elementAttributes.getType().equals(ElementType.SCRIPT_CONTINGENCY_LIST)
                 || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
             actionsService.deleteContingencyList(elementAttributes.getElementUuid()).subscribe();
+        } else if (elementAttributes.getType().equals(ElementType.FILTER) ||
+                elementAttributes.getType().equals(ElementType.SCRIPT)) {
+            deleteFilter(elementAttributes.getElementUuid()).subscribe();
         } else {
             // directory
             deleteSubElements(elementAttributes.getElementUuid(), userId);
@@ -268,6 +274,20 @@ class DirectoryService {
 
     private void deleteSubElements(UUID elementUuid, String userId) {
         directoryContentStream(elementUuid, userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
+    }
+
+    public Mono<Void> deleteFilter(UUID id) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}")
+                .buildAndExpand(id)
+                .toUriString();
+
+        return webClient.delete()
+                .uri(filterServerBaseUri + path)
+                .retrieve()
+                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, r -> Mono.empty())
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
     public void setStudyServerBaseUri(String studyServerBaseUri) {
@@ -478,5 +498,98 @@ class DirectoryService {
                         NotificationType.UPDATE_DIRECTORY);
                 });
         });
+    }
+
+    private Mono<Void> insertFilter(AbstractFilter filter, String userId) {
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters").toUriString();
+
+        return webClient.post()
+                .uri(filterServerBaseUri + path)
+                .header(HEADER_USER_ID, userId)
+                .body(BodyInserters.fromValue(filter))
+                .retrieve()
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
+    public Mono<Void> createFilter(AbstractFilter filter, boolean isPrivate, UUID parentDirectoryUuid, String userId) {
+        ElementType elementType = filter.getType().equals(FilterType.SCRIPT) ? ElementType.SCRIPT : ElementType.FILTER;
+        ElementAttributes elementAttributes = new ElementAttributes(null, filter.getName(), elementType,
+                new AccessRightsAttributes(isPrivate), userId, 0);
+        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+            // notification here
+            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+            filter.setId(elementAttributes1.getElementUuid());
+            return insertFilter(filter, userId)
+                    .doOnError(err -> {
+                        deleteElement(elementAttributes1.getElementUuid(), userId).subscribe();
+                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+                    });
+        });
+    }
+
+    public Mono<Void> newScriptFromFilter(UUID id, String scriptName, String userId, UUID parentDirectoryUuid) {
+        return getElementInfos(id).flatMap(elementAttributes -> {
+            if (elementAttributes.getType() != ElementType.FILTER) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
+            ElementAttributes newElementAttributes = new ElementAttributes(null, scriptName,
+                    ElementType.SCRIPT, new AccessRightsAttributes(elementAttributes.getAccessRights().isPrivate()), userId, 0);
+            return insertElement(newElementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+                emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+                return insertNewScriptFromFilters(id, scriptName, elementAttributes1.getElementUuid())
+                        .doOnError(err -> {
+                            deleteElement(elementAttributes1.getElementUuid(), userId);
+                            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+                        });
+            });
+        });
+    }
+
+    //TODO to move to other class
+    public Mono<Void> insertNewScriptFromFilters(UUID id, String scriptName, UUID newId) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}/new-script/{scriptId}/{scriptName}")
+                .buildAndExpand(id, newId, scriptName)
+                .toUriString();
+
+        return webClient.post()
+                .uri(filterServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    }
+
+    public Mono<Void> replaceFilterWithScript(UUID id, String userId, UUID parentDirectoryUuid) {
+        return getElementInfos(id).flatMap(elementAttributes -> {
+            if (!userId.equals(elementAttributes.getOwner())) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
+            if (elementAttributes.getType() != ElementType.FILTER) {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
+            return replaceFilterWithScript(id)
+                    .doOnSuccess(unused -> {
+                        directoryElementRepository.updateElementType(id, ElementType.SCRIPT.name());
+                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false,
+                                NotificationType.UPDATE_DIRECTORY);
+                    });
+        });
+    }
+
+    //TODO to move to other class
+    public Mono<Void> replaceFilterWithScript(UUID id) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}/replace-with-script")
+                .buildAndExpand(id)
+                .toUriString();
+
+        return webClient.put()
+                .uri(filterServerBaseUri + path)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .publishOn(Schedulers.boundedElastic())
+                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 }
