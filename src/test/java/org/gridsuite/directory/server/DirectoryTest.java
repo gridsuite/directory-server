@@ -81,6 +81,9 @@ public class DirectoryTest {
     @Autowired
     private ContingencyListService contingencyListService;
 
+    @Autowired
+    private FilterService filterService;
+
     private MockWebServer server;
 
     @Autowired
@@ -119,7 +122,7 @@ public class DirectoryTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         directoryService.setStudyServerBaseUri(baseUrl);
-        directoryService.setFilterServerBaseUri(baseUrl);
+        filterService.setFilterServerBaseUri(baseUrl);
         contingencyListService.setActionsServerBaseUri(baseUrl);
 
         final Dispatcher dispatcher = new Dispatcher() {

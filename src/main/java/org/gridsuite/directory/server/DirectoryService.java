@@ -46,12 +46,10 @@ import static org.gridsuite.directory.server.DirectoryException.Type.*;
 class DirectoryService {
     private static final String DELIMITER = "/";
     private static final String STUDY_SERVER_API_VERSION = "v1";
-    private static final String FILTER_SERVER_API_VERSION = "v1";
     private static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
     private final WebClient webClient;
     private String studyServerBaseUri;
-    private String filterServerBaseUri;
 
     private final DirectoryElementRepository directoryElementRepository;
 
@@ -73,22 +71,23 @@ class DirectoryService {
     private final StreamBridge studyUpdatePublisher;
 
     private ContingencyListService actionsService;
+    private FilterService filterService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
 
     public DirectoryService(
             DirectoryElementRepository directoryElementRepository,
             @Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri,
-            @Value("${backing-services.filter-server.base-uri:http://filter-server/}") String filterServerBaseUri,
             WebClient.Builder webClientBuilder, StreamBridge studyUpdatePublisher,
-            ContingencyListService actionsService) {
+            ContingencyListService actionsService,
+            FilterService filterService) {
         this.directoryElementRepository = directoryElementRepository;
         this.studyServerBaseUri = studyServerBaseUri;
-        this.filterServerBaseUri = filterServerBaseUri;
 
         this.webClient = webClientBuilder.build();
         this.studyUpdatePublisher = studyUpdatePublisher;
         this.actionsService = actionsService;
+        this.filterService = filterService;
     }
 
     /* notifications */
@@ -200,7 +199,7 @@ class DirectoryService {
                 return actionsService.renameContingencyList(elementUuid, newElementName);
             } else if (elementAttributes.getType().equals(ElementType.FILTER)
                     || elementAttributes.getType().equals(ElementType.SCRIPT)) {
-                return renameFilter(elementUuid, newElementName);
+                return filterService.renameFilter(elementUuid, newElementName);
             } else {
                 return Mono.empty();
             }
@@ -266,7 +265,7 @@ class DirectoryService {
             actionsService.deleteContingencyList(elementAttributes.getElementUuid()).subscribe();
         } else if (elementAttributes.getType().equals(ElementType.FILTER) ||
                 elementAttributes.getType().equals(ElementType.SCRIPT)) {
-            deleteFilter(elementAttributes.getElementUuid()).subscribe();
+            filterService.deleteFilter(elementAttributes.getElementUuid()).subscribe();
         } else {
             // directory
             deleteSubElements(elementAttributes.getElementUuid(), userId);
@@ -278,26 +277,8 @@ class DirectoryService {
         directoryContentStream(elementUuid, userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
     }
 
-    public Mono<Void> deleteFilter(UUID id) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}")
-                .buildAndExpand(id)
-                .toUriString();
-
-        return webClient.delete()
-                .uri(filterServerBaseUri + path)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus != HttpStatus.OK, r -> Mono.empty())
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
     public void setStudyServerBaseUri(String studyServerBaseUri) {
         this.studyServerBaseUri = studyServerBaseUri;
-    }
-
-    public void setFilterServerBaseUri(String filterServerBaseUri) {
-        this.filterServerBaseUri = filterServerBaseUri;
     }
 
     public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
@@ -506,20 +487,6 @@ class DirectoryService {
         });
     }
 
-    private Mono<Void> insertFilter(AbstractFilter filter, String userId) {
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters").toUriString();
-
-        return webClient.post()
-                .uri(filterServerBaseUri + path)
-                .header(HEADER_USER_ID, userId)
-                .body(BodyInserters.fromValue(filter))
-                .retrieve()
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
     public Mono<Void> createFilter(AbstractFilter filter, boolean isPrivate, UUID parentDirectoryUuid, String userId) {
         ElementType elementType = filter.getType().equals(FilterType.SCRIPT) ? ElementType.SCRIPT : ElementType.FILTER;
         ElementAttributes elementAttributes = new ElementAttributes(null, filter.getName(), elementType,
@@ -528,7 +495,7 @@ class DirectoryService {
             // notification here
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
             filter.setId(elementAttributes1.getElementUuid());
-            return insertFilter(filter, userId)
+            return filterService.insertFilter(filter, userId)
                     .doOnError(err -> {
                         deleteElement(elementAttributes1.getElementUuid(), userId).subscribe();
                         emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
@@ -545,27 +512,13 @@ class DirectoryService {
                     ElementType.SCRIPT, new AccessRightsAttributes(elementAttributes.getAccessRights().isPrivate()), userId, 0);
             return insertElement(newElementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
                 emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-                return insertNewScriptFromFilters(id, scriptName, elementAttributes1.getElementUuid())
+                return filterService.insertNewScriptFromFilters(id, scriptName, elementAttributes1.getElementUuid())
                         .doOnError(err -> {
                             deleteElement(elementAttributes1.getElementUuid(), userId);
                             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
                         });
             });
         });
-    }
-
-    //TODO to move to other class
-    public Mono<Void> insertNewScriptFromFilters(UUID id, String scriptName, UUID newId) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}/new-script/{scriptId}/{scriptName}")
-                .buildAndExpand(id, newId, scriptName)
-                .toUriString();
-
-        return webClient.post()
-                .uri(filterServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
     public Mono<Void> replaceFilterWithScript(UUID id, String userId, UUID parentDirectoryUuid) {
@@ -576,7 +529,7 @@ class DirectoryService {
             if (elementAttributes.getType() != ElementType.FILTER) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }
-            return replaceFilterWithScript(id)
+            return filterService.replaceFilterWithScript(id)
                     .doOnSuccess(unused -> {
                         directoryElementRepository.updateElementType(id, ElementType.SCRIPT.name());
                         emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false,
@@ -584,33 +537,4 @@ class DirectoryService {
                     });
         });
     }
-
-    //TODO to move to other class
-    public Mono<Void> replaceFilterWithScript(UUID id) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}/replace-with-script")
-                .buildAndExpand(id)
-                .toUriString();
-
-        return webClient.put()
-                .uri(filterServerBaseUri + path)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    public Mono<Void> renameFilter(UUID filterId, String newName) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/rename/{id}/{newName}")
-                .buildAndExpand(filterId, newName)
-                .toUriString();
-
-        return webClient.post()
-                .uri(filterServerBaseUri + path)
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(FILTER_NOT_FOUND)))
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
 }
