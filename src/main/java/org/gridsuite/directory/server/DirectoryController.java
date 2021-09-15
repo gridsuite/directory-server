@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.filter.AbstractFilter;
 import org.springframework.http.HttpStatus;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.springframework.http.MediaType;
@@ -182,11 +181,13 @@ public class DirectoryController {
     @PostMapping(value = "/directories/filters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "create a filter")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Filter creation request delegated to filter server")})
-    public ResponseEntity<Mono<Void>> createFilter(@RequestBody AbstractFilter filter,
+    public ResponseEntity<Mono<Void>> createFilter(@RequestBody String filter,
+                                                   @RequestParam("name") String filterName,
+                                                   @RequestParam("type") String filterType,
                                                    @RequestParam("isPrivate") Boolean isPrivate,
                                                    @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
                                                    @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.createFilter(filter, isPrivate, parentDirectoryUuid, userId));
+        return ResponseEntity.ok().body(service.createFilter(filter, filterName, filterType, isPrivate, parentDirectoryUuid, userId));
     }
 
     @PostMapping(value = "/directories/filters/{id}/new-script/{scriptName}")

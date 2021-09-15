@@ -1,11 +1,10 @@
 package org.gridsuite.directory.server;
 
-import org.gridsuite.directory.server.dto.filter.AbstractFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
@@ -29,7 +28,7 @@ public class FilterService {
     private String filterServerBaseUri;
 
     @Autowired
-    public FilterService(@Value("${backing-services.actions-server.base-uri:http://filter-server/}") String filterServerBaseUri,
+    public FilterService(@Value("${backing-services.filter-server.base-uri:http://filter-server/}") String filterServerBaseUri,
                                   WebClient.Builder webClientBuilder) {
         this.filterServerBaseUri = filterServerBaseUri;
         this.webClient = webClientBuilder.build();
@@ -93,14 +92,16 @@ public class FilterService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    public Mono<Void> insertFilter(AbstractFilter filter, String userId) {
-
-        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters").toUriString();
+    public Mono<Void> insertFilter(String filter, UUID filterId, String userId) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}")
+                .buildAndExpand(filterId)
+                .toUriString();
 
         return webClient.post()
                 .uri(filterServerBaseUri + path)
                 .header(HEADER_USER_ID, userId)
-                .body(BodyInserters.fromValue(filter))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(filter)
                 .retrieve()
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())

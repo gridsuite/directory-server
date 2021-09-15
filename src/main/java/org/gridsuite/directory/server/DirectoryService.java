@@ -7,7 +7,6 @@
 package org.gridsuite.directory.server;
 
 import org.gridsuite.directory.server.dto.*;
-import org.gridsuite.directory.server.dto.filter.AbstractFilter;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.utils.FilterType;
@@ -487,15 +486,14 @@ class DirectoryService {
         });
     }
 
-    public Mono<Void> createFilter(AbstractFilter filter, boolean isPrivate, UUID parentDirectoryUuid, String userId) {
-        ElementType elementType = filter.getType().equals(FilterType.SCRIPT) ? ElementType.SCRIPT : ElementType.FILTER;
-        ElementAttributes elementAttributes = new ElementAttributes(null, filter.getName(), elementType,
+    public Mono<Void> createFilter(String filter, String filterName, String filterType, boolean isPrivate, UUID parentDirectoryUuid, String userId) {
+        ElementType elementType = filterType.equals(FilterType.SCRIPT.name()) ? ElementType.SCRIPT : ElementType.FILTER;
+        ElementAttributes elementAttributes = new ElementAttributes(null, filterName, elementType,
                 new AccessRightsAttributes(isPrivate), userId, 0);
         return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
             // notification here
             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-            filter.setId(elementAttributes1.getElementUuid());
-            return filterService.insertFilter(filter, userId)
+            return filterService.insertFilter(filter, elementAttributes1.getElementUuid(), userId)
                     .doOnError(err -> {
                         deleteElement(elementAttributes1.getElementUuid(), userId).subscribe();
                         emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
