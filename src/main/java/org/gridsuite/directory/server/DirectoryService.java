@@ -510,7 +510,7 @@ class DirectoryService {
                     ElementType.SCRIPT, new AccessRightsAttributes(elementAttributes.getAccessRights().isPrivate()), userId, 0);
             return insertElement(newElementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
                 emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-                return filterService.insertNewScriptFromFilters(id, scriptName, elementAttributes1.getElementUuid())
+                return filterService.insertNewScriptFromFilter(id, scriptName, elementAttributes1.getElementUuid())
                         .doOnError(err -> {
                             deleteElement(elementAttributes1.getElementUuid(), userId);
                             emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);

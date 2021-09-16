@@ -46,6 +46,7 @@ public class FilterService {
         return webClient.put()
                 .uri(filterServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(FILTER_NOT_FOUND)))
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
@@ -65,7 +66,7 @@ public class FilterService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    public Mono<Void> insertNewScriptFromFilters(UUID id, String scriptName, UUID newId) {
+    public Mono<Void> insertNewScriptFromFilter(UUID id, String scriptName, UUID newId) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}/new-script/{scriptId}/{scriptName}")
                 .buildAndExpand(id, newId, scriptName)
                 .toUriString();
@@ -73,6 +74,7 @@ public class FilterService {
         return webClient.post()
                 .uri(filterServerBaseUri + path)
                 .retrieve()
+                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(FILTER_NOT_FOUND)))
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
