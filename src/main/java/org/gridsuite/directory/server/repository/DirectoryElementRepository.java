@@ -22,11 +22,20 @@ import java.util.UUID;
 @Repository
 public interface DirectoryElementRepository extends JpaRepository<DirectoryElementEntity, UUID> {
 
-    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId = :parentId AND (d.isPrivate='false' or d.owner=:owner)")
-    List<DirectoryElementEntity> findDirectoryContentByUserId(UUID parentId, String owner);
+    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId = :parentId AND (d.isPrivate='false' or d.owner=:userId)")
+    List<DirectoryElementEntity> findDirectoryContentByUserId(UUID parentId, String userId);
 
     @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND (d.isPrivate='false' or d.owner=:owner)")
     List<DirectoryElementEntity> findRootDirectoriesByUserId(String owner);
+
+    interface SubDirectoryCount {
+        UUID getId();
+
+        Long getCount();
+    }
+
+    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.isPrivate='false' or d.owner=:userId) AND d.type = 'DIRECTORY' GROUP BY d.parentId")
+    List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, String userId);
 
     @Transactional
     @Modifying
