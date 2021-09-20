@@ -168,7 +168,7 @@ public class DirectoryTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/filters-contingency-lists.*") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/filters/rename/" + FILTER_UUID + "/newFilterName") && "POST".equals(request.getMethod())) {
+                } else if (path.matches("/v1/filters/rename/" + FILTER_UUID + "/newFilterName") && "PUT".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/filters.*/new-script/.*") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);

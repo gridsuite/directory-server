@@ -57,7 +57,7 @@ public class FilterService {
                 .buildAndExpand(filterId, newName)
                 .toUriString();
 
-        return webClient.post()
+        return webClient.put()
                 .uri(filterServerBaseUri + path)
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(FILTER_NOT_FOUND)))
