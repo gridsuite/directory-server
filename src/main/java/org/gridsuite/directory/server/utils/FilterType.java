@@ -10,6 +10,12 @@ package org.gridsuite.directory.server.utils;
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
+/* For now we only need this at filter creation and there is 2 possibilities:
+*  - we create a script so the type is SCRIPT
+*  - we create a filter in which case it is a type line because - FOR NOW - when we create a filter
+*  we create a line filter by default.
+*  This behaviour is not what we aim for and it'll probably change soon enough.
+* */
 public enum FilterType {
     SCRIPT(""),
     LINE("lines");
