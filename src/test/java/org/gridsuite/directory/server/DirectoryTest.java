@@ -18,6 +18,7 @@ import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.utils.FilterType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,6 +56,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.*;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -79,6 +81,9 @@ public class DirectoryTest {
     @Autowired
     private ContingencyListService contingencyListService;
 
+    @Autowired
+    private FilterService filterService;
+
     private MockWebServer server;
 
     @Autowired
@@ -100,6 +105,7 @@ public class DirectoryTest {
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_NOT_FOUND_UUID = UUID.randomUUID();
     private static final UUID CONTINGENCY_LIST_UUID = UUID.randomUUID();
+    private static final UUID FILTER_UUID = UUID.randomUUID();
 
     private void cleanDB() {
         directoryElementRepository.deleteAll();
@@ -116,6 +122,7 @@ public class DirectoryTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         directoryService.setStudyServerBaseUri(baseUrl);
+        filterService.setFilterServerBaseUri(baseUrl);
         contingencyListService.setActionsServerBaseUri(baseUrl);
 
         final Dispatcher dispatcher = new Dispatcher() {
@@ -160,6 +167,14 @@ public class DirectoryTest {
                 } else if (path.matches("/v1/filters-contingency-lists.*/replace-with-script") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/filters-contingency-lists.*") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/filters/" + FILTER_UUID + "/rename") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/filters.*/new-script/.*") && "POST".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/filters.*/replace-with-script") && "PUT".equals(request.getMethod())) {
+                    return new MockResponse().setResponseCode(200);
+                } else if (path.matches("/v1/filters.*") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 }
                 return  new MockResponse().setResponseCode(500);
@@ -567,6 +582,153 @@ public class DirectoryTest {
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + replaceWithScriptFromFiltersListUuid + "\",\"elementName\":\"filterList1\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user5\",\"subdirectoriesCount\":0}]", "userId");
         requests = getRequestsDone(1);
         assertTrue(requests.contains(String.format("/v1/filters-contingency-lists/%s/replace-with-script", newFiltersListUuid)));
+    }
+
+    @Test
+    public void testFilters() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a public filter in the root directory by the user1
+        String filterUuid = insertAndCheckSubElement(FILTER_UUID, rootDirUuid, "Filter", ElementType.FILTER, false, "user1", false);
+
+        // try to delete the filter (of user1) with the user2 -> the filter should still be here
+        deleteElementFail(filterUuid, "user2", 403);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"Filter\",\"type\":\"" + ElementType.FILTER + "\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
+
+        renameElement(filterUuid, rootDirUuid, "user1", "newFilterName", false, false);
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"newFilterName\",\"type\":\"" + ElementType.FILTER + "\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
+        var requests = getRequestsDone(1);
+        assertTrue(requests.contains("/v1/filters/" + filterUuid + "/rename"));
+
+        // delete the filter -> the filter is not there anymore
+        deleteElement(filterUuid, rootDirUuid, "user1", false, false);
+        checkElementNotFound(filterUuid, "user1");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains("/v1/filters/" + filterUuid));
+
+        String filter = "{\"name\": \"testName\", \"transient\": true, \"type\": \"" + FilterType.LINE.name() + "\"}";
+        UUID newFilterUuid = insertFilter(filter, "user3", UUID.fromString(rootDirUuid), false, "testName", FilterType.LINE.name());
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + newFilterUuid + "\",\"elementName\":\"testName\",\"type\":\"" + ElementType.FILTER + "\",\"accessRights\":{\"private\":false},\"owner\":\"user3\",\"subdirectoriesCount\":0}]", "userId");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains("/v1/filters?id=" + newFilterUuid));
+
+        deleteElement(newFilterUuid.toString(), rootDirUuid, "user3", false, false);
+        checkElementNotFound(newFilterUuid.toString(), "user3");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains("/v1/filters/" + newFilterUuid));
+
+        filter = "{\"name\": \"scriptFilter\", \"transient\": true, \"type\": \"" + FilterType.SCRIPT.name() + "\"}";
+        UUID newScriptFilterUuid = insertFilter(filter, "user5", UUID.fromString(rootDirUuid), false, "scriptFilter", FilterType.SCRIPT.name());
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + newScriptFilterUuid + "\",\"elementName\":\"scriptFilter\",\"type\":\"" + ElementType.SCRIPT + "\",\"accessRights\":{\"private\":false},\"owner\":\"user5\",\"subdirectoriesCount\":0}]", "userId");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains("/v1/filters?id=" + newScriptFilterUuid));
+
+        deleteElement(newScriptFilterUuid.toString(), rootDirUuid, "user5", false, false);
+        checkElementNotFound(newScriptFilterUuid.toString(), "user5");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains("/v1/filters/" + newScriptFilterUuid));
+
+        filter = "{\"name\": \"FilterToConvert\", \"transient\": true, \"type\": \"" + FilterType.LINE.name() + "\"}";
+        UUID filterUuidToConvert = insertFilter(filter, "user5", UUID.fromString(rootDirUuid), false, "FilterToConvert", FilterType.LINE.name());
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuidToConvert + "\",\"elementName\":\"FilterToConvert\",\"type\":\"" + ElementType.FILTER + "\",\"accessRights\":{\"private\":false},\"owner\":\"user5\",\"subdirectoriesCount\":0}]", "userId");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains("/v1/filters?id=" + filterUuidToConvert));
+
+        // create new script from filters
+        UUID newScriptFromFiltersUuid = newScriptFromFilter("user5", filterUuidToConvert.toString(), "newScriptFromFilters", UUID.fromString(rootDirUuid));
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuidToConvert + "\",\"elementName\":\"FilterToConvert\",\"type\":\"" + ElementType.FILTER + "\",\"accessRights\":{\"private\":false},\"owner\":\"user5\",\"subdirectoriesCount\":0}," +
+                "{\"elementUuid\":\"" + newScriptFromFiltersUuid + "\",\"elementName\":\"newScriptFromFilters\",\"type\":\"" + ElementType.SCRIPT + "\",\"accessRights\":{\"private\":false},\"owner\":\"user5\",\"subdirectoriesCount\":0}]", "userId");
+
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/filters/%s/new-script/%s/%s", filterUuidToConvert, newScriptFromFiltersUuid, "newScriptFromFilters")));
+
+        deleteElement(newScriptFromFiltersUuid.toString(), rootDirUuid, "user5", false, false);
+        checkElementNotFound(newScriptFromFiltersUuid.toString(), "user5");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/filters/%s", newScriptFromFiltersUuid)));
+
+        // replace filters with script
+        UUID replaceWithScriptFromFiltersListUuid = replaceFilterWithScript("user5", filterUuidToConvert.toString(), UUID.fromString(rootDirUuid));
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + replaceWithScriptFromFiltersListUuid + "\",\"elementName\":\"FilterToConvert\",\"type\":\"" + ElementType.SCRIPT + "\",\"accessRights\":{\"private\":false},\"owner\":\"user5\",\"subdirectoriesCount\":0}]", "userId");
+        requests = getRequestsDone(1);
+        assertTrue(requests.contains(String.format("/v1/filters/%s/replace-with-script", filterUuidToConvert)));
+    }
+
+    @SneakyThrows
+    public UUID insertFilter(String filter, String userId, UUID parentDirectory, Boolean isPrivate, String name, String type) {
+        webTestClient.post()
+                .uri("/v1/directories/filters?name={name}&type={type}&isPrivate={isPrivate}&parentDirectoryUuid={parentDirectoryUuid}",
+                        name, type, isPrivate, parentDirectory)
+                .header("userId", userId)
+                .contentType(APPLICATION_JSON)
+                .body(BodyInserters.fromValue(filter))
+                .exchange()
+                .expectStatus().isOk();
+
+        UUID filterUuid = directoryElementRepository.findAll().stream()
+                .filter(directoryElementEntity -> directoryElementEntity.getType().equals(ElementType.FILTER.name()) || directoryElementEntity.getType().equals(ElementType.SCRIPT.name())).collect(Collectors.toList()).get(0).getId();
+
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectory, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        return filterUuid;
+    }
+
+    @SneakyThrows
+    private UUID newScriptFromFilter(String userId, String id, String scriptName, UUID parentDirectoryUuid) {
+        webTestClient.post()
+                .uri("/v1/directories/filters/{id}/new-script/{scriptName}?parentDirectoryUuid={parentDirectoryUuid}",
+                        id, scriptName, parentDirectoryUuid)
+                .header("userId", userId)
+                .exchange()
+                .expectStatus().isOk();
+
+        UUID listUuid = directoryElementRepository.findAll().stream().filter(elt -> ElementType.valueOf(elt.getType()) != ElementType.DIRECTORY && !elt.getId().equals(UUID.fromString(id))).collect(Collectors.toList()).get(0).getId();
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        return listUuid;
+    }
+
+    @SneakyThrows
+    private UUID replaceFilterWithScript(String userId, String id, UUID parentDirectoryUuid) {
+        webTestClient.post()
+                .uri("/v1//directories/filters/{id}/replace-with-script?parentDirectoryUuid={parentDirectoryUuid}",
+                        id, parentDirectoryUuid)
+                .header("userId", userId)
+                .exchange()
+                .expectStatus().isOk();
+
+        UUID listUuid = directoryElementRepository.findAll().get(1).getId();
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        return listUuid;
     }
 
     @SneakyThrows
