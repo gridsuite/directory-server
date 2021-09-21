@@ -613,7 +613,7 @@ public class DirectoryTest {
         UUID newFilterUuid = insertFilter(filter, "user3", UUID.fromString(rootDirUuid), false, "testName", FilterType.LINE.name());
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + newFilterUuid + "\",\"elementName\":\"testName\",\"type\":\"" + ElementType.FILTER + "\",\"accessRights\":{\"private\":false},\"owner\":\"user3\",\"subdirectoriesCount\":0}]", "userId");
         requests = getRequestsDone(1);
-        assertTrue(requests.contains("/v1/filters/" + newFilterUuid));
+        assertTrue(requests.contains("/v1/filters?id=" + newFilterUuid));
 
         deleteElement(newFilterUuid.toString(), rootDirUuid, "user3", false, false);
         checkElementNotFound(newFilterUuid.toString(), "user3");
@@ -624,7 +624,7 @@ public class DirectoryTest {
         UUID newScriptFilterUuid = insertFilter(filter, "user5", UUID.fromString(rootDirUuid), false, "scriptFilter", FilterType.SCRIPT.name());
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + newScriptFilterUuid + "\",\"elementName\":\"scriptFilter\",\"type\":\"" + ElementType.SCRIPT + "\",\"accessRights\":{\"private\":false},\"owner\":\"user5\",\"subdirectoriesCount\":0}]", "userId");
         requests = getRequestsDone(1);
-        assertTrue(requests.contains("/v1/filters/" + newScriptFilterUuid));
+        assertTrue(requests.contains("/v1/filters?id=" + newScriptFilterUuid));
 
         deleteElement(newScriptFilterUuid.toString(), rootDirUuid, "user5", false, false);
         checkElementNotFound(newScriptFilterUuid.toString(), "user5");
@@ -635,7 +635,7 @@ public class DirectoryTest {
         UUID filterUuidToConvert = insertFilter(filter, "user5", UUID.fromString(rootDirUuid), false, "FilterToConvert", FilterType.LINE.name());
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuidToConvert + "\",\"elementName\":\"FilterToConvert\",\"type\":\"" + ElementType.FILTER + "\",\"accessRights\":{\"private\":false},\"owner\":\"user5\",\"subdirectoriesCount\":0}]", "userId");
         requests = getRequestsDone(1);
-        assertTrue(requests.contains("/v1/filters/" + filterUuidToConvert));
+        assertTrue(requests.contains("/v1/filters?id=" + filterUuidToConvert));
 
         // create new script from filters
         UUID newScriptFromFiltersUuid = newScriptFromFilter("user5", filterUuidToConvert.toString(), "newScriptFromFilters", UUID.fromString(rootDirUuid));

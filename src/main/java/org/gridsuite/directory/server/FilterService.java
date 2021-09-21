@@ -95,7 +95,7 @@ public class FilterService {
     }
 
     public Mono<Void> insertFilter(String filter, UUID filterId, String userId) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters?id={id}")
                 .buildAndExpand(filterId)
                 .toUriString();
 
