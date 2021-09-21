@@ -168,7 +168,7 @@ public class DirectoryTest {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/filters-contingency-lists.*") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
-                } else if (path.matches("/v1/filters/rename/" + FILTER_UUID + "/newFilterName") && "PUT".equals(request.getMethod())) {
+                } else if (path.matches("/v1/filters/" + FILTER_UUID + "/rename") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
                 } else if (path.matches("/v1/filters.*/new-script/.*") && "POST".equals(request.getMethod())) {
                     return new MockResponse().setResponseCode(200);
@@ -601,7 +601,7 @@ public class DirectoryTest {
         renameElement(filterUuid, rootDirUuid, "user1", "newFilterName", false, false);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"newFilterName\",\"type\":\"" + ElementType.FILTER + "\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
         var requests = getRequestsDone(1);
-        assertTrue(requests.contains("/v1/filters/rename/" + filterUuid + "/newFilterName"));
+        assertTrue(requests.contains("/v1/filters/" + filterUuid + "/rename"));
 
         // delete the filter -> the filter is not there anymore
         deleteElement(filterUuid, rootDirUuid, "user1", false, false);

@@ -1,10 +1,12 @@
 package org.gridsuite.directory.server;
 
+import org.gridsuite.directory.server.dto.RenameElementAttributes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
@@ -53,12 +55,13 @@ public class FilterService {
     }
 
     public Mono<Void> renameFilter(UUID filterId, String newName) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/rename/{id}/{newName}")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}/rename")
                 .buildAndExpand(filterId, newName)
                 .toUriString();
 
-        return webClient.put()
+        return webClient.post()
                 .uri(filterServerBaseUri + path)
+                .body(BodyInserters.fromValue(new RenameElementAttributes(newName)))
                 .retrieve()
                 .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(FILTER_NOT_FOUND)))
                 .bodyToMono(Void.class)
