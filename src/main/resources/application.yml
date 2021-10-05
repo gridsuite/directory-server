@@ -24,7 +24,7 @@ spring:
       source: publishDirectoryUpdate
 
   datasource:
-    url: ${dbApi}:${dbVendor}://${hostPort}/${dbName}${query}
+    url: ${dbUrl}
     username: ${login}
     password: ${password}
 
@@ -51,6 +51,14 @@ spring:
               create-target: src/main/resources/directory.sql
               create-source: metadata
 
+# this structure is shared among all microservices, if you change it, change it everywhere
+# customQuery allows a microservice to set query parameters specific to itself
+# if customQuery is empty, set queryBegin to "?", otherwise set it to "&"
+# this allow the user to add additional query elements common to all microservices
+# and using the appropriate leading character depending on whether the microsevice
+# uses custom query parameters
+queryBegin: '?'
+customQuery:
 dbName: directory
 dbApi: jdbc
 
