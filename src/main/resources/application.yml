@@ -1,15 +1,17 @@
 server :
-  port : 5026
   forward-headers-strategy: framework
 
 spring:
+  profiles:
+    active: default,local
+
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 103MB
 
   rabbitmq:
-    addresses: localhost
+    addresses: rabbitmq
     port: 5672
 
   cloud:
@@ -67,11 +69,3 @@ customQueryBegin: '?'
 customQuery:
 dbName: directory
 dbApi: jdbc
-
-backing-services:
-  study-server:
-    base-uri: http://localhost:5001
-  actions-server:
-    base-uri: http://localhost:5022
-  filter-server:
-    base-uri: http://localhost:5027
