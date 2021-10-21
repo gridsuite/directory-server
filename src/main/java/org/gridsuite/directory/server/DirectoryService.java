@@ -12,18 +12,14 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.utils.FilterType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import reactor.core.publisher.Flux;
@@ -384,54 +380,68 @@ class DirectoryService {
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
     }
 
-    private Mono<Void> insertStudyWithCaseFile(UUID studyUuid, String studyName, String description, String userId, Boolean isPrivate, Mono<FilePart> caseFile) {
-        return caseFile.flatMap(file -> {
-            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
-            multipartBodyBuilder.part("caseFile", file);
+//    private Mono<Void> insertStudyWithCaseFile(UUID studyUuid, String studyName, String description, String userId, Boolean isPrivate, Mono<FilePart> caseFile) {
+//        return caseFile.flatMap(file -> {
+//            MultipartBodyBuilder multipartBodyBuilder = new MultipartBodyBuilder();
+//            multipartBodyBuilder.part("caseFile", file);
+//
+//            String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION +
+//                    "/studies/{studyName}?description={description}&isPrivate={isPrivate}&studyUuid={studyUuid}")
+//                    .buildAndExpand(studyName, description, isPrivate, studyUuid)
+//                    .toUriString();
+//
+//            return webClient.post()
+//                    .uri(studyServerBaseUri + path)
+//                    .header(HEADER_USER_ID, userId)
+//                    .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
+//                    .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
+//                    .retrieve()
+//                    .bodyToMono(Void.class)
+//                    .publishOn(Schedulers.boundedElastic())
+//                    .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+//        });
+//    }
 
-            String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION +
-                    "/studies/{studyName}?description={description}&isPrivate={isPrivate}&studyUuid={studyUuid}")
-                    .buildAndExpand(studyName, description, isPrivate, studyUuid)
-                    .toUriString();
+//    public Mono<ElementAttributes> createStudy(String studyName, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+//        ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
+//                new AccessRightsAttributes(isPrivate), userId, 0L);
+//        return insertElement(elementAttributes, parentDirectoryUuid);
+//        .flatMap(elementAttributes1 -> {
+//            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+//            return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
+//                    .doOnError(err -> {
+//                        deleteElement(elementAttributes1.getElementUuid(), userId);
+//                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+//                    });
+//        });
+//    }
 
-            return webClient.post()
-                    .uri(studyServerBaseUri + path)
-                    .header(HEADER_USER_ID, userId)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.MULTIPART_FORM_DATA.toString())
-                    .body(BodyInserters.fromMultipartData(multipartBodyBuilder.build()))
-                    .retrieve()
-                    .bodyToMono(Void.class)
-                    .publishOn(Schedulers.boundedElastic())
-                    .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-        });
-    }
+//    public Mono<Void> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+//        ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
+//                new AccessRightsAttributes(isPrivate), userId, 0L);
+//        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+//            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+//            return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
+//                    .doOnError(err -> {
+//                        deleteElement(elementAttributes1.getElementUuid(), userId);
+//                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+//                    });
+//        });
+//    }
 
-    public Mono<Void> createStudy(String studyName, UUID caseUuid, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
-        ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
-                new AccessRightsAttributes(isPrivate), userId, 0L);
-        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
-            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-            return insertStudyWithExistingCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseUuid)
-                    .doOnError(err -> {
-                        deleteElement(elementAttributes1.getElementUuid(), userId);
-                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-                    });
-        });
-    }
-
-    public Mono<Void> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
-        ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
-                new AccessRightsAttributes(isPrivate), userId, 0L);
-        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
-            // notification here
-            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-            return insertStudyWithCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseFile)
-                    .doOnError(err -> {
-                        deleteElement(elementAttributes1.getElementUuid(), userId).subscribe();
-                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
-                    });
-        });
-    }
+//    public Mono<Void> createStudy(String studyName, Mono<FilePart> caseFile, String description, String userId, Boolean isPrivate, UUID parentDirectoryUuid) {
+//        ElementAttributes elementAttributes = new ElementAttributes(null, studyName, ElementType.STUDY,
+//                new AccessRightsAttributes(isPrivate), userId, 0L);
+//        return insertElement(elementAttributes, parentDirectoryUuid).flatMap(elementAttributes1 -> {
+//            // notification here
+//            emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+//            return insertStudyWithCaseFile(elementAttributes1.getElementUuid(), studyName, description, userId, isPrivate, caseFile)
+//                    .doOnError(err -> {
+//                        deleteElement(elementAttributes1.getElementUuid(), userId).subscribe();
+//                        emitDirectoryChanged(parentDirectoryUuid, userId, isPrivateDirectory(parentDirectoryUuid), false, NotificationType.UPDATE_DIRECTORY);
+//                    });
+//        });
+//    }
 
     /* handle CONTINGENCY LISTS objects */
 

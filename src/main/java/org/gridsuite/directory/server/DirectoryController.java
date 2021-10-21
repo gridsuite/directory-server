@@ -11,11 +11,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.springframework.http.HttpStatus;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
@@ -112,29 +111,29 @@ public class DirectoryController {
     }
 
     /* handle STUDY objects */
-    @PostMapping(value = "/directories/studies/{studyName}/cases/{caseUuid}")
-    @Operation(summary = "create a study from an existing case")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study creation request delegated to study server")})
-    public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                                  @PathVariable("caseUuid") UUID caseUuid,
-                                                                  @RequestParam("description") String description,
-                                                                  @RequestParam("isPrivate") Boolean isPrivate,
-                                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                                  @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.createStudy(studyName, caseUuid, description, userId, isPrivate, parentDirectoryUuid));
-    }
+//    @PostMapping(value = "/directories/studies/{studyName}/cases/{caseUuid}")
+//    @Operation(summary = "create a study from an existing case")
+//    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study creation request delegated to study server")})
+//    public ResponseEntity<Mono<ElementAttributes>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
+//                                                                  @PathVariable("caseUuid") UUID caseUuid,
+//                                                                  @RequestParam("description") String description,
+//                                                                  @RequestParam("isPrivate") Boolean isPrivate,
+//                                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+//                                                                  @RequestHeader("userId") String userId) {
+//        return ResponseEntity.ok().body(service.createStudy(studyName, caseUuid, description, userId, isPrivate, parentDirectoryUuid));
+//    }
 
-    @PostMapping(value = "/directories/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "create a study and import the case")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study creation request delegated to study server")})
-    public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
-                                                  @RequestPart("caseFile") FilePart caseFile,
-                                                  @RequestParam("description") String description,
-                                                  @RequestParam("isPrivate") Boolean isPrivate,
-                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                  @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, parentDirectoryUuid));
-    }
+//    @PostMapping(value = "/directories/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    @Operation(summary = "create a study and import the case")
+//    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study creation request delegated to study server")})
+//    public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
+//                                                  @RequestPart("caseFile") FilePart caseFile,
+//                                                  @RequestParam("description") String description,
+//                                                  @RequestParam("isPrivate") Boolean isPrivate,
+//                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+//                                                  @RequestHeader("userId") String userId) {
+//        return ResponseEntity.ok().body(service.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, parentDirectoryUuid));
+//    }
 
     /* handle CONTINGENCY_LIST objects */
     @PostMapping(value = "/directories/script-contingency-lists/{listName}")

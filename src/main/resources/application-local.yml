@@ -12,3 +12,5 @@ backing-services:
     base-uri: http://localhost:5022
   filter-server:
     base-uri: http://localhost:5027
+  explore-server:
+    base-uri: http://localhost:5029
