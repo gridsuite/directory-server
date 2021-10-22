@@ -4,7 +4,6 @@ import org.gridsuite.directory.server.dto.RenameElementAttributes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -48,76 +47,6 @@ public class ContingencyListService {
             .body(BodyInserters.fromValue(new RenameElementAttributes(newElementName)))
             .retrieve()
             .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(CONTINGENCY_LIST_NOT_FOUND)))
-            .bodyToMono(Void.class)
-            .publishOn(Schedulers.boundedElastic())
-            .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    public Mono<Void> deleteContingencyList(UUID id) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/{id}")
-            .buildAndExpand(id)
-            .toUriString();
-
-        return webClient.delete()
-            .uri(actionsServerBaseUri + path)
-            .retrieve()
-            .onStatus(httpStatus -> httpStatus != HttpStatus.OK, r -> Mono.empty())
-            .bodyToMono(Void.class)
-            .publishOn(Schedulers.boundedElastic())
-            .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    public Mono<Void> insertScriptContingencyList(UUID id, String content) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/script-contingency-lists?id={id}")
-            .buildAndExpand(id)
-            .toUriString();
-
-        return webClient.post()
-            .uri(actionsServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(content))
-            .retrieve()
-            .bodyToMono(Void.class)
-            .publishOn(Schedulers.boundedElastic())
-            .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    public Mono<Void> insertFiltersContingencyList(UUID id, String content) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/filters-contingency-lists?id={id}")
-            .buildAndExpand(id)
-            .toUriString();
-
-        return webClient.post()
-            .uri(actionsServerBaseUri + path)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(content))
-            .retrieve()
-            .bodyToMono(Void.class)
-            .publishOn(Schedulers.boundedElastic())
-            .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    public Mono<Void> newScriptFromFiltersContingencyList(UUID id, String scriptName, UUID newId) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/filters-contingency-lists/{id}/new-script/{scriptName}?newId={newId}")
-            .buildAndExpand(id, scriptName, newId)
-            .toUriString();
-
-        return webClient.post()
-            .uri(actionsServerBaseUri + path)
-            .retrieve()
-            .bodyToMono(Void.class)
-            .publishOn(Schedulers.boundedElastic())
-            .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    public Mono<Void> replaceFilterContingencyListWithScript(UUID id) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + ACTIONS_API_VERSION + "/filters-contingency-lists/{id}/replace-with-script")
-            .buildAndExpand(id)
-            .toUriString();
-
-        return webClient.post()
-            .uri(actionsServerBaseUri + path)
-            .retrieve()
             .bodyToMono(Void.class)
             .publishOn(Schedulers.boundedElastic())
             .log(ROOT_CATEGORY_REACTOR, Level.FINE);
