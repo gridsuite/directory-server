@@ -4,11 +4,3 @@ server :
 spring:
   rabbitmq:
     addresses: localhost
-
-backing-services:
-  study-server:
-    base-uri: http://localhost:5001
-  actions-server:
-    base-uri: http://localhost:5022
-  filter-server:
-    base-uri: http://localhost:5027

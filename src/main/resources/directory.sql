@@ -1,6 +1,7 @@
 
     create table element (
        id uuid not null,
+        description varchar(255),
         isPrivate boolean not null,
         name varchar(80),
         owner varchar(80) not null,

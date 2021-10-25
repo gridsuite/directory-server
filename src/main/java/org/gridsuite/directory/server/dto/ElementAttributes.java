@@ -33,4 +33,6 @@ public class ElementAttributes {
     private String owner;
 
     private long subdirectoriesCount;
+
+    private String description;
 }
