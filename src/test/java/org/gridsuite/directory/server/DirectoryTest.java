@@ -50,6 +50,7 @@ import static org.junit.Assert.*;
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
+ * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 
 @RunWith(SpringRunner.class)
@@ -80,7 +81,6 @@ public class DirectoryTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryTest.class);
 
-//    private static final String TEST_FILE = "testCase.xiidm";
     private static final UUID STUDY_RENAME_UUID = UUID.randomUUID();
     private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_RENAME_NOT_FOUND_UUID = UUID.randomUUID();
