@@ -11,7 +11,6 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
@@ -59,7 +58,7 @@ class DirectoryService {
 
     public DirectoryService(
             DirectoryElementRepository directoryElementRepository,
-            WebClient.Builder webClientBuilder, StreamBridge studyUpdatePublisher) {
+            StreamBridge studyUpdatePublisher) {
         this.directoryElementRepository = directoryElementRepository;
 
         this.studyUpdatePublisher = studyUpdatePublisher;
