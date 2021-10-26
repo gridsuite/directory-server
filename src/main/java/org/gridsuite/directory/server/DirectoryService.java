@@ -200,7 +200,7 @@ class DirectoryService {
             if (elementAttributes.getType().equals(ElementType.STUDY)) {
                 return renameStudy(elementUuid, userId, newElementName);
             } else if (elementAttributes.getType().equals(ElementType.SCRIPT_CONTINGENCY_LIST)
-                || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
+                    || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
                 return actionsService.renameContingencyList(elementUuid, newElementName);
             } else if (elementAttributes.getType().equals(ElementType.FILTER)
                     || elementAttributes.getType().equals(ElementType.SCRIPT)) {
