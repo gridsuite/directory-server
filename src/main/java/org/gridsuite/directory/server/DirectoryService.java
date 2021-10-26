@@ -279,4 +279,9 @@ class DirectoryService {
             return Mono.empty();
         });
     }
+
+    Mono<Boolean> elementExists(UUID parentDirectoryUuid, String elementName, String userId) {
+        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findDirectoryContentByUserId(parentDirectoryUuid, userId);
+        return Mono.just(directoryElements.stream().anyMatch(e -> e.getName().equals(elementName)));
+    }
 }

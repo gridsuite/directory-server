@@ -121,4 +121,13 @@ public class DirectoryController {
                                                     @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
     }
+
+    @GetMapping(value = "/directories/{directoryUuid}/{elementName}/exists")
+    @Operation(summary = "Check if the element exists")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the element exists or not")})
+    public ResponseEntity<Mono<Boolean>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                       @PathVariable("elementName") String elementName,
+                                                       @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.elementExists(directoryUuid, elementName, userId));
+    }
 }

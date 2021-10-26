@@ -96,6 +96,9 @@ public class DirectoryTest {
         checkDirectoryContent(uuidNewDirectory, "[{\"elementUuid\":\"" + uuidNewSubDirectory + "\",\"elementName\":\"newSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":null}" +
                 ",{\"elementUuid\":\"" + uuidAddedStudy + "\",\"elementName\":\"newStudy\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":\"descr study\"}]", "userId");
 
+        checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", "userId", Boolean.TRUE);
+        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", "userId", Boolean.FALSE);
+
         // Delete the sub-directory newSubDir
         deleteElement(uuidNewSubDirectory, uuidNewDirectory, "userId", false, false);
         checkDirectoryContent(uuidNewDirectory, "[{\"elementUuid\":\"" + uuidAddedStudy + "\",\"elementName\":\"newStudy\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":\"descr study\"}]", "userId");
@@ -606,6 +609,17 @@ public class DirectoryTest {
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isNotFound();
+    }
+
+    private void checkElementNameExistInDirectory(String parentDirectoryUuid, String elementName, String userId, Boolean expected) {
+        webTestClient.get()
+            .uri("/v1/directories/" + parentDirectoryUuid + "/" + elementName + "/exists")
+            .header("userId", userId)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody(Boolean.class)
+            .isEqualTo(expected);
     }
 
     private void deleteElement(String elementUuidToBeDeleted, String elementUuidHeader, String userId, boolean isRoot, boolean isPrivate) {
