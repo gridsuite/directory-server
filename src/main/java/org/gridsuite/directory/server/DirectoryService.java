@@ -144,11 +144,11 @@ class DirectoryService {
     /* methods */
     public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
         return insertElement(elementAttributes, parentDirectoryUuid).doOnSuccess(unused -> emitDirectoryChanged(
-                parentDirectoryUuid,
-                userId,
-                isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
-                false,
-                NotificationType.UPDATE_DIRECTORY));
+               parentDirectoryUuid,
+               userId,
+               isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
+               false,
+               NotificationType.UPDATE_DIRECTORY));
     }
 
     /* methods */
@@ -200,7 +200,7 @@ class DirectoryService {
             if (elementAttributes.getType().equals(ElementType.STUDY)) {
                 return renameStudy(elementUuid, userId, newElementName);
             } else if (elementAttributes.getType().equals(ElementType.SCRIPT_CONTINGENCY_LIST)
-                    || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
+                || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
                 return actionsService.renameContingencyList(elementUuid, newElementName);
             } else if (elementAttributes.getType().equals(ElementType.FILTER)
                     || elementAttributes.getType().equals(ElementType.SCRIPT)) {
