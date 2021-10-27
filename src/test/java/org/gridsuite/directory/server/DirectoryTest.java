@@ -7,6 +7,7 @@
 package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
@@ -529,6 +530,29 @@ public class DirectoryTest {
                 ",{\"elementUuid\":\"" + contengencyFilterUuid + "\",\"elementName\":\"contingencyFilter\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
     }
 
+    @SneakyThrows
+    @Test
+    public void testGetElement() {
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1");
+
+        // Insert a public filter in the root directory by the user1
+        String filterUuid = insertAndCheckSubElement(FILTER_UUID, rootDirUuid, "Filter", ElementType.FILTER, false, "user1", false);
+        String scriptUUID = insertAndCheckSubElement(UUID.randomUUID(), rootDirUuid, "Script", ElementType.SCRIPT, false, "user1", false);
+        var res = getElements(List.of(scriptUUID, filterUuid, UUID.randomUUID().toString()), "user1");
+        assertEquals(2, res.size());
+        var filter1 = res.get(0).getElementName().equals("Filter") ? res.get(0) : res.get(1);
+        assertEquals(filterUuid, filter1.getElementUuid().toString());
+        assertEquals("Filter", filter1.getElementName());
+        assertEquals(filterUuid, filter1.getElementUuid().toString());
+        assertEquals(ElementType.FILTER, filter1.getType());
+
+        var script = res.get(0).getElementName().equals("Filter") ? res.get(1) : res.get(0);
+        assertEquals(scriptUUID, script.getElementUuid().toString());
+        assertEquals("Script", script.getElementName());
+        assertEquals(ElementType.SCRIPT, script.getType());
+    }
+
     private void checkRootDirectoriesList(String userId, String expected) {
         webTestClient.get()
                 .uri("/v1/root-directories")
@@ -571,6 +595,22 @@ public class DirectoryTest {
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         return uuidNewDirectory;
+    }
+
+    private List<ElementAttributes> getElements(List<String> elementUuids, String userId) throws JsonProcessingException {
+        var ids = new StringJoiner("&id=");
+        elementUuids.forEach(ids::add);
+        // Insert a sub-element of type DIRECTORY
+        EntityExchangeResult result = webTestClient.get()
+            .uri("/v1/directories/elements?id=" + ids)
+            .header("userId", userId)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody(String.class)
+            .returnResult();
+        return objectMapper.readValue(result.getResponseBody().toString(), new TypeReference<>() {
+        });
     }
 
     private String insertAndCheckSubElement(UUID elementUuid, String parentDirectoryUUid, String subElementName, ElementType type, boolean isPrivate, String userId, boolean isParentPrivate) throws JsonProcessingException {

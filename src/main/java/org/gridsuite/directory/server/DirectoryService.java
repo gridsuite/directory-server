@@ -328,4 +328,8 @@ class DirectoryService {
             return Mono.empty();
         });
     }
+
+    public Flux<ElementAttributes> getElementsAttribute(List<UUID> ids) {
+        return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(e -> toElementAttributes(e, 0)));
+    }
 }
