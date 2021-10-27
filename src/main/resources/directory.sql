@@ -8,3 +8,4 @@
         type varchar(30) not null,
         primary key (id)
     );
+create index directoryElementEntity_parentId_index on element (parentId);
