@@ -90,11 +90,10 @@ public class DirectoryController {
     }
 
     @PutMapping(value = "/directories/{elementUuid}/updateType/{newType}")
-    @Operation(summary = "Rename element/directory")
+    @Operation(summary = "update the element type")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"),
-            @ApiResponse(responseCode = "404", description = "The element was not found"),
-            @ApiResponse(responseCode = "403", description = "Not authorized to rename this element")
+            @ApiResponse(responseCode = "200", description = "Element type was successfully updated"),
+            @ApiResponse(responseCode = "403", description = "Not authorized to update this element or the change requested is not correct")
     })
     public ResponseEntity<Mono<Void>> updateType(@PathVariable("elementUuid") UUID elementUuid,
                                                     @PathVariable("newType") String newType,

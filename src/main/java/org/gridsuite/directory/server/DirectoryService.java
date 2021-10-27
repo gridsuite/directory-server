@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
+import static org.gridsuite.directory.server.ElementType.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -202,7 +203,7 @@ class DirectoryService {
             } else if (elementAttributes.getType().equals(ElementType.SCRIPT_CONTINGENCY_LIST)
                     || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
                 return actionsService.renameContingencyList(elementUuid, newElementName);
-            } else if (elementAttributes.getType().equals(ElementType.FILTER)
+            } else if (elementAttributes.getType().equals(FILTER)
                     || elementAttributes.getType().equals(ElementType.SCRIPT)) {
                 return filterService.renameFilter(elementUuid, newElementName);
             } else {
@@ -318,7 +319,12 @@ class DirectoryService {
             if (!userId.equals(elementAttributes.getOwner())) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }
-            directoryElementRepository.updateElementType(elementUuid, newType);
+            if ((elementAttributes.getType().equals(FILTER) && newType.equals(SCRIPT.name())) ||
+                    (elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST) && newType.equals(SCRIPT_CONTINGENCY_LIST.name()))) {
+                directoryElementRepository.updateElementType(elementUuid, newType);
+            } else {
+                return Mono.error(new DirectoryException(NOT_ALLOWED));
+            }
             return Mono.empty();
         });
     }

@@ -474,19 +474,37 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testChangeElementType() throws Exception {
+    public void testFailChangeElementType() throws Exception {
         checkRootDirectoriesList("Doe", "[]");
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
         // Insert a public study in the root directory by the user1
         String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false);
 
+        //study cannot be updated to be a filter
         webTestClient.put().uri("/v1/directories/" + UUID.fromString(study1Uuid) + "/updateType/" + ElementType.FILTER)
+                .header("userId", "user1")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
+    }
+
+    @Test
+    public void testChangeElementType() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+
+        String filterUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "filter1",  ElementType.FILTER, false, "user1", false);
+
+        webTestClient.put().uri("/v1/directories/" + UUID.fromString(filterUuid) + "/updateType/" + ElementType.SCRIPT)
                 .header("userId", "user1")
                 .exchange()
                 .expectStatus().isOk();
 
-        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"FILTER\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"filter1\",\"type\":\"SCRIPT\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
     }
 
     private void checkRootDirectoriesList(String userId, String expected) {
