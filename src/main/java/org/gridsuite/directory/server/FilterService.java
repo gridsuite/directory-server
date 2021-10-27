@@ -38,6 +38,7 @@ public class FilterService {
         this.filterServerBaseUri = filterServerBaseUri;
     }
 
+    //TODO remove when names are removed from filter-server
     public Mono<Void> renameFilter(UUID filterId, String newName) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + FILTER_SERVER_API_VERSION + "/filters/{id}/rename")
                 .buildAndExpand(filterId, newName)

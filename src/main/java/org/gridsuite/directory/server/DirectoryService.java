@@ -297,6 +297,7 @@ class DirectoryService {
         }
     }
 
+    //TODO remove when names are removed from study-server
     private Mono<Void> renameStudy(UUID studyUuid, String userId, String newElementName) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}/rename")
                 .buildAndExpand(studyUuid)
@@ -327,5 +328,9 @@ class DirectoryService {
             }
             return Mono.empty();
         });
+    }
+
+    public Flux<ElementAttributes> getElementsAttribute(List<UUID> ids) {
+        return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(e -> toElementAttributes(e, 0)));
     }
 }
