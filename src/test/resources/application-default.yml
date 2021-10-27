@@ -3,6 +3,8 @@ spring:
     database: H2
     properties:
       dialect: org.hibernate.dialect.H2Dialect
+      hibernate:
+        format_sql: true
 
 logging:
   level:
