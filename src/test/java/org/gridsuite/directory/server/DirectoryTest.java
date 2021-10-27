@@ -7,8 +7,10 @@
 package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
@@ -387,13 +389,22 @@ public class DirectoryTest {
         // Insert a public study in the root directory by the user1
         String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, null);
 
+        String contingencyScriptUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "contingencyScript",  ElementType.SCRIPT_CONTINGENCY_LIST, false, "user1", false, null);
+
         //study cannot be updated to be a filter
         webTestClient.put().uri("/v1/directories/" + UUID.fromString(study1Uuid) + "/updateType/" + ElementType.FILTER)
                 .header("userId", "user1")
                 .exchange()
                 .expectStatus().isForbidden();
 
-        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
+        //type contingency script -> filter => forbidden
+        webTestClient.put().uri("/v1/directories/" + UUID.fromString(contingencyScriptUuid) + "/updateType/" + ElementType.FILTERS_CONTINGENCY_LIST)
+                .header("userId", "user1")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" +
+                ",{\"elementUuid\":\"" + contingencyScriptUuid + "\",\"elementName\":\"contingencyScript\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}]", "userId");
     }
 
     @Test
@@ -404,13 +415,49 @@ public class DirectoryTest {
         // Insert a public study in the root directory by the user1
 
         String filterUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "filter1",  ElementType.FILTER, false, "user1", false, null);
+        String contengencyFilterUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "contingencyFilter",  ElementType.FILTERS_CONTINGENCY_LIST, false, "user1", false, null);
 
         webTestClient.put().uri("/v1/directories/" + UUID.fromString(filterUuid) + "/updateType/" + ElementType.SCRIPT)
                 .header("userId", "user1")
                 .exchange()
                 .expectStatus().isOk();
 
-        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"filter1\",\"type\":\"SCRIPT\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
+        webTestClient.put().uri("/v1/directories/" + UUID.fromString(contengencyFilterUuid) + "/updateType/" + ElementType.SCRIPT_CONTINGENCY_LIST)
+                .header("userId", "user1")
+                .exchange()
+                .expectStatus().isOk();
+
+        //not allowed with another user
+        webTestClient.put().uri("/v1/directories/" + UUID.fromString(filterUuid) + "/updateType/" + ElementType.SCRIPT)
+                .header("userId", "user2")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"filter1\",\"type\":\"SCRIPT\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" +
+                ",{\"elementUuid\":\"" + contengencyFilterUuid + "\",\"elementName\":\"contingencyFilter\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
+    }
+
+    @SneakyThrows
+    @Test
+    public void testGetElement() {
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1", null);
+
+        // Insert a public filter in the root directory by the user1
+        String filterUuid = insertAndCheckSubElement(UUID.randomUUID(), rootDirUuid, "Filter", ElementType.FILTER, false, "user1", false, null);
+        String scriptUUID = insertAndCheckSubElement(UUID.randomUUID(), rootDirUuid, "Script", ElementType.SCRIPT, false, "user1", false, null);
+        var res = getElements(List.of(scriptUUID, filterUuid, UUID.randomUUID().toString()), "user1");
+        assertEquals(2, res.size());
+        var filter1 = res.get(0).getElementName().equals("Filter") ? res.get(0) : res.get(1);
+        assertEquals(filterUuid, filter1.getElementUuid().toString());
+        assertEquals("Filter", filter1.getElementName());
+        assertEquals(filterUuid, filter1.getElementUuid().toString());
+        assertEquals(ElementType.FILTER, filter1.getType());
+
+        var script = res.get(0).getElementName().equals("Filter") ? res.get(1) : res.get(0);
+        assertEquals(scriptUUID, script.getElementUuid().toString());
+        assertEquals("Script", script.getElementName());
+        assertEquals(ElementType.SCRIPT, script.getType());
     }
 
     private void checkRootDirectoriesList(String userId, String expected) {
@@ -460,8 +507,24 @@ public class DirectoryTest {
         return uuidNewDirectory;
     }
 
+    private List<ElementAttributes> getElements(List<String> elementUuids, String userId) throws JsonProcessingException {
+        var ids = new StringJoiner("&id=");
+        elementUuids.forEach(ids::add);
+        // Insert a sub-element of type DIRECTORY
+        EntityExchangeResult result = webTestClient.get()
+            .uri("/v1/directories/elements?id=" + ids)
+            .header("userId", userId)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody(String.class)
+            .returnResult();
+        return objectMapper.readValue(result.getResponseBody().toString(), new TypeReference<>() {
+        });
+    }
+
     private String insertAndCheckSubElement(UUID elementUuid, String parentDirectoryUUid, String subElementName, ElementType type, boolean isPrivate, String userId, boolean isParentPrivate, String subElementDescription) throws JsonProcessingException {
-        // Insert a sub-element
+        // Insert a sub-element of type DIRECTORY
         EntityExchangeResult result = webTestClient.post()
                 .uri("/v1/directories/" + UUID.fromString(parentDirectoryUUid))
                 .header("userId", userId)
