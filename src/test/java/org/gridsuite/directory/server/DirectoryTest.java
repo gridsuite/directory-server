@@ -393,7 +393,7 @@ public class DirectoryTest {
                 .exchange()
                 .expectStatus().isForbidden();
 
-        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
     }
 
     @Test
@@ -410,7 +410,7 @@ public class DirectoryTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"study1\",\"type\":\"FILTER\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
+        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"filter1\",\"type\":\"SCRIPT\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
     }
 
     private void checkRootDirectoriesList(String userId, String expected) {
