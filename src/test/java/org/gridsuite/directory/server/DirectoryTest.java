@@ -670,6 +670,7 @@ public class DirectoryTest {
         var res = getElements(List.of(scriptUUID, filterUuid, UUID.randomUUID().toString()), "user1");
         assertEquals(2, res.size());
         var filter1 = res.get(0).getElementName().equals("Filter") ? res.get(0) : res.get(1);
+        assertEquals(filterUuid, filter1.getElementUuid().toString());
         assertEquals("Filter", filter1.getElementName());
         assertEquals(filterUuid, filter1.getElementUuid().toString());
         assertEquals(ElementType.FILTER, filter1.getType());
