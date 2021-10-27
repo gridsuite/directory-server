@@ -21,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -80,9 +81,9 @@ public class DirectoryController {
     @PutMapping(value = "/directories/{elementUuid}/rename/{newElementName}")
     @Operation(summary = "Rename element/directory")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"),
-            @ApiResponse(responseCode = "404", description = "The element was not found"),
-            @ApiResponse(responseCode = "403", description = "Not authorized to rename this element")
+        @ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"),
+        @ApiResponse(responseCode = "404", description = "The element was not found"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to rename this element")
     })
     public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @PathVariable("newElementName") String newElementName,
@@ -93,9 +94,9 @@ public class DirectoryController {
     @PutMapping(value = "/directories/{elementUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Modify element/directory's access rights")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Element/directory was successfully updated"),
-            @ApiResponse(responseCode = "404", description = "The element was not found"),
-            @ApiResponse(responseCode = "403", description = "Not authorized to update this element access rights")
+        @ApiResponse(responseCode = "200", description = "Element/directory was successfully updated"),
+        @ApiResponse(responseCode = "404", description = "The element was not found"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to update this element access rights")
     })
     public ResponseEntity<Mono<Void>> setAccessRights(@PathVariable("elementUuid") UUID elementUuid,
                                                       @RequestBody boolean isPrivate,
@@ -209,4 +210,10 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.replaceFilterWithScript(id, userId, parentDirectoryUuid));
     }
 
+    @GetMapping(value = "/directories/elements")
+    @Operation(summary = "get element infos from ids given as parameters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The elements information")})
+    public ResponseEntity<Flux<ElementAttributes>> getElementsAttributes(@RequestParam("id") List<UUID> ids) {
+        return ResponseEntity.ok().body(service.getElementsAttribute(ids));
+    }
 }
