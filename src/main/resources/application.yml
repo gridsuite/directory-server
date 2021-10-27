@@ -37,6 +37,7 @@ spring:
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
         # Used when action: create is uncommented
+      hibernate:
         hbm2ddl:
           delimiter: ;
       # Uncomment action to automatically generate the database sql schema file
