@@ -272,6 +272,9 @@ class DirectoryService {
             if ((elementAttributes.getType().equals(FILTER) && newType.equals(SCRIPT.name())) ||
                     (elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST) && newType.equals(SCRIPT_CONTINGENCY_LIST.name()))) {
                 directoryElementRepository.updateElementType(elementUuid, newType);
+                UUID parentUuid = getParentUuid(elementUuid);
+                emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null,
+                        NotificationType.UPDATE_DIRECTORY);
             } else {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }

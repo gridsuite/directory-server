@@ -422,16 +422,30 @@ public class DirectoryTest {
                 .exchange()
                 .expectStatus().isOk();
 
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("user1", headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(rootDirUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
         webTestClient.put().uri("/v1/directories/" + UUID.fromString(contengencyFilterUuid) + "/updateType/" + ElementType.SCRIPT_CONTINGENCY_LIST)
                 .header("userId", "user1")
                 .exchange()
                 .expectStatus().isOk();
+
+        output.receive(1000);
 
         //not allowed with another user
         webTestClient.put().uri("/v1/directories/" + UUID.fromString(filterUuid) + "/updateType/" + ElementType.SCRIPT)
                 .header("userId", "user2")
                 .exchange()
                 .expectStatus().isForbidden();
+
+        output.receive(1000);
 
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"filter1\",\"type\":\"SCRIPT\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" +
                 ",{\"elementUuid\":\"" + contengencyFilterUuid + "\",\"elementName\":\"contingencyFilter\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");

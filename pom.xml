@@ -11,11 +11,10 @@
          xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>5</version>
+        <version>6</version>
         <relativePath/>
     </parent>
 
@@ -47,6 +46,7 @@
         <java.version>11</java.version>
         <gridsuite-dependencies.version>11</gridsuite-dependencies.version>
         <jib.container.environment>SPRING_PROFILES_ACTIVE=default</jib.container.environment>
+        <liquibase-hibernate-package>org.gridsuite.directory.server</liquibase-hibernate-package>
     </properties>
 
     <build>
@@ -149,6 +149,11 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-stream-binder-rabbit</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
             <scope>runtime</scope>
         </dependency>
 
