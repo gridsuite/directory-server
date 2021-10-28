@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
-import static org.gridsuite.directory.server.ElementType.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -64,6 +63,10 @@ class DirectoryService {
     static final String HEADER_ERROR = "error";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_NOTIFICATION_TYPE = "notificationType";
+    static final String STUDY = "STUDY";
+    static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
+    static final String FILTER = "FILTER";
+    static final String DIRECTORY = "DIRECTORY";
 
     private final StreamBridge studyUpdatePublisher;
 
@@ -135,7 +138,7 @@ class DirectoryService {
         return new ElementAttributes(
                 entity.getId(),
                 entity.getName(),
-                ElementType.valueOf(entity.getType()),
+                entity.getType(),
                 new AccessRightsAttributes(entity.isPrivate()),
                 entity.getOwner(),
                 subDirectoriesCount
@@ -164,7 +167,7 @@ class DirectoryService {
     }
 
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
-        ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY,
+        ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
                 rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L);
         return insertElement(elementAttributes, null).doOnSuccess(element ->
                 emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true, NotificationType.ADD_DIRECTORY));
@@ -198,13 +201,11 @@ class DirectoryService {
             if (!userId.equals(elementAttributes.getOwner())) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }
-            if (elementAttributes.getType().equals(ElementType.STUDY)) {
+            if (elementAttributes.getType().equals(STUDY)) {
                 return renameStudy(elementUuid, userId, newElementName);
-            } else if (elementAttributes.getType().equals(ElementType.SCRIPT_CONTINGENCY_LIST)
-                    || elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST)) {
+            } else if (elementAttributes.getType().equals(CONTINGENCY_LIST)) {
                 return actionsService.renameContingencyList(elementUuid, newElementName);
-            } else if (elementAttributes.getType().equals(FILTER)
-                    || elementAttributes.getType().equals(ElementType.SCRIPT)) {
+            } else if (elementAttributes.getType().equals(FILTER)) {
                 return filterService.renameFilter(elementUuid, newElementName);
             } else {
                 return Mono.empty();
@@ -260,7 +261,7 @@ class DirectoryService {
     }
 
     private void deleteObject(ElementAttributes elementAttributes, String userId) {
-        if (elementAttributes.getType().equals(ElementType.DIRECTORY)) {
+        if (elementAttributes.getType().equals(DIRECTORY)) {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
         directoryElementRepository.deleteById(elementAttributes.getElementUuid());
@@ -313,24 +314,6 @@ class DirectoryService {
                 .bodyToMono(Void.class)
                 .publishOn(Schedulers.boundedElastic())
                 .log(ROOT_CATEGORY_REACTOR, Level.FINE);
-    }
-
-    public Mono<Void> updateType(UUID elementUuid, String newType, String userId) {
-        return getElementInfos(elementUuid).flatMap(elementAttributes -> {
-            if (!userId.equals(elementAttributes.getOwner())) {
-                return Mono.error(new DirectoryException(NOT_ALLOWED));
-            }
-            if ((elementAttributes.getType().equals(FILTER) && newType.equals(SCRIPT.name())) ||
-                    (elementAttributes.getType().equals(ElementType.FILTERS_CONTINGENCY_LIST) && newType.equals(SCRIPT_CONTINGENCY_LIST.name()))) {
-                directoryElementRepository.updateElementType(elementUuid, newType);
-                UUID parentUuid = getParentUuid(elementUuid);
-                emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null,
-                        NotificationType.UPDATE_DIRECTORY);
-            } else {
-                return Mono.error(new DirectoryException(NOT_ALLOWED));
-            }
-            return Mono.empty();
-        });
     }
 
     public Flux<ElementAttributes> getElementsAttribute(List<UUID> ids) {

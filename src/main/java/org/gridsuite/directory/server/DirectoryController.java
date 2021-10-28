@@ -90,18 +90,6 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName, userId));
     }
 
-    @PutMapping(value = "/directories/{elementUuid}/updateType/{newType}")
-    @Operation(summary = "update the element type")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Element type was successfully updated"),
-            @ApiResponse(responseCode = "403", description = "Not authorized to update this element or the change requested is not correct")
-    })
-    public ResponseEntity<Mono<Void>> updateType(@PathVariable("elementUuid") UUID elementUuid,
-                                                    @PathVariable("newType") String newType,
-                                                    @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.updateType(elementUuid, newType, userId));
-    }
-
     @PutMapping(value = "/directories/{elementUuid}/rights", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Modify element/directory's access rights")
     @ApiResponses(value = {
