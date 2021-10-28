@@ -10,7 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.gridsuite.directory.server.ElementType;
 
 import java.util.UUID;
 
@@ -26,7 +25,7 @@ public class ElementAttributes {
 
     private String elementName;
 
-    private ElementType type;
+    private String type;
 
     private AccessRightsAttributes accessRights;
 

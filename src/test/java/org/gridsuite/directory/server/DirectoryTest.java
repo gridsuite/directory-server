@@ -73,6 +73,10 @@ public class DirectoryTest {
     private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
+    private static final UUID FILTER_UUID = UUID.randomUUID();
+    static final String STUDY = "STUDY";
+    static final String FILTER = "FILTER";
+    static final String DIRECTORY = "DIRECTORY";
 
     private void cleanDB() {
         directoryElementRepository.deleteAll();
@@ -90,11 +94,11 @@ public class DirectoryTest {
         String uuidNewDirectory = insertAndCheckRootDirectory("newDir", false, "userId", null);
 
         // Insert a sub-element of type DIRECTORY
-        String uuidNewSubDirectory = insertAndCheckSubElement(null, uuidNewDirectory, "newSubDir", ElementType.DIRECTORY, true, "userId", false, null);
+        String uuidNewSubDirectory = insertAndCheckSubElement(null, uuidNewDirectory, "newSubDir", DIRECTORY, true, "userId", false, null);
         checkDirectoryContent(uuidNewDirectory, "[{\"elementUuid\":\"" + uuidNewSubDirectory + "\",\"elementName\":\"newSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
 
         // Insert a  sub-element of type STUDY
-        String uuidAddedStudy = insertAndCheckSubElement(UUID.randomUUID(), uuidNewDirectory, "newStudy", ElementType.STUDY, false, "userId", false, "descr study");
+        String uuidAddedStudy = insertAndCheckSubElement(UUID.randomUUID(), uuidNewDirectory, "newStudy", STUDY, false, "userId", false, "descr study");
         checkDirectoryContent(uuidNewDirectory, "[{\"elementUuid\":\"" + uuidNewSubDirectory + "\",\"elementName\":\"newSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":null}" +
                 ",{\"elementUuid\":\"" + uuidAddedStudy + "\",\"elementName\":\"newStudy\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":\"descr study\"}]", "userId");
 
@@ -121,11 +125,11 @@ public class DirectoryTest {
         checkRootDirectoriesList("userId", "[{\"elementUuid\":\"" + uuidNewDirectory + "\",\"elementName\":\"newName\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":null}]");
 
         // Add another sub-directory
-        uuidNewSubDirectory = insertAndCheckSubElement(null, uuidNewDirectory, "newSubDir", ElementType.DIRECTORY, true, "userId", true, "descr newSubDir");
+        uuidNewSubDirectory = insertAndCheckSubElement(null, uuidNewDirectory, "newSubDir", DIRECTORY, true, "userId", true, "descr newSubDir");
         checkDirectoryContent(uuidNewDirectory, "[{\"elementUuid\":\"" + uuidNewSubDirectory + "\",\"elementName\":\"newSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":\"descr newSubDir\"}" + "]", "userId");
 
         // Add another sub-directory
-        String uuidNewSubSubDirectory = insertAndCheckSubElement(null, uuidNewSubDirectory, "newSubSubDir", ElementType.DIRECTORY, true, "userId", true, null);
+        String uuidNewSubSubDirectory = insertAndCheckSubElement(null, uuidNewSubDirectory, "newSubSubDir", DIRECTORY, true, "userId", true, null);
         checkDirectoryContent(uuidNewSubDirectory, "[{\"elementUuid\":\"" + uuidNewSubSubDirectory + "\",\"elementName\":\"newSubSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
 
         // Test children number of root directory
@@ -192,9 +196,9 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory bu the user1
-        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, null);
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  STUDY, false, "user1", false, null);
         // Insert a public study in the root directory bu the user1
-        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  ElementType.STUDY, false, "user2", false, "descr study2");
+        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  STUDY, false, "user2", false, "descr study2");
 
         // check user1 visible studies
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}," +
@@ -219,9 +223,9 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory bu the user1
-        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, true, "user1", false, "descr study1");
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  STUDY, true, "user1", false, "descr study1");
         // Insert a public study in the root directory bu the user1
-        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  ElementType.STUDY, false, "user2", false, "descr study2");
+        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  STUDY, false, "user2", false, "descr study2");
 
         // check user1 visible studies
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":true},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":\"descr study1\"}," +
@@ -246,9 +250,9 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory bu the user1
-        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, true, "user1", false, null);
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  STUDY, true, "user1", false, null);
         // Insert a public study in the root directory bu the user1
-        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  ElementType.STUDY, true, "user2", false, null);
+        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  STUDY, true, "user2", false, null);
 
         // check user1 visible studies
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":true},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}]", "user1");
@@ -272,13 +276,13 @@ public class DirectoryTest {
         // Insert a private root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "userId", null);
         // Insert a public study in the root directory bu the userId
-        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, true, "userId", true, "descr study1");
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  STUDY, true, "userId", true, "descr study1");
         // Insert a public study in the root directory bu the userId
-        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  ElementType.STUDY, true, "userId", true, null);
+        String study2Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study2",  STUDY, true, "userId", true, null);
         // Insert a subDirectory
-        String subDirUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "subDir",  ElementType.DIRECTORY, true, "userId", true, null);
+        String subDirUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "subDir",  DIRECTORY, true, "userId", true, null);
         // Insert a public study in the root directory bu the userId
-        String subDirStudyUuid = insertAndCheckSubElement(UUID.randomUUID(),  subDirUuid, "study3",  ElementType.STUDY, true, "userId", true, "descr study3");
+        String subDirStudyUuid = insertAndCheckSubElement(UUID.randomUUID(),  subDirUuid, "study3",  STUDY, true, "userId", true, "descr study3");
 
         deleteElement(rootDirUuid, rootDirUuid, "userId", true, true);
 
@@ -295,7 +299,7 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory by the user1
-        String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, null);
+        String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_UUID,  rootDirUuid, "study1",  STUDY, false, "user1", false, null);
 
         renameElement(study1Uuid, rootDirUuid, "user1", "newName1", false, false);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"newName1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
@@ -307,7 +311,7 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory by the user1
-        String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_FORBIDDEN_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, null);
+        String study1Uuid = insertAndCheckSubElement(STUDY_RENAME_FORBIDDEN_UUID,  rootDirUuid, "study1",  STUDY, false, "user1", false, null);
 
         //the name should not change
         renameElementExpectFail(study1Uuid, "user2", "newName1", 403);
@@ -331,7 +335,7 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory by the user1
-        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, null);
+        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_UUID,  rootDirUuid, "study1",  STUDY, false, "user1", false, null);
 
         //set study to private
         updateAccessRights(study1Uuid, rootDirUuid, "user1", true, false, false);
@@ -348,7 +352,7 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory by the user1
-        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID,  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, "descr study1");
+        String study1Uuid = insertAndCheckSubElement(STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID,  rootDirUuid, "study1",  STUDY, false, "user1", false, "descr study1");
 
         //the access rights should not change
         updateStudyAccessRightFail(study1Uuid, "user2", true, 403);
@@ -361,7 +365,7 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory by the user1
-        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, null);
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  STUDY, false, "user1", false, null);
 
         //try to update the study1 (of user1) with the user2 -> the access rights should not change because it's not allowed
         updateStudyAccessRightFail(study1Uuid, "user2", true, 403);
@@ -374,81 +378,11 @@ public class DirectoryTest {
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory by the user1
-        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, null);
+        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  STUDY, false, "user1", false, null);
 
         //try to delete the study1 (of user1) with the user2 -> the should still be here
         deleteElementFail(study1Uuid, "user2", 403);
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
-    }
-
-    @Test
-    public void testFailChangeElementType() throws Exception {
-        checkRootDirectoriesList("Doe", "[]");
-        // Insert a public root directory user1
-        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
-        // Insert a public study in the root directory by the user1
-        String study1Uuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  ElementType.STUDY, false, "user1", false, null);
-
-        String contingencyScriptUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "contingencyScript",  ElementType.SCRIPT_CONTINGENCY_LIST, false, "user1", false, null);
-
-        //study cannot be updated to be a filter
-        webTestClient.put().uri("/v1/directories/" + UUID.fromString(study1Uuid) + "/updateType/" + ElementType.FILTER)
-                .header("userId", "user1")
-                .exchange()
-                .expectStatus().isForbidden();
-
-        //type contingency script -> filter => forbidden
-        webTestClient.put().uri("/v1/directories/" + UUID.fromString(contingencyScriptUuid) + "/updateType/" + ElementType.FILTERS_CONTINGENCY_LIST)
-                .header("userId", "user1")
-                .exchange()
-                .expectStatus().isForbidden();
-
-        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" +
-                ",{\"elementUuid\":\"" + contingencyScriptUuid + "\",\"elementName\":\"contingencyScript\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}]", "userId");
-    }
-
-    @Test
-    public void testChangeElementType() throws Exception {
-        checkRootDirectoriesList("Doe", "[]");
-        // Insert a public root directory user1
-        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
-        // Insert a public study in the root directory by the user1
-
-        String filterUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "filter1",  ElementType.FILTER, false, "user1", false, null);
-        String contengencyFilterUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "contingencyFilter",  ElementType.FILTERS_CONTINGENCY_LIST, false, "user1", false, null);
-
-        webTestClient.put().uri("/v1/directories/" + UUID.fromString(filterUuid) + "/updateType/" + ElementType.SCRIPT)
-                .header("userId", "user1")
-                .exchange()
-                .expectStatus().isOk();
-
-        Message<byte[]> message = output.receive(1000);
-        assertEquals("", new String(message.getPayload()));
-        MessageHeaders headers = message.getHeaders();
-        assertEquals("user1", headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(rootDirUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
-        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
-
-        webTestClient.put().uri("/v1/directories/" + UUID.fromString(contengencyFilterUuid) + "/updateType/" + ElementType.SCRIPT_CONTINGENCY_LIST)
-                .header("userId", "user1")
-                .exchange()
-                .expectStatus().isOk();
-
-        output.receive(1000);
-
-        //not allowed with another user
-        webTestClient.put().uri("/v1/directories/" + UUID.fromString(filterUuid) + "/updateType/" + ElementType.SCRIPT)
-                .header("userId", "user2")
-                .exchange()
-                .expectStatus().isForbidden();
-
-        output.receive(1000);
-
-        checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + filterUuid + "\",\"elementName\":\"filter1\",\"type\":\"SCRIPT\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" +
-                ",{\"elementUuid\":\"" + contengencyFilterUuid + "\",\"elementName\":\"contingencyFilter\",\"type\":\"SCRIPT_CONTINGENCY_LIST\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
     }
 
     @SneakyThrows
@@ -458,20 +392,20 @@ public class DirectoryTest {
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1", null);
 
         // Insert a public filter in the root directory by the user1
-        String filterUuid = insertAndCheckSubElement(UUID.randomUUID(), rootDirUuid, "Filter", ElementType.FILTER, false, "user1", false, null);
-        String scriptUUID = insertAndCheckSubElement(UUID.randomUUID(), rootDirUuid, "Script", ElementType.SCRIPT, false, "user1", false, null);
+        String filterUuid = insertAndCheckSubElement(FILTER_UUID, rootDirUuid, "Filter", FILTER, false, "user1", false, null);
+        String scriptUUID = insertAndCheckSubElement(UUID.randomUUID(), rootDirUuid, "Script", FILTER, false, "user1", false, null);
         var res = getElements(List.of(scriptUUID, filterUuid, UUID.randomUUID().toString()), "user1");
         assertEquals(2, res.size());
         var filter1 = res.get(0).getElementName().equals("Filter") ? res.get(0) : res.get(1);
         assertEquals(filterUuid, filter1.getElementUuid().toString());
         assertEquals("Filter", filter1.getElementName());
         assertEquals(filterUuid, filter1.getElementUuid().toString());
-        assertEquals(ElementType.FILTER, filter1.getType());
+        assertEquals(FILTER, filter1.getType());
 
         var script = res.get(0).getElementName().equals("Filter") ? res.get(1) : res.get(0);
         assertEquals(scriptUUID, script.getElementUuid().toString());
         assertEquals("Script", script.getElementName());
-        assertEquals(ElementType.SCRIPT, script.getType());
+        assertEquals(FILTER, script.getType());
     }
 
     private void checkRootDirectoriesList(String userId, String expected) {
@@ -505,7 +439,7 @@ public class DirectoryTest {
         }
         assertEquals(isPrivate, jsonTree.get("accessRights").get("private").asBoolean());
 
-        assertElementIsProperlyInserted(uuidNewDirectory, rootDirectoryName, ElementType.DIRECTORY, isPrivate, userId, description);
+        assertElementIsProperlyInserted(uuidNewDirectory, rootDirectoryName, DIRECTORY, isPrivate, userId, description);
 
         // assert that the broker message has been sent a root directory creation request message
         Message<byte[]> message = output.receive(1000);
@@ -537,7 +471,7 @@ public class DirectoryTest {
         });
     }
 
-    private String insertAndCheckSubElement(UUID elementUuid, String parentDirectoryUUid, String subElementName, ElementType type, boolean isPrivate, String userId, boolean isParentPrivate, String subElementDescription) throws JsonProcessingException {
+    private String insertAndCheckSubElement(UUID elementUuid, String parentDirectoryUUid, String subElementName, String type, boolean isPrivate, String userId, boolean isParentPrivate, String subElementDescription) throws JsonProcessingException {
         // Insert a sub-element of type DIRECTORY
         EntityExchangeResult result = webTestClient.post()
                 .uri("/v1/directories/" + UUID.fromString(parentDirectoryUUid))
@@ -658,7 +592,7 @@ public class DirectoryTest {
                 .isEqualTo("[]");
     }
 
-    private void assertElementIsProperlyInserted(String elementUuid, String elementName, ElementType type, boolean isPrivate, String userId, String description) {
+    private void assertElementIsProperlyInserted(String elementUuid, String elementName, String type, boolean isPrivate, String userId, String description) {
         webTestClient.get()
                 .uri("/v1/directories/" + elementUuid)
                 .header("userId", "userId")
