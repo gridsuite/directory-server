@@ -320,7 +320,7 @@ class DirectoryService {
         return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(e -> toElementAttributes(e, 0)));
     }
 
-    public Mono<Void> sendUpdateTypeNotification(UUID elementUuid, String userId) {
+    public Mono<Void> emitDirectoryChangedNotification(UUID elementUuid, String userId) {
         return getElementInfos(elementUuid).flatMap(elementAttributes -> {
             UUID parentUuid = getParentUuid(elementUuid);
             emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null,

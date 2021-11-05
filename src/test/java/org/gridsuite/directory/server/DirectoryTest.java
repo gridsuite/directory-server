@@ -487,7 +487,7 @@ public class DirectoryTest {
         String contingencyListUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  CONTINGENCY_LIST, false, "Doe", false);
 
         webTestClient.put()
-                .uri("/v1/directories/" + contingencyListUuid + "/updateTypeNotification")
+                .uri("/v1/directories/" + contingencyListUuid + "/notify-parent")
                 .header("userId", "Doe")
                 .exchange()
                 .expectStatus().isOk();

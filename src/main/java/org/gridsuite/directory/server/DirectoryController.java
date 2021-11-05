@@ -118,13 +118,13 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getElementsAttribute(ids));
     }
 
-    @PutMapping(value = "/directories/{elementUuid}/updateTypeNotification")
+    @PutMapping(value = "/directories/{elementUuid}/notify-parent")
     @Operation(summary = "send update type notification")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "The notification has been sent"),
     })
-    public ResponseEntity<Mono<Void>> sendUpdateTypeNotification(@PathVariable("elementUuid") UUID elementUuid,
+    public ResponseEntity<Mono<Void>> emitDirectoryChangedNotification(@PathVariable("elementUuid") UUID elementUuid,
                                                  @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.sendUpdateTypeNotification(elementUuid, userId));
+        return ResponseEntity.ok().body(service.emitDirectoryChangedNotification(elementUuid, userId));
     }
 }
