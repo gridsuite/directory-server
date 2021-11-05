@@ -478,6 +478,15 @@ public class DirectoryTest {
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0}" + "]", "userId");
     }
 
+    @Test
+    public void testSendUpdateTypeNotification() {
+        webTestClient.put()
+                .uri("/v1/directories/" + CONTINGENCY_LIST_UUID + "/updateTypeNotification")
+                .header("userId", "Doe")
+                .exchange()
+                .expectStatus().isOk();
+    }
+
     @SneakyThrows
     @Test
     public void testGetElement() {
