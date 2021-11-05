@@ -161,7 +161,7 @@ class DirectoryService {
                 elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
                 parentDirectoryUuid,
                 elementAttributes.getElementName(),
-                elementAttributes.getType().toString(),
+                elementAttributes.getType(),
                 elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
                 elementAttributes.getOwner())), 0L));
     }
