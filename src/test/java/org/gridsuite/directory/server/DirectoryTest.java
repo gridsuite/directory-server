@@ -479,7 +479,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testSendUpdateTypeNotification() throws Exception {
+    public void testEmitDirectoryChangedNotification() throws Exception {
         checkRootDirectoriesList("Doe", "[]");
         // Insert a public root directory user1
         String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
