@@ -117,4 +117,14 @@ public class DirectoryController {
     public ResponseEntity<Flux<ElementAttributes>> getElementsAttributes(@RequestParam("id") List<UUID> ids) {
         return ResponseEntity.ok().body(service.getElementsAttribute(ids));
     }
+
+    @PutMapping(value = "/directories/{elementUuid}/updateTypeNotification")
+    @Operation(summary = "send update type notification")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The notification has been sent"),
+    })
+    public ResponseEntity<Mono<Void>> sendUpdateTypeNotification(@PathVariable("elementUuid") UUID elementUuid,
+                                                 @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.sendUpdateTypeNotification(elementUuid, userId));
+    }
 }
