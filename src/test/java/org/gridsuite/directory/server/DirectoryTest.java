@@ -385,6 +385,32 @@ public class DirectoryTest {
         checkDirectoryContent(rootDirUuid, "[{\"elementUuid\":\"" + study1Uuid + "\",\"elementName\":\"study1\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"user1\",\"subdirectoriesCount\":0,\"description\":null}" + "]", "userId");
     }
 
+    @Test
+    public void testEmitDirectoryChangedNotification() throws Exception {
+        checkRootDirectoriesList("Doe", "[]");
+        // Insert a public root directory user1
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        // Insert a public study in the root directory by the user1
+        String contingencyListUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  CONTINGENCY_LIST, false, "Doe", false);
+
+        webTestClient.put()
+                .uri("/v1/directories/" + contingencyListUuid + "/notify-parent")
+                .header("userId", "Doe")
+                .exchange()
+                .expectStatus().isOk();
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(rootDirUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID).toString());
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+    }
+
     @SneakyThrows
     @Test
     public void testGetElement() {
