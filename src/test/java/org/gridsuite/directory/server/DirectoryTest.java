@@ -75,6 +75,7 @@ public class DirectoryTest {
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID FILTER_UUID = UUID.randomUUID();
     static final String STUDY = "STUDY";
+    static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
     static final String FILTER = "FILTER";
     static final String DIRECTORY = "DIRECTORY";
 
@@ -389,9 +390,9 @@ public class DirectoryTest {
     public void testEmitDirectoryChangedNotification() throws Exception {
         checkRootDirectoriesList("Doe", "[]");
         // Insert a public root directory user1
-        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        String rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe", null);
         // Insert a public study in the root directory by the user1
-        String contingencyListUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  CONTINGENCY_LIST, false, "Doe", false);
+        String contingencyListUuid = insertAndCheckSubElement(UUID.randomUUID(),  rootDirUuid, "study1",  CONTINGENCY_LIST, false, "Doe", false, null);
 
         webTestClient.put()
                 .uri("/v1/directories/" + contingencyListUuid + "/notify-parent")
