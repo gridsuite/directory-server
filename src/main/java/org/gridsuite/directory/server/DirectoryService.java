@@ -32,35 +32,41 @@ class DirectoryService {
         this.directoryElementRepository = directoryElementRepository;
     }
 
-    private static ElementAttributes fromEntity(DirectoryElementEntity entity) {
-        return new ElementAttributes(entity.getId(), entity.getName(), ElementType.valueOf(entity.getType()), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner());
+    public static ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
+        return ElementAttributes.builder()
+            .id(entity.getId())
+            .name(entity.getName())
+            .type(ElementType.valueOf(entity.getType()))
+            .accessRights(new AccessRightsAttributes(entity.isPrivate()))
+            .owner(entity.getOwner())
+            .build();
     }
 
     public Mono<DirectoryElementEntity> createDirectory(DirectoryAttributes directoryAttributes) {
         return directoryElementRepository.save(new DirectoryElementEntity(null, directoryAttributes.getParentId(),
-                                                                   directoryAttributes.getDirectoryName(),
-                                                                   ElementType.DIRECTORY.toString(),
-                                                                   directoryAttributes.getAccessRights() == null || directoryAttributes.getAccessRights().isPrivate(),
-                                                                   directoryAttributes.getOwner(),
-                                                        true));
+            directoryAttributes.getName(),
+            ElementType.DIRECTORY.toString(),
+            directoryAttributes.getAccessRights() == null || directoryAttributes.getAccessRights().isPrivate(),
+            directoryAttributes.getOwner(),
+            true));
     }
 
     public Mono<DirectoryElementEntity> addElementToDirectory(Optional<String> directoryUuid, ElementAttributes elementAttributes) {
-        return directoryElementRepository.save(new DirectoryElementEntity(elementAttributes.getElementUuid(),
-                                                                   directoryUuid.isPresent() ? UUID.fromString(directoryUuid.get()) : null,
-                                                                   elementAttributes.getElementName(),
-                                                                   elementAttributes.getType().toString(),
-                                                                   elementAttributes.getAccessRights().isPrivate(),
-                                                                   elementAttributes.getOwner(),
-                                                        true));
+        return directoryElementRepository.save(new DirectoryElementEntity(elementAttributes.getId(),
+            directoryUuid.map(UUID::fromString).orElse(null),
+            elementAttributes.getName(),
+            elementAttributes.getType().toString(),
+            elementAttributes.getAccessRights().isPrivate(),
+            elementAttributes.getOwner(),
+            true));
     }
 
     public Flux<ElementAttributes> listDirectoryContent(String directoryUuid) {
-        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).map(DirectoryService::fromEntity);
+        return directoryElementRepository.findByParentId(UUID.fromString(directoryUuid)).map(DirectoryService::toElementAttributes);
     }
 
     public Flux<ElementAttributes> getRootDirectories() {
-        return directoryElementRepository.findByParentId(null).map(DirectoryService::fromEntity);
+        return directoryElementRepository.findByParentId(null).map(DirectoryService::toElementAttributes);
     }
 
     public Mono<Void> renameElement(String elementUuid, String newElementName) {

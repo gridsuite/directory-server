@@ -6,21 +6,32 @@
  */
 package org.gridsuite.directory.server.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.directory.server.ElementType;
+
+import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
+
 @SuperBuilder
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(callSuper = true)
-public class ElementAttributes extends BasicAttributes {
-    private ElementType type;
+@ToString
+public class BasicAttributes {
+
+    private UUID id;
+
+    private String name;
+
+    private AccessRightsAttributes accessRights;
+
+    private String owner;
+
+    public boolean hasAccessRights(@NonNull String userId) {
+        return owner.equals(userId) || !accessRights.isPrivate();
+    }
+
 }

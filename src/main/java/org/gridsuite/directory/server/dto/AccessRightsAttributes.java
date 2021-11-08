@@ -6,10 +6,7 @@
  */
 package org.gridsuite.directory.server.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -19,6 +16,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString
 public class AccessRightsAttributes {
     private boolean isPrivate;
 }

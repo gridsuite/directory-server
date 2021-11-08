@@ -6,10 +6,11 @@
  */
 package org.gridsuite.directory.server.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
+import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
@@ -17,18 +18,11 @@ import java.util.UUID;
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 
+@SuperBuilder
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-public class DirectoryAttributes {
-
+@ToString(callSuper = true)
+public class DirectoryAttributes extends BasicAttributes {
     private UUID parentId;
-
-    private String directoryName;
-
-    private AccessRightsAttributes accessRights = new AccessRightsAttributes(true);
-
-    private String owner;
-
 }
