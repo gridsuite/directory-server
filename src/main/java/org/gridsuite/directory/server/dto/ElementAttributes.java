@@ -40,6 +40,10 @@ public class ElementAttributes {
 
     private String description;
 
+    public boolean isAllowed(@NonNull String userId) {
+        return owner.equals(userId) || !accessRights.isPrivate();
+    }
+
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
         return toElementAttributes(entity, 0L);
     }

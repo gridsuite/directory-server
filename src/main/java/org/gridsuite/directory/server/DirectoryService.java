@@ -288,4 +288,8 @@ public class DirectoryService {
             })
             .then();
     }
+
+    public Mono<Boolean> isAllowed(@NonNull UUID elementUuid, @NonNull String userId) {
+        return getElement(elementUuid).map(e -> e.isAllowed(userId));
+    }
 }

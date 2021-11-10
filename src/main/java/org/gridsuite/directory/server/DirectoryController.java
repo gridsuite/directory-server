@@ -138,4 +138,11 @@ public class DirectoryController {
                                                     @PathVariable("type") String type) {
         return ResponseEntity.ok().body(service.elementExistsMono(directoryUuid, elementName, type));
     }
+
+    @GetMapping(value = "/directories/{elementUuid}/allowed")
+    @Operation(summary = "Control access permissions for a user")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "Access permissions control done"))
+    public ResponseEntity<Mono<Boolean>> isAllowed(@PathVariable("elementUuid") UUID elementUuid, @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.isAllowed(elementUuid, userId));
+    }
 }
