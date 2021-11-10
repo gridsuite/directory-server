@@ -128,7 +128,7 @@ public class DirectoryController {
     }
 
     @PutMapping(value = "/directories/{elementUuid}/notify-parent")
-    @Operation(summary = "send update type notification")
+    @Operation(summary = "notify parent")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "The notification has been sent"),
     })
