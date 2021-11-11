@@ -123,13 +123,11 @@ public class DirectoryService {
         studyUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
-    private void emitDirectoryChanged(UUID directoryUuid, String userId, boolean isPrivate, boolean isRoot,
-                                      NotificationType notificationType) {
+    private void emitDirectoryChanged(UUID directoryUuid, String userId, boolean isPrivate, boolean isRoot, NotificationType notificationType) {
         emitDirectoryChanged(directoryUuid, userId, null, isPrivate, isRoot, notificationType);
     }
 
-    private void emitDirectoryChanged(UUID directoryUuid, String userId, String error, boolean isPrivate,
-                                      boolean isRoot, NotificationType notificationType) {
+    private void emitDirectoryChanged(UUID directoryUuid, String userId, String error, boolean isPrivate, boolean isRoot, NotificationType notificationType) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
             .setHeader(HEADER_USER_ID, userId)
             .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
@@ -199,15 +197,15 @@ public class DirectoryService {
             if (!userId.equals(elementAttributes.getOwner())) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }
-            if (elementAttributes.getType().equals(STUDY)) {
-                return renameStudy(elementUuid, userId, newElementName);
-            } else if (elementAttributes.getType().equals(CONTINGENCY_LIST)) {
-                return actionsService.renameContingencyList(elementUuid, newElementName);
-            } else if (elementAttributes.getType().equals(FILTER)
-            ) {
-                return filterService.renameFilter(elementUuid, newElementName);
-            } else {
-                return Mono.empty();
+            switch (elementAttributes.getType()) {
+                case STUDY:
+                    return renameStudy(elementUuid, userId, newElementName);
+                case CONTINGENCY_LIST:
+                    return actionsService.renameContingencyList(elementUuid, newElementName);
+                case FILTER:
+                    return filterService.renameFilter(elementUuid, newElementName);
+                default:
+                    return Mono.empty();
             }
         }).doOnSuccess(unused -> {
             directoryElementRepository.updateElementName(elementUuid, newElementName);
@@ -275,7 +273,7 @@ public class DirectoryService {
     }
 
     public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
-        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(e -> toElementAttributes(e)).orElse(null));
+        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(ElementAttributes::toElementAttributes).orElse(null));
     }
 
     private UUID getParentUuid(UUID directoryUuid) {
@@ -316,7 +314,7 @@ public class DirectoryService {
     }
 
     public Flux<ElementAttributes> getElementsAttribute(List<UUID> ids) {
-        return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(e -> toElementAttributes(e)));
+        return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(ElementAttributes::toElementAttributes));
     }
 
     public Mono<Void> emitDirectoryChangedNotification(UUID elementUuid, String userId) {
