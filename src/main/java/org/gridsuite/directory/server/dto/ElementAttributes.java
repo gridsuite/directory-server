@@ -10,10 +10,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.directory.server.ElementType;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
 import java.util.UUID;
+
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -27,7 +28,7 @@ public class ElementAttributes {
 
     private String elementName;
 
-    private ElementType type;
+    private String type;
 
     private AccessRightsAttributes accessRights;
 
@@ -44,7 +45,7 @@ public class ElementAttributes {
         return ElementAttributes.builder()
             .elementUuid(entity.getId())
             .elementName(entity.getName())
-            .type(ElementType.valueOf(entity.getType()))
+            .type(entity.getType())
             .accessRights(AccessRightsAttributes.builder().isPrivate(entity.isPrivate()).build())
             .owner(entity.getOwner())
             .subdirectoriesCount(subDirectoriesCount)
@@ -55,14 +56,14 @@ public class ElementAttributes {
         return ElementAttributes.builder()
             .elementUuid(null)
             .elementName(rootDirectoryAttributes.getElementName())
-            .type(ElementType.DIRECTORY)
+            .type(DIRECTORY)
             .accessRights(rootDirectoryAttributes.getAccessRights())
             .owner(rootDirectoryAttributes.getOwner())
             .subdirectoriesCount(0L)
             .build();
     }
 
-    public static ElementAttributes toElementAttributes(String elementName, ElementType elementType, boolean isPrivate, String userId) {
+    public static ElementAttributes toElementAttributes(String elementName, String elementType, boolean isPrivate, String userId) {
         return ElementAttributes.builder()
             .elementUuid(null)
             .elementName(elementName)

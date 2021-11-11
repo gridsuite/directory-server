@@ -48,11 +48,6 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     void updateElementAccessRights(UUID elementUuid, boolean isPrivate);
 
     @Transactional
-    @Modifying
-    @Query("UPDATE DirectoryElementEntity SET type = :newTypeName WHERE id = :elementUuid")
-    void updateElementType(UUID elementUuid, String newTypeName);
-
-    @Transactional
     void deleteById(UUID id);
 
 }
