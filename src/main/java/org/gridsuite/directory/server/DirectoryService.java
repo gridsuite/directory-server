@@ -102,11 +102,10 @@ public class DirectoryService {
     @Bean
     public Consumer<Flux<Message<String>>> consumeStudyUpdate() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
+            UUID studyUuid = message.getHeaders().get(HEADER_STUDY_UUID, UUID.class);
             String error = message.getHeaders().get(HEADER_ERROR, String.class);
             String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            if (studyUuidHeader != null) {
-                UUID studyUuid = UUID.fromString(studyUuidHeader);
+            if (studyUuid != null) {
                 UUID parentUuid = getParentUuid(studyUuid);
                 if (error != null) {
                     deleteElement(studyUuid, userId).subscribe();
