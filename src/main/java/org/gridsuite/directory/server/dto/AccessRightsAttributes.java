@@ -7,15 +7,14 @@
 package org.gridsuite.directory.server.dto;
 
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
-@SuperBuilder
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @ToString
 public class AccessRightsAttributes {
     private boolean isPrivate;

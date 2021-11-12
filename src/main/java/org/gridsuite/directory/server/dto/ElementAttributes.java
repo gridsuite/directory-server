@@ -6,10 +6,10 @@
  */
 package org.gridsuite.directory.server.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
 import java.util.UUID;
@@ -19,9 +19,9 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
-@SuperBuilder
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
 @ToString
 public class ElementAttributes {
     private UUID elementUuid;
@@ -34,7 +34,7 @@ public class ElementAttributes {
 
     private String owner;
 
-    private long subdirectoriesCount = 0L;
+    private long subdirectoriesCount;
 
     /* converters */
     public static ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
@@ -42,35 +42,24 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(DirectoryElementEntity entity, long subDirectoriesCount) {
-        return ElementAttributes.builder()
-            .elementUuid(entity.getId())
-            .elementName(entity.getName())
-            .type(entity.getType())
-            .accessRights(AccessRightsAttributes.builder().isPrivate(entity.isPrivate()).build())
-            .owner(entity.getOwner())
-            .subdirectoriesCount(subDirectoriesCount)
-            .build();
+        return new ElementAttributes(entity.getId(), entity.getName(), entity.getType(),
+            new AccessRightsAttributes(entity.isPrivate()), entity.getOwner(), subDirectoriesCount);
     }
 
     public static ElementAttributes toElementAttributes(RootDirectoryAttributes rootDirectoryAttributes) {
-        return ElementAttributes.builder()
-            .elementUuid(null)
-            .elementName(rootDirectoryAttributes.getElementName())
-            .type(DIRECTORY)
-            .accessRights(rootDirectoryAttributes.getAccessRights())
-            .owner(rootDirectoryAttributes.getOwner())
-            .subdirectoriesCount(0L)
-            .build();
+        return new ElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
+            rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L);
+    }
+
+    public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, String elementType, boolean isPrivate, String userId) {
+        return toElementAttributes(elementUuid, elementName, elementType, isPrivate, userId, 0L);
+    }
+
+    public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, String elementType, boolean isPrivate, String userId, long subdirectoriesCount) {
+        return new ElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, subdirectoriesCount);
     }
 
     public static ElementAttributes toElementAttributes(String elementName, String elementType, boolean isPrivate, String userId) {
-        return ElementAttributes.builder()
-            .elementUuid(null)
-            .elementName(elementName)
-            .type(elementType)
-            .accessRights(AccessRightsAttributes.builder().isPrivate(isPrivate).build())
-            .owner(userId)
-            .subdirectoriesCount(0L)
-            .build();
+        return new ElementAttributes(null, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L);
     }
 }
