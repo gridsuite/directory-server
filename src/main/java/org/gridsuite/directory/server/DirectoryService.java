@@ -150,13 +150,18 @@ public class DirectoryService {
 
     /* methods */
     private Mono<ElementAttributes> insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
-        return Mono.fromCallable(() -> toElementAttributes(directoryElementRepository.save(new DirectoryElementEntity(
-            elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
-            parentDirectoryUuid,
-            elementAttributes.getElementName(),
-            elementAttributes.getType(),
-            elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
-            elementAttributes.getOwner()))));
+        return Mono.fromCallable(() -> toElementAttributes(
+            directoryElementRepository.save(
+                new DirectoryElementEntity(
+                    elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
+                    parentDirectoryUuid,
+                    elementAttributes.getElementName(),
+                    elementAttributes.getType(),
+                    elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
+                    elementAttributes.getOwner()
+                )
+            )
+        ));
     }
 
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {

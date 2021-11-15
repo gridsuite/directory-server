@@ -6,10 +6,7 @@
  */
 package org.gridsuite.directory.server.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
 import java.util.UUID;
@@ -21,7 +18,7 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
  */
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ToString
 public class ElementAttributes {
     private UUID elementUuid;
@@ -36,30 +33,23 @@ public class ElementAttributes {
 
     private long subdirectoriesCount;
 
-    /* converters */
     public static ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
         return toElementAttributes(entity, 0L);
     }
 
     public static ElementAttributes toElementAttributes(DirectoryElementEntity entity, long subDirectoriesCount) {
-        return new ElementAttributes(entity.getId(), entity.getName(), entity.getType(),
-            new AccessRightsAttributes(entity.isPrivate()), entity.getOwner(), subDirectoriesCount);
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner(), subDirectoriesCount);
     }
 
     public static ElementAttributes toElementAttributes(RootDirectoryAttributes rootDirectoryAttributes) {
-        return new ElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
-            rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L);
+        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, String elementType, boolean isPrivate, String userId) {
-        return toElementAttributes(elementUuid, elementName, elementType, isPrivate, userId, 0L);
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, String elementType, boolean isPrivate, String userId, long subdirectoriesCount) {
-        return new ElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, subdirectoriesCount);
-    }
-
-    public static ElementAttributes toElementAttributes(String elementName, String elementType, boolean isPrivate, String userId) {
-        return new ElementAttributes(null, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L);
+    public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, String elementType, AccessRightsAttributes accessRights, String userId, long subdirectoriesCount) {
+        return new ElementAttributes(elementUuid, elementName, elementType, accessRights, userId, subdirectoriesCount);
     }
 }

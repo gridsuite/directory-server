@@ -212,7 +212,7 @@ public class DirectoryTest {
         checkDirectoryContent(uuidNewSubDirectory, "userId", List.of(toElementAttributes(uuidNewSubSubDirectory, "newSubSubDir", DIRECTORY, true, "userId")));
 
         // Test children number of root directory
-        checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, true, "userId", 1L)));
+        checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L)));
 
         deleteElement(uuidNewDirectory, uuidNewDirectory, "userId", true, true);
         checkRootDirectoriesList("userId", List.of());
