@@ -27,6 +27,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -103,8 +104,8 @@ public class DirectoryTest {
         checkDirectoryContent(uuidNewDirectory, "[{\"elementUuid\":\"" + uuidNewSubDirectory + "\",\"elementName\":\"newSubDir\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":null}" +
                 ",{\"elementUuid\":\"" + uuidAddedStudy + "\",\"elementName\":\"newStudy\",\"type\":\"STUDY\",\"accessRights\":{\"private\":false},\"owner\":\"userId\",\"subdirectoriesCount\":0,\"description\":\"descr study\"}]", "userId");
 
-        checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", "userId", Boolean.TRUE);
-        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", "userId", Boolean.FALSE);
+        checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", "userId", HttpStatus.OK);
+        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", "userId", HttpStatus.NOT_FOUND);
 
         // Delete the sub-directory newSubDir
         deleteElement(uuidNewSubDirectory, uuidNewDirectory, "userId", false, false);
@@ -649,15 +650,12 @@ public class DirectoryTest {
                 .expectStatus().isNotFound();
     }
 
-    private void checkElementNameExistInDirectory(String parentDirectoryUuid, String elementName, String userId, Boolean expected) {
-        webTestClient.get()
-            .uri("/v1/directories/" + parentDirectoryUuid + "/" + elementName + "/exists")
+    private void checkElementNameExistInDirectory(String parentDirectoryUuid, String elementName, String userId, HttpStatus expectedStatus) {
+        webTestClient.head()
+            .uri("/v1/directories/" + parentDirectoryUuid + "/" + elementName)
             .header("userId", userId)
             .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBody(Boolean.class)
-            .isEqualTo(expected);
+            .expectStatus().isEqualTo(expectedStatus);
     }
 
     private void deleteElement(String elementUuidToBeDeleted, String elementUuidHeader, String userId, boolean isRoot, boolean isPrivate) {

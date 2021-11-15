@@ -50,9 +50,6 @@ class DirectoryService {
     static final String HEADER_ERROR = "error";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_NOTIFICATION_TYPE = "notificationType";
-    static final String STUDY = "STUDY";
-    static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
-    static final String FILTER = "FILTER";
     static final String DIRECTORY = "DIRECTORY";
 
     private final StreamBridge studyUpdatePublisher;
