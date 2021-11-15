@@ -115,10 +115,10 @@ public class DirectoryController {
     @Operation(summary = "Check if the element exists")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
                            @ApiResponse(responseCode = "404", description = "The element doesn't exist")})
-    public Mono<ResponseEntity.HeadersBuilder<? extends ResponseEntity.HeadersBuilder<?>>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
-                                                                                                         @PathVariable("elementName") String elementName,
-                                                                                                         @RequestHeader("userId") String userId) {
-        return service.elementExists(directoryUuid, elementName, userId).map(b -> b.booleanValue() ? ResponseEntity.ok() : ResponseEntity.notFound());
+    public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                    @PathVariable("elementName") String elementName,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, userId));
     }
 
     @GetMapping(value = "/directories/elements")

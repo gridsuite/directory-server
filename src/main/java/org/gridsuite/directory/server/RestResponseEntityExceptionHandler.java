@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -25,6 +26,8 @@ public class RestResponseEntityExceptionHandler {
         switch (directoryException.getType()) {
             case NOT_ALLOWED:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
+            case NOT_FOUND:
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND);
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

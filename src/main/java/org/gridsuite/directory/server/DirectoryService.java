@@ -264,9 +264,9 @@ class DirectoryService {
         }
     }
 
-    public Mono<Boolean> elementExists(UUID parentDirectoryUuid, String elementName, String userId) {
-        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findDirectoryContentByUserId(parentDirectoryUuid, userId);
-        return Mono.just(directoryElements.stream().anyMatch(e -> e.getName().equals(elementName)));
+    public Mono<Void> elementExists(UUID parentDirectoryUuid, String elementName, String userId) {
+        return directoryElementRepository.findDirectoryContentByUserId(parentDirectoryUuid, userId).stream().anyMatch(e -> e.getName().equals(elementName))
+            ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND));
     }
 
     public Flux<ElementAttributes> getElementsAttribute(List<UUID> ids) {

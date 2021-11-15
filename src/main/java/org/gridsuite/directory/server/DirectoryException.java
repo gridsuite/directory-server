@@ -14,7 +14,8 @@ import java.util.Objects;
 class DirectoryException extends RuntimeException {
 
     public enum Type {
-        NOT_ALLOWED
+        NOT_ALLOWED,
+        NOT_FOUND
     }
 
     private final Type type;
