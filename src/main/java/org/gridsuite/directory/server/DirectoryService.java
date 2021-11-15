@@ -157,7 +157,7 @@ public class DirectoryService {
                     parentDirectoryUuid,
                     elementAttributes.getElementName(),
                     elementAttributes.getType(),
-                    elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
+                    elementAttributes.getAccessRights().isPrivate(),
                     elementAttributes.getOwner()
                 )
             )

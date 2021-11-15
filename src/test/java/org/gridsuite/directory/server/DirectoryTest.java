@@ -7,6 +7,7 @@
 package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jparams.verifier.tostring.ToStringVerifier;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -39,10 +40,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.config.EnableWebFlux;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.StringJoiner;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
@@ -68,6 +66,12 @@ public class DirectoryTest {
 
     @Autowired
     private DirectoryService directoryService;
+
+    @Autowired
+    private FilterService filterService;
+
+    @Autowired
+    ContingencyListService contingencyListService;
 
     private MockWebServer server;
 
@@ -104,6 +108,8 @@ public class DirectoryTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         directoryService.setStudyServerBaseUri(baseUrl);
+        filterService.setFilterServerBaseUri(baseUrl);
+        contingencyListService.setActionsServerBaseUri(baseUrl);
 
         final Dispatcher dispatcher = new Dispatcher() {
             @NotNull
@@ -544,20 +550,37 @@ public class DirectoryTest {
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1");
 
         // Insert a public filter in the root directory by the user1
+        UUID contingencyUUID = insertAndCheckSubElement(CONTINGENCY_LIST_UUID, rootDirUuid, "Contingency", CONTINGENCY_LIST, false, "user1", false);
         UUID filterUuid = insertAndCheckSubElement(FILTER_UUID, rootDirUuid, "Filter", FILTER, false, "user1", false);
         UUID scriptUUID = insertAndCheckSubElement(UUID.randomUUID(), rootDirUuid, "Script", FILTER, false, "user1", false);
-        var res = getElements(List.of(scriptUUID, filterUuid, UUID.randomUUID()), "user1");
-        assertEquals(2, res.size());
-        var filter1 = res.get(0).getElementName().equals("Filter") ? res.get(0) : res.get(1);
-        assertEquals(filterUuid, filter1.getElementUuid());
-        assertEquals("Filter", filter1.getElementName());
-        assertEquals(filterUuid, filter1.getElementUuid());
-        assertEquals(FILTER, filter1.getType());
 
-        var script = res.get(0).getElementName().equals("Filter") ? res.get(1) : res.get(0);
-        assertEquals(scriptUUID, script.getElementUuid());
-        assertEquals("Script", script.getElementName());
-        assertEquals(FILTER, script.getType());
+        var res = getElements(List.of(contingencyUUID, filterUuid, scriptUUID, UUID.randomUUID()), "user1");
+        assertEquals(3, res.size());
+        ToStringVerifier.forClass(ElementAttributes.class).verify();
+
+        res.sort(Comparator.comparing(ElementAttributes::getElementName));
+        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
+            List.of(
+                toElementAttributes(contingencyUUID, "Contingency", CONTINGENCY_LIST, false, "user1"),
+                toElementAttributes(filterUuid, "Filter", FILTER, false, "user1"),
+                toElementAttributes(scriptUUID, "Script", FILTER, false, "user1")
+            ))
+        );
+
+        renameElement(contingencyUUID, rootDirUuid, "user1", "newContingency", false, false);
+        renameElement(filterUuid, rootDirUuid, "user1", "newFilter", false, false);
+        renameElement(scriptUUID, rootDirUuid, "user1", "newScript", false, false);
+        res = getElements(List.of(contingencyUUID, scriptUUID, filterUuid), "user1");
+        assertEquals(3, res.size());
+
+        res.sort(Comparator.comparing(ElementAttributes::getElementName));
+        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
+            List.of(
+                toElementAttributes(contingencyUUID, "newContingency", CONTINGENCY_LIST, false, "user1"),
+                toElementAttributes(filterUuid, "newFilter", FILTER, false, "user1"),
+                toElementAttributes(scriptUUID, "newScript", FILTER, false, "user1")
+            ))
+        );
     }
 
     private void checkRootDirectoriesList(String userId, List<ElementAttributes> list) {
