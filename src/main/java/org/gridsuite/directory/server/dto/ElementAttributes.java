@@ -33,23 +33,23 @@ public class ElementAttributes {
 
     private long subdirectoriesCount;
 
-    public static ElementAttributes toElementAttributes(DirectoryElementEntity entity) {
+    public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
         return toElementAttributes(entity, 0L);
     }
 
-    public static ElementAttributes toElementAttributes(DirectoryElementEntity entity, long subDirectoriesCount) {
+    public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
         return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner(), subDirectoriesCount);
     }
 
-    public static ElementAttributes toElementAttributes(RootDirectoryAttributes rootDirectoryAttributes) {
+    public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
         return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, String elementType, boolean isPrivate, String userId) {
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, boolean isPrivate, @NonNull String userId) {
         return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, String elementType, AccessRightsAttributes accessRights, String userId, long subdirectoriesCount) {
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, @NonNull AccessRightsAttributes accessRights, @NonNull String userId, long subdirectoriesCount) {
         return new ElementAttributes(elementUuid, elementName, elementType, accessRights, userId, subdirectoriesCount);
     }
 }
