@@ -9,13 +9,8 @@ package org.gridsuite.directory.server;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
@@ -23,7 +18,6 @@ import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -40,13 +34,6 @@ import static org.gridsuite.directory.server.DirectoryException.Type.*;
  */
 @Service
 class DirectoryService {
-    private static final String DELIMITER = "/";
-    private static final String STUDY_SERVER_API_VERSION = "v1";
-    private static final String ROOT_CATEGORY_REACTOR = "reactor.";
-
-    private final WebClient webClient;
-    private String studyServerBaseUri;
-
     private final DirectoryElementRepository directoryElementRepository;
 
     private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
@@ -63,31 +50,18 @@ class DirectoryService {
     static final String HEADER_ERROR = "error";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_NOTIFICATION_TYPE = "notificationType";
-    static final String STUDY = "STUDY";
-    static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
-    static final String FILTER = "FILTER";
     static final String DIRECTORY = "DIRECTORY";
 
     private final StreamBridge studyUpdatePublisher;
-
-    private ContingencyListService actionsService;
-    private FilterService filterService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
 
     public DirectoryService(
             DirectoryElementRepository directoryElementRepository,
-            @Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri,
-            WebClient.Builder webClientBuilder, StreamBridge studyUpdatePublisher,
-            ContingencyListService actionsService,
-            FilterService filterService) {
+            StreamBridge studyUpdatePublisher) {
         this.directoryElementRepository = directoryElementRepository;
-        this.studyServerBaseUri = studyServerBaseUri;
 
-        this.webClient = webClientBuilder.build();
         this.studyUpdatePublisher = studyUpdatePublisher;
-        this.actionsService = actionsService;
-        this.filterService = filterService;
     }
 
     /* notifications */
@@ -141,7 +115,8 @@ class DirectoryService {
                 entity.getType(),
                 new AccessRightsAttributes(entity.isPrivate()),
                 entity.getOwner(),
-                subDirectoriesCount
+                subDirectoriesCount,
+                entity.getDescription()
         );
     }
 
@@ -163,12 +138,14 @@ class DirectoryService {
                 elementAttributes.getElementName(),
                 elementAttributes.getType(),
                 elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
-                elementAttributes.getOwner())), 0L));
+                elementAttributes.getOwner(),
+                elementAttributes.getDescription())),
+                0L));
     }
 
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
         ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
-                rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L);
+                rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, rootDirectoryAttributes.getDescription());
         return insertElement(elementAttributes, null).doOnSuccess(element ->
                 emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true, NotificationType.ADD_DIRECTORY));
     }
@@ -200,15 +177,8 @@ class DirectoryService {
         return getElementInfos(elementUuid).flatMap(elementAttributes -> {
             if (!userId.equals(elementAttributes.getOwner())) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
-            }
-            if (elementAttributes.getType().equals(STUDY)) {
-                return renameStudy(elementUuid, userId, newElementName);
-            } else if (elementAttributes.getType().equals(CONTINGENCY_LIST)) {
-                return actionsService.renameContingencyList(elementUuid, newElementName);
-            } else if (elementAttributes.getType().equals(FILTER)) {
-                return filterService.renameFilter(elementUuid, newElementName);
             } else {
-                return Mono.empty();
+                return Mono.empty().then();
             }
         }).doOnSuccess(unused -> {
             directoryElementRepository.updateElementName(elementUuid, newElementName);
@@ -271,10 +241,6 @@ class DirectoryService {
         directoryContentStream(elementUuid, userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
     }
 
-    public void setStudyServerBaseUri(String studyServerBaseUri) {
-        this.studyServerBaseUri = studyServerBaseUri;
-    }
-
     public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
         return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(e -> toElementAttributes(e, 0L)).orElse(null));
     }
@@ -298,22 +264,9 @@ class DirectoryService {
         }
     }
 
-    //TODO remove when names are removed from study-server
-    private Mono<Void> renameStudy(UUID studyUuid, String userId, String newElementName) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION + "/studies/{studyUuid}/rename")
-                .buildAndExpand(studyUuid)
-                .toUriString();
-
-        return webClient.post()
-                .uri(studyServerBaseUri + path)
-                .header(HEADER_USER_ID, userId)
-                .body(BodyInserters.fromValue(new RenameElementAttributes(newElementName)))
-                .retrieve()
-                .onStatus(httpStatus -> httpStatus == HttpStatus.NOT_FOUND, clientResponse -> Mono.error(new DirectoryException(STUDY_NOT_FOUND)))
-                .onStatus(httpStatus -> httpStatus == HttpStatus.FORBIDDEN, clientResponse -> Mono.error(new DirectoryException(NOT_ALLOWED)))
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+    public Mono<Void> elementExists(UUID parentDirectoryUuid, String elementName, String userId) {
+        return directoryElementRepository.findDirectoryContentByUserId(parentDirectoryUuid, userId).stream().anyMatch(e -> e.getName().equals(elementName))
+            ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND));
     }
 
     public Flux<ElementAttributes> getElementsAttribute(List<UUID> ids) {
