@@ -22,4 +22,6 @@ public class RootDirectoryAttributes {
     private AccessRightsAttributes accessRights;
 
     private String owner;
+
+    private String description;
 }

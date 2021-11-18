@@ -111,6 +111,16 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
     }
 
+    @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/{elementName}")
+    @Operation(summary = "Check if the element exists")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
+                           @ApiResponse(responseCode = "404", description = "The element doesn't exist")})
+    public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                    @PathVariable("elementName") String elementName,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, userId));
+    }
+
     @GetMapping(value = "/directories/elements")
     @Operation(summary = "get element infos from ids given as parameters")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The elements information")})

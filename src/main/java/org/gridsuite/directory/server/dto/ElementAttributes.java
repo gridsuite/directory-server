@@ -33,23 +33,32 @@ public class ElementAttributes {
 
     private long subdirectoriesCount;
 
+    private String description;
+
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
         return toElementAttributes(entity, 0L);
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner(), subDirectoriesCount);
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
-        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L);
+        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, boolean isPrivate, @NonNull String userId) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L);
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, null);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, @NonNull AccessRightsAttributes accessRights, @NonNull String userId, long subdirectoriesCount) {
-        return new ElementAttributes(elementUuid, elementName, elementType, accessRights, userId, subdirectoriesCount);
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+                                                        boolean isPrivate, @NonNull String userId, String elementDescription) {
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription);
+    }
+
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+                                                        @NonNull AccessRightsAttributes accessRights, @NonNull String userId,
+                                                        long subdirectoriesCount, String elementDescription) {
+        return new ElementAttributes(elementUuid, elementName, elementType, accessRights, userId, subdirectoriesCount, elementDescription);
     }
 }
