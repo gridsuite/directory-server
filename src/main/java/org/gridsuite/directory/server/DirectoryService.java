@@ -6,26 +6,32 @@
  */
 package org.gridsuite.directory.server;
 
-import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.context.annotation.Bean;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
+import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.directory.server.DirectoryException.Type.*;
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
+import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -33,7 +39,7 @@ import static org.gridsuite.directory.server.DirectoryException.Type.*;
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 @Service
-class DirectoryService {
+public class DirectoryService {
     private final DirectoryElementRepository directoryElementRepository;
 
     private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
@@ -50,15 +56,19 @@ class DirectoryService {
     static final String HEADER_ERROR = "error";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_NOTIFICATION_TYPE = "notificationType";
-    static final String DIRECTORY = "DIRECTORY";
+
+    public static final String STUDY = "STUDY";
+    public static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
+    public static final String FILTER = "FILTER";
+    public static final String DIRECTORY = "DIRECTORY";
 
     private final StreamBridge studyUpdatePublisher;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
 
     public DirectoryService(
-            DirectoryElementRepository directoryElementRepository,
-            StreamBridge studyUpdatePublisher) {
+        DirectoryElementRepository directoryElementRepository,
+        StreamBridge studyUpdatePublisher) {
         this.directoryElementRepository = directoryElementRepository;
 
         this.studyUpdatePublisher = studyUpdatePublisher;
@@ -68,11 +78,10 @@ class DirectoryService {
     @Bean
     public Consumer<Flux<Message<String>>> consumeStudyUpdate() {
         return f -> f.log(CATEGORY_BROKER_INPUT, Level.FINE).flatMap(message -> {
-            String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
+            UUID studyUuid = message.getHeaders().get(HEADER_STUDY_UUID, UUID.class);
             String error = message.getHeaders().get(HEADER_ERROR, String.class);
             String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            if (studyUuidHeader != null) {
-                UUID studyUuid = UUID.fromString(studyUuidHeader);
+            if (studyUuid != null) {
                 UUID parentUuid = getParentUuid(studyUuid);
                 if (error != null) {
                     deleteElement(studyUuid, userId).subscribe();
@@ -81,9 +90,7 @@ class DirectoryService {
                 emitDirectoryChanged(parentUuid, userId, error, isPrivate, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
             }
             return Mono.empty();
-        })
-        .doOnError(throwable -> LOGGER.error(throwable.toString(), throwable))
-        .subscribe();
+        }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
     }
 
     private void sendUpdateMessage(Message<String> message) {
@@ -97,57 +104,48 @@ class DirectoryService {
 
     private void emitDirectoryChanged(UUID directoryUuid, String userId, String error, boolean isPrivate, boolean isRoot, NotificationType notificationType) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
-                .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
-                .setHeader(HEADER_IS_ROOT_DIRECTORY, isRoot)
-                .setHeader(HEADER_IS_PUBLIC_DIRECTORY, !isPrivate)
-                .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
-                .setHeader(HEADER_ERROR, error);
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
+            .setHeader(HEADER_IS_ROOT_DIRECTORY, isRoot)
+            .setHeader(HEADER_IS_PUBLIC_DIRECTORY, !isPrivate)
+            .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
+            .setHeader(HEADER_ERROR, error);
         sendUpdateMessage(messageBuilder.build());
-    }
-
-    /* converters */
-    private ElementAttributes toElementAttributes(DirectoryElementEntity entity, long subDirectoriesCount) {
-        return new ElementAttributes(
-                entity.getId(),
-                entity.getName(),
-                entity.getType(),
-                new AccessRightsAttributes(entity.isPrivate()),
-                entity.getOwner(),
-                subDirectoriesCount,
-                entity.getDescription()
-        );
     }
 
     /* methods */
     public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
         return insertElement(elementAttributes, parentDirectoryUuid).doOnSuccess(unused -> emitDirectoryChanged(
-               parentDirectoryUuid,
-               userId,
-               isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
-               false,
-               NotificationType.UPDATE_DIRECTORY));
+            parentDirectoryUuid,
+            userId,
+            isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
+            false,
+            NotificationType.UPDATE_DIRECTORY));
     }
 
     /* methods */
     private Mono<ElementAttributes> insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
-        return Mono.fromCallable(() -> toElementAttributes(directoryElementRepository.save(new DirectoryElementEntity(
-                elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
-                parentDirectoryUuid,
-                elementAttributes.getElementName(),
-                elementAttributes.getType(),
-                elementAttributes.getAccessRights() == null || elementAttributes.getAccessRights().isPrivate(),
-                elementAttributes.getOwner(),
-                elementAttributes.getDescription())),
-                0L));
+        return Mono.fromCallable(() -> toElementAttributes(
+            directoryElementRepository.save(
+                new DirectoryElementEntity(
+                    elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
+                    parentDirectoryUuid,
+                    elementAttributes.getElementName(),
+                    elementAttributes.getType(),
+                    elementAttributes.getAccessRights().isPrivate(),
+                    elementAttributes.getOwner(),
+                    elementAttributes.getDescription()
+                )
+            )
+        ));
     }
 
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
-        ElementAttributes elementAttributes = new ElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
-                rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, rootDirectoryAttributes.getDescription());
-        return insertElement(elementAttributes, null).doOnSuccess(element ->
-                emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true, NotificationType.ADD_DIRECTORY));
+        return insertElement(toElementAttributes(rootDirectoryAttributes), null)
+            .doOnSuccess(element ->
+                emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true, NotificationType.ADD_DIRECTORY)
+            );
     }
 
     public Flux<ElementAttributes> listDirectoryContent(UUID directoryUuid, String userId) {
@@ -164,7 +162,9 @@ class DirectoryService {
     private Stream<ElementAttributes> directoryContentStream(UUID directoryUuid, String userId) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), userId);
-        return directoryElements.stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
+        return directoryElements
+            .stream()
+            .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
     public Flux<ElementAttributes> getRootDirectories(String userId) {
@@ -183,16 +183,16 @@ class DirectoryService {
         }).doOnSuccess(unused -> {
             directoryElementRepository.updateElementName(elementUuid, newElementName);
             directoryElementRepository.findById(elementUuid)
-                    .ifPresent(directoryElementEntity -> {
-                        boolean isPrivate = isPrivateForNotification(directoryElementEntity.getParentId(), directoryElementEntity.isPrivate());
-                        emitDirectoryChanged(
-                                directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(),
-                                userId,
-                                isPrivate,
-                                directoryElementEntity.getParentId() == null,
-                                NotificationType.UPDATE_DIRECTORY
-                        );
-                    });
+                .ifPresent(directoryElementEntity -> {
+                    boolean isPrivate = isPrivateForNotification(directoryElementEntity.getParentId(), directoryElementEntity.isPrivate());
+                    emitDirectoryChanged(
+                        directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(),
+                        userId,
+                        isPrivate,
+                        directoryElementEntity.getParentId() == null,
+                        NotificationType.UPDATE_DIRECTORY
+                    );
+                });
         });
     }
 
@@ -206,11 +206,11 @@ class DirectoryService {
                 boolean isPrivate = isPrivateForNotification(directoryElementEntity.getParentId(), false);
                 // second parameter should be always false because when we pass a root folder from public -> private we should notify all clients
                 emitDirectoryChanged(
-                        directoryElementEntity.getParentId() == null ? directoryElementEntity.getId() : directoryElementEntity.getParentId(),
-                        userId,
-                        isPrivate,
-                        directoryElementEntity.getParentId() == null,
-                        NotificationType.UPDATE_DIRECTORY);
+                    directoryElementEntity.getParentId() == null ? directoryElementEntity.getId() : directoryElementEntity.getParentId(),
+                    userId,
+                    isPrivate,
+                    directoryElementEntity.getParentId() == null,
+                    NotificationType.UPDATE_DIRECTORY);
             });
             return Mono.empty();
         });
@@ -225,7 +225,7 @@ class DirectoryService {
             deleteObject(elementAttributes, userId);
             boolean isPrivate = isPrivateForNotification(parentUuid, elementAttributes.getAccessRights().isPrivate());
             emitDirectoryChanged(parentUuid == null ? elementUuid : parentUuid, userId, isPrivate, parentUuid == null,
-                    parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY);
+                parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY);
             return Mono.empty();
         });
     }
@@ -242,7 +242,7 @@ class DirectoryService {
     }
 
     public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
-        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(e -> toElementAttributes(e, 0L)).orElse(null));
+        return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(ElementAttributes::toElementAttributes).orElse(null));
     }
 
     private UUID getParentUuid(UUID directoryUuid) {
@@ -270,14 +270,14 @@ class DirectoryService {
     }
 
     public Flux<ElementAttributes> getElementsAttribute(List<UUID> ids) {
-        return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(e -> toElementAttributes(e, 0)));
+        return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(ElementAttributes::toElementAttributes));
     }
 
     public Mono<Void> emitDirectoryChangedNotification(UUID elementUuid, String userId) {
         return getElementInfos(elementUuid).flatMap(elementAttributes -> {
             UUID parentUuid = getParentUuid(elementUuid);
             emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null,
-                    NotificationType.UPDATE_DIRECTORY);
+                NotificationType.UPDATE_DIRECTORY);
             return Mono.empty();
         });
     }

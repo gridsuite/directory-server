@@ -47,6 +47,7 @@
         <gridsuite-dependencies.version>11</gridsuite-dependencies.version>
         <jib.container.environment>SPRING_PROFILES_ACTIVE=default</jib.container.environment>
         <liquibase-hibernate-package>org.gridsuite.directory.server</liquibase-hibernate-package>
+        <to-string-verifier-version>1.4.8</to-string-verifier-version>
     </properties>
 
     <build>
@@ -95,6 +96,12 @@
             </dependency>
 
             <!-- project specific dependencies -->
+            <dependency>
+                <groupId>com.jparams</groupId>
+                <artifactId>to-string-verifier</artifactId>
+                <version>${to-string-verifier-version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -198,6 +205,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jparams</groupId>
+            <artifactId>to-string-verifier</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
