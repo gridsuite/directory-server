@@ -11,11 +11,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.springframework.http.HttpStatus;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
@@ -112,102 +111,14 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
     }
 
-    /* handle STUDY objects */
-    @PostMapping(value = "/directories/studies/{studyName}/cases/{caseUuid}")
-    @Operation(summary = "create a study from an existing case")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study creation request delegated to study server")})
-    public ResponseEntity<Mono<Void>> createStudyFromExistingCase(@PathVariable("studyName") String studyName,
-                                                                  @PathVariable("caseUuid") UUID caseUuid,
-                                                                  @RequestParam("description") String description,
-                                                                  @RequestParam("isPrivate") Boolean isPrivate,
-                                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                                  @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.createStudy(studyName, caseUuid, description, userId, isPrivate, parentDirectoryUuid));
-    }
-
-    @PostMapping(value = "/directories/studies/{studyName}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "create a study and import the case")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study creation request delegated to study server")})
-    public ResponseEntity<Mono<Void>> createStudy(@PathVariable("studyName") String studyName,
-                                                  @RequestPart("caseFile") FilePart caseFile,
-                                                  @RequestParam("description") String description,
-                                                  @RequestParam("isPrivate") Boolean isPrivate,
-                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                  @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.createStudy(studyName, Mono.just(caseFile), description, userId, isPrivate, parentDirectoryUuid));
-    }
-
-    /* handle CONTINGENCY_LIST objects */
-    @PostMapping(value = "/directories/script-contingency-lists/{listName}")
-    @Operation(summary = "create a script contingency list")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Script contingency list has been created")})
-    public ResponseEntity<Mono<Void>> createScriptContingencyList(@PathVariable("listName") String listName,
-                                                                  @RequestBody(required = false) String content,
-                                                                  @RequestParam("isPrivate") Boolean isPrivate,
-                                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                                  @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.createScriptContingencyList(listName, content, userId, isPrivate, parentDirectoryUuid));
-    }
-
-    @PostMapping(value = "/directories/filters-contingency-lists/{listName}")
-    @Operation(summary = "create a filters contingency list")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Filters contingency list has been created")})
-    public ResponseEntity<Mono<Void>> createFiltersContingencyList(@PathVariable("listName") String listName,
-                                                                  @RequestBody(required = false) String content,
-                                                                  @RequestParam("isPrivate") Boolean isPrivate,
-                                                                  @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                                  @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.createFiltersContingencyList(listName, content, userId, isPrivate, parentDirectoryUuid));
-    }
-
-    @PostMapping(value = "/directories/filters-contingency-lists/{id}/new-script/{scriptName}")
-    @Operation(summary = "Create a new script contingency list from a filters contingency list")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The script contingency list have been created successfully")})
-    public ResponseEntity<Mono<Void>> newScriptFromFiltersContingencyList(@PathVariable("id") UUID id,
-                                                                          @PathVariable("scriptName") String scriptName,
-                                                                          @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                                          @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.newScriptFromFiltersContingencyList(id, scriptName, userId, parentDirectoryUuid));
-    }
-
-    @PostMapping(value = "/directories/filters-contingency-lists/{id}/replace-with-script")
-    @Operation(summary = "Replace a filters contingency list with a script contingency list")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The filters contingency list has been replaced successfully")})
-    public ResponseEntity<Mono<Void>> replaceFilterContingencyListWithScript(@PathVariable("id") UUID id,
-                                                                          @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                                          @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.replaceFilterContingencyListWithScript(id, userId, parentDirectoryUuid));
-    }
-
-    @PostMapping(value = "/directories/filters", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "create a filter")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Filter creation request delegated to filter server")})
-    public ResponseEntity<Mono<Void>> createFilter(@RequestBody String filter,
-                                                   @RequestParam("name") String filterName,
-                                                   @RequestParam("type") String filterType,
-                                                   @RequestParam("isPrivate") Boolean isPrivate,
-                                                   @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                   @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.createFilter(filter, filterName, filterType, isPrivate, parentDirectoryUuid, userId));
-    }
-
-    @PostMapping(value = "/directories/filters/{id}/new-script/{scriptName}")
-    @Operation(summary = "Create a new script from a filter")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The script has been created successfully")})
-    public ResponseEntity<Mono<Void>> newScriptFromFilter(@PathVariable("id") UUID filterId,
-                                                          @PathVariable("scriptName") String scriptName,
-                                                          @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                          @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.newScriptFromFilter(filterId, scriptName, userId, parentDirectoryUuid));
-    }
-
-    @PostMapping(value = "/directories/filters/{id}/replace-with-script")
-    @Operation(summary = "Replace a filter with a script")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The filter has been replaced successfully")})
-    public ResponseEntity<Mono<Void>> replaceFilterWithScript(@PathVariable("id") UUID id,
-                                                              @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
-                                                              @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.replaceFilterWithScript(id, userId, parentDirectoryUuid));
+    @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/{elementName}")
+    @Operation(summary = "Check if the element exists")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
+                           @ApiResponse(responseCode = "404", description = "The element doesn't exist")})
+    public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                    @PathVariable("elementName") String elementName,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, userId));
     }
 
     @GetMapping(value = "/directories/elements")
@@ -215,5 +126,15 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The elements information")})
     public ResponseEntity<Flux<ElementAttributes>> getElementsAttributes(@RequestParam("id") List<UUID> ids) {
         return ResponseEntity.ok().body(service.getElementsAttribute(ids));
+    }
+
+    @PutMapping(value = "/directories/{elementUuid}/notify-parent")
+    @Operation(summary = "notify parent")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The notification has been sent"),
+    })
+    public ResponseEntity<Mono<Void>> emitDirectoryChangedNotification(@PathVariable("elementUuid") UUID elementUuid,
+                                                 @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.emitDirectoryChangedNotification(elementUuid, userId));
     }
 }

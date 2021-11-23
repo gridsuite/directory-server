@@ -9,13 +9,11 @@ package org.gridsuite.directory.server.dto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class RootDirectoryAttributes {
@@ -24,4 +22,6 @@ public class RootDirectoryAttributes {
     private AccessRightsAttributes accessRights;
 
     private String owner;
+
+    private String description;
 }
