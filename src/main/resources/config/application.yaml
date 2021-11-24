@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: directory-server
+
+  cloud:
+    stream:
+      function:
+        definition: consumeStudyUpdate
+      bindings:
+        publishDirectoryUpdate-out-0:
+          destination: directory.update
+        consumeStudyUpdate-in-0:
+          destination: study.update
+      source: publishDirectoryUpdate
+
+dbName: directory
