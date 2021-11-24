@@ -452,8 +452,8 @@ public class DirectoryTest {
         ElementAttributes contingencyListAttributes = toElementAttributes(UUID.randomUUID(), "study1", CONTINGENCY_LIST, false, "Doe");
         insertAndCheckSubElement(rootDirUuid, false, contingencyListAttributes);
 
-        webTestClient.put()
-            .uri("/v1/directories/" + contingencyListAttributes.getElementUuid() + "/notify-parent")
+        webTestClient.post()
+            .uri("/v1/elements/" + contingencyListAttributes.getElementUuid() + "/notification")
             .header("userId", "Doe")
             .exchange()
             .expectStatus().isOk();
@@ -513,7 +513,7 @@ public class DirectoryTest {
 
     private void checkRootDirectoriesList(String userId, List<ElementAttributes> list) {
         webTestClient.get()
-            .uri("/v1/root-directories")
+            .uri("/v1/elements")
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
@@ -524,7 +524,7 @@ public class DirectoryTest {
 
     private UUID insertAndCheckRootDirectory(String rootDirectoryName, boolean isPrivate, String userId) {
         WebTestClient.BodySpec<ElementAttributes, ?> result = webTestClient.post()
-            .uri("/v1/root-directories")
+            .uri("/v1/elements")
             .header("userId", userId)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null))
@@ -557,7 +557,7 @@ public class DirectoryTest {
         elementUuids.stream().map(UUID::toString).forEach(ids::add);
         // Insert a sub-element of type DIRECTORY
         return webTestClient.get()
-            .uri("/v1/directories/elements?id=" + ids)
+            .uri("/v1/elements?id=" + ids)
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
@@ -570,7 +570,7 @@ public class DirectoryTest {
     private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) {
         // Insert a sub-element of type DIRECTORY
         WebTestClient.BodySpec<ElementAttributes, ?> result = webTestClient.post()
-            .uri("/v1/directories/" + parentDirectoryUUid)
+            .uri("/v1/elements/" + parentDirectoryUUid + "/elements")
             .header("userId", subElementAttributes.getOwner())
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(subElementAttributes)
@@ -597,7 +597,8 @@ public class DirectoryTest {
     }
 
     private void renameElement(UUID elementUuidToRename, UUID elementUuidHeader, String userId, String newName, boolean isRoot, boolean isPrivate) {
-        webTestClient.put().uri("/v1/directories/" + elementUuidToRename + "/rename/" + newName)
+        webTestClient.put()
+            .uri(String.format("/v1/elements/%s?name=%s", elementUuidToRename, newName))
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk();
@@ -616,12 +617,14 @@ public class DirectoryTest {
 
     private void renameElementExpectFail(UUID elementUuidToRename, String userId, String newName, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
-            webTestClient.put().uri("/v1/directories/" + elementUuidToRename + "/rename/" + newName)
+            webTestClient.put()
+                .uri(String.format("/v1/elements/%s?name=%s", elementUuidToRename, newName))
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isForbidden();
         } else if (httpCodeExpected == 404) {
-            webTestClient.put().uri("/v1/directories/" + elementUuidToRename + "/rename/" + newName)
+            webTestClient.put()
+                .uri(String.format("/v1/elements/%s?name=%s", elementUuidToRename, newName))
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isNotFound();
@@ -631,10 +634,10 @@ public class DirectoryTest {
     }
 
     private void updateAccessRights(UUID elementUuidToUpdate, UUID elementUuidHeader, String userId, boolean newIsPrivate, boolean isRoot, boolean isPrivate) {
-        webTestClient.put().uri("/v1/directories/" + elementUuidToUpdate + "/rights")
+        webTestClient.put()
+            .uri(String.format("/v1/elements/%s?private=%s", elementUuidToUpdate, newIsPrivate))
             .header("userId", userId)
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(newIsPrivate)
             .exchange()
             .expectStatus().isOk();
 
@@ -650,19 +653,19 @@ public class DirectoryTest {
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
     }
 
-    private void updateStudyAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newisPrivate, int httpCodeExpected) {
+    private void updateStudyAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
-            webTestClient.put().uri("/v1/directories/" + elementUuidToUpdate + "/rights")
+            webTestClient.put()
+                .uri(String.format("/v1/elements/%s?private=%s", elementUuidToUpdate, newIsPrivate))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(newisPrivate)
                 .exchange()
                 .expectStatus().isForbidden();
         } else if (httpCodeExpected == 404) {
-            webTestClient.put().uri("/v1/directories/" + elementUuidToUpdate + "/rights")
+            webTestClient.put()
+                .uri(String.format("/v1/elements/%s?private=%s", elementUuidToUpdate, newIsPrivate))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(newisPrivate)
                 .exchange()
                 .expectStatus().isNotFound();
         } else {
@@ -672,7 +675,7 @@ public class DirectoryTest {
 
     private void assertDirectoryIsEmpty(UUID uuidDir, String userId) {
         webTestClient.get()
-            .uri("/v1/directories/" + uuidDir + "/content")
+            .uri("/v1/elements/" + uuidDir + "/elements")
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
@@ -683,7 +686,7 @@ public class DirectoryTest {
 
     private void assertElementIsProperlyInserted(ElementAttributes elementAttributes) {
         webTestClient.get()
-            .uri("/v1/directories/" + elementAttributes.getElementUuid())
+            .uri("/v1/elements/" + elementAttributes.getElementUuid())
             .header("userId", "userId")
             .exchange()
             .expectStatus().isOk()
@@ -694,7 +697,7 @@ public class DirectoryTest {
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementAttributes> list) {
         webTestClient.get()
-            .uri("/v1/directories/" + parentDirectoryUuid + "/content")
+            .uri("/v1/elements/" + parentDirectoryUuid + "/elements")
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
@@ -705,7 +708,7 @@ public class DirectoryTest {
 
     private void checkElementNotFound(UUID elementUuid, String userId) {
         webTestClient.get()
-            .uri("/v1/directories/" + elementUuid)
+            .uri("/v1/elements/" + elementUuid)
             .header("userId", userId)
             .exchange()
             .expectStatus().isNotFound();
@@ -713,7 +716,7 @@ public class DirectoryTest {
 
     private void checkElementNameExistInDirectory(UUID parentDirectoryUuid, String elementName, String userId, HttpStatus expectedStatus) {
         webTestClient.head()
-            .uri("/v1/directories/" + parentDirectoryUuid + "/" + elementName)
+            .uri(String.format("/v1/elements/%s/elements/%s", parentDirectoryUuid, elementName))
             .header("userId", userId)
             .exchange()
             .expectStatus().isEqualTo(expectedStatus);
@@ -721,7 +724,7 @@ public class DirectoryTest {
 
     private void deleteElement(UUID elementUuidToBeDeleted, UUID elementUuidHeader, String userId, boolean isRoot, boolean isPrivate) {
         webTestClient.delete()
-            .uri("/v1/directories/" + elementUuidToBeDeleted)
+            .uri("/v1/elements/" + elementUuidToBeDeleted)
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk();
@@ -741,7 +744,7 @@ public class DirectoryTest {
     private void deleteElementFail(UUID elementUuidToBeDeleted, String userId, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
             webTestClient.delete()
-                .uri("/v1/directories/" + elementUuidToBeDeleted)
+                .uri("/v1/elements/" + elementUuidToBeDeleted)
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isForbidden();
