@@ -17,6 +17,7 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
+ * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @Getter
 @Setter

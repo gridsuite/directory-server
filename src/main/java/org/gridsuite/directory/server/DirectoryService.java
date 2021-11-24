@@ -289,7 +289,9 @@ public class DirectoryService {
             .then();
     }
 
-    public Mono<Boolean> isAllowed(@NonNull UUID elementUuid, @NonNull String userId) {
-        return getElement(elementUuid).map(e -> e.isAllowed(userId));
+    public Mono<Void> areElementsAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
+        return getElements(elementUuids)
+            .map(e -> e.isAllowed(userId) ? e : new DirectoryException(NOT_ALLOWED))
+            .then();
     }
 }

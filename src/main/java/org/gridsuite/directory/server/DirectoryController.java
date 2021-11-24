@@ -103,6 +103,18 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getElements(ids));
     }
 
+    @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
+    @Operation(summary = "Control elements access permissions for a user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "All elements are accessible"),
+        @ApiResponse(responseCode = "404", description = "At least one item was not found"),
+        @ApiResponse(responseCode = "403", description = "Access forbidden")
+    })
+    public ResponseEntity<Mono<Void>> areElementsAccessible(@RequestParam("id") List<UUID> elementUuids,
+                                                            @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.areElementsAccessible(userId, elementUuids));
+    }
+
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Update element/directory")
     @ApiResponses(value = {
@@ -137,12 +149,5 @@ public class DirectoryController {
                                                     @PathVariable("elementName") String elementName,
                                                     @PathVariable("type") String type) {
         return ResponseEntity.ok().body(service.elementExistsMono(directoryUuid, elementName, type));
-    }
-
-    @GetMapping(value = "/directories/{elementUuid}/allowed")
-    @Operation(summary = "Control access permissions for a user")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "Access permissions control done"))
-    public ResponseEntity<Mono<Boolean>> isAllowed(@PathVariable("elementUuid") UUID elementUuid, @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.isAllowed(elementUuid, userId));
     }
 }
