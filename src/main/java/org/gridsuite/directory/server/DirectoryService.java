@@ -149,7 +149,7 @@ public class DirectoryService {
             );
     }
 
-    public Flux<ElementAttributes> listDirectoryContent(UUID directoryUuid, String userId) {
+    public Flux<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId) {
         return Flux.fromStream(directoryContentStream(directoryUuid, userId));
     }
 
@@ -175,7 +175,7 @@ public class DirectoryService {
     }
 
     public Mono<Void> renameElement(UUID elementUuid, String newElementName, String userId) {
-        return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+        return getElement(elementUuid).flatMap(elementAttributes -> {
             if (!userId.equals(elementAttributes.getOwner())) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             } else {
@@ -197,8 +197,8 @@ public class DirectoryService {
         });
     }
 
-    public Mono<Void> setAccessRights(UUID elementUuid, boolean newIsPrivate, String userId) {
-        return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+    public Mono<Void> setElementAccesRights(UUID elementUuid, boolean newIsPrivate, String userId) {
+        return getElement(elementUuid).flatMap(elementAttributes -> {
             if (!userId.equals(elementAttributes.getOwner())) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }
@@ -218,7 +218,7 @@ public class DirectoryService {
     }
 
     public Mono<Void> deleteElement(UUID elementUuid, String userId) {
-        return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+        return getElement(elementUuid).flatMap(elementAttributes -> {
             if (!userId.equals(elementAttributes.getOwner())) {
                 return Mono.error(new DirectoryException(NOT_ALLOWED));
             }
@@ -242,7 +242,7 @@ public class DirectoryService {
         directoryContentStream(elementUuid, userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
     }
 
-    public Mono<ElementAttributes> getElementInfos(UUID directoryUuid) {
+    public Mono<ElementAttributes> getElement(UUID directoryUuid) {
         return Mono.fromCallable(() -> directoryElementRepository.findById(directoryUuid).map(ElementAttributes::toElementAttributes).orElse(null));
     }
 
@@ -270,12 +270,12 @@ public class DirectoryService {
             ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND));
     }
 
-    public Flux<ElementAttributes> getElementsAttribute(List<UUID> ids) {
+    public Flux<ElementAttributes> getElements(List<UUID> ids) {
         return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(ElementAttributes::toElementAttributes));
     }
 
     public Mono<Void> emitDirectoryChangedNotification(UUID elementUuid, String userId) {
-        return getElementInfos(elementUuid).flatMap(elementAttributes -> {
+        return getElement(elementUuid).flatMap(elementAttributes -> {
             UUID parentUuid = getParentUuid(elementUuid);
             emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null,
                 NotificationType.UPDATE_DIRECTORY);

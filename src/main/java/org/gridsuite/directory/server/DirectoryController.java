@@ -25,6 +25,7 @@ import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
+ * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @RestController
 @RequestMapping(value = "/" + DirectoryApi.API_VERSION)
@@ -37,7 +38,7 @@ public class DirectoryController {
         this.service = service;
     }
 
-    @PostMapping(value = "/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create root directory")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The created root directory"))
     public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes,
@@ -45,50 +46,36 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createRootDirectory(rootDirectoryAttributes, userId));
     }
 
-    @PostMapping(value = "/elements/{elementUuid}/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Create a sub element")
+    @PostMapping(value = "/directories/{directoryUuid}/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Create an element in a directory")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The created element"))
-    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("elementUuid") UUID parentElementUuid,
+    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                  @RequestBody ElementAttributes elementAttributes,
                                                                  @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, parentElementUuid, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
     }
 
-    @GetMapping(value = "/elements", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get root directories or element list from ids given as parameters")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The elements informations"))
-    public ResponseEntity<Flux<ElementAttributes>> getElementsAttributes(@RequestHeader(name = "userId", required = false) String userId,
-                                                                         @RequestParam(name = "id", required = false) List<UUID> ids) {
-        return ResponseEntity.ok().body(ids == null ? service.getRootDirectories(userId) : service.getElementsAttribute(ids));
+    @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get root directories")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "The root directories"))
+    public ResponseEntity<Flux<ElementAttributes>> getRootDirectories(@RequestHeader(name = "userId") String userId) {
+        return ResponseEntity.ok().body(service.getRootDirectories(userId));
     }
 
-    @GetMapping(value = "/elements/{elementUuid}/elements", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get sub elements list ")
+    @GetMapping(value = "/directories/{directoryUuid}/elements", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get directory elements")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
-    public ResponseEntity<Flux<ElementAttributes>> listDirectoryContent(@PathVariable("elementUuid") UUID elementUuid,
+    public ResponseEntity<Flux<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                         @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.listDirectoryContent(elementUuid, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId));
     }
 
     @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get element infos")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "element's infos"))
-    public ResponseEntity<Mono<ElementAttributes>> getElementInfos(@PathVariable("elementUuid") UUID elementUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementInfos(elementUuid)
+    public ResponseEntity<Mono<ElementAttributes>> getElement(@PathVariable("elementUuid") UUID elementUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElement(elementUuid)
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
-    }
-
-    @PutMapping(value = "/elements/{elementUuid}")
-    @Operation(summary = "Rename element/directory")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"),
-        @ApiResponse(responseCode = "404", description = "The element was not found"),
-        @ApiResponse(responseCode = "403", description = "Not authorized to rename this element")
-    })
-    public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") UUID elementUuid,
-                                                    @RequestParam("name") String newElementName,
-                                                    @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName, userId));
     }
 
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -98,10 +85,10 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized to update this element access rights")
     })
-    public ResponseEntity<Mono<Void>> setAccessRights(@PathVariable("elementUuid") UUID elementUuid,
+    public ResponseEntity<Mono<Void>> setElementAccesRights(@PathVariable("elementUuid") UUID elementUuid,
                                                       @RequestParam("private") boolean isPrivate,
                                                       @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.setAccessRights(elementUuid, isPrivate, userId));
+        return ResponseEntity.ok().body(service.setElementAccesRights(elementUuid, isPrivate, userId));
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")
@@ -112,23 +99,42 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
     }
 
-    @RequestMapping(method = RequestMethod.HEAD, value = "/elements/{elementUuid}/elements/{elementName}")
-    @Operation(summary = "Check if a sub element exists")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
-        @ApiResponse(responseCode = "404", description = "The element doesn't exist")})
-    public ResponseEntity<Mono<Void>> elementExists(@PathVariable("elementUuid") UUID elementUuid,
-                                                    @PathVariable("elementName") String elementName,
+    @PutMapping(value = "/elements/{elementUuid}")
+    @Operation(summary = "Rename element/directory")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"),
+        @ApiResponse(responseCode = "404", description = "The element was not found"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to rename this element")
+    })
+    public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") UUID elementUuid,
+                                                    @RequestParam("newName") String newElementName,
                                                     @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.elementExists(elementUuid, elementName, userId));
+        return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName, userId));
     }
 
-    @PostMapping(value = "/elements/{elementUuid}/notification")
+    @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/elements/{elementName}")
+    @Operation(summary = "Check if an element exists in a directory")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
+        @ApiResponse(responseCode = "404", description = "The element doesn't exist")})
+    public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                    @PathVariable("elementName") String elementName,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, userId));
+    }
+
+    @GetMapping(value = "/elements")
+    @Operation(summary = "Get elements infos from ids given as parameters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The elements information")})
+    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("id") List<UUID> ids) {
+        return ResponseEntity.ok().body(service.getElements(ids));
+    }
+
+    @PutMapping(value = "/elements/{elementUuid}/notif")
     @Operation(summary = "Create change element notification")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The notification has been sent"),
-    })
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The notification has been sent")})
     public ResponseEntity<Mono<Void>> emitDirectoryChangedNotification(@PathVariable("elementUuid") UUID elementUuid,
+                                                                       @RequestParam("notify") boolean notify,
                                                                        @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.emitDirectoryChangedNotification(elementUuid, userId));
+        return ResponseEntity.ok().body(notify ? service.emitDirectoryChangedNotification(elementUuid, userId) : Mono.empty());
     }
 }

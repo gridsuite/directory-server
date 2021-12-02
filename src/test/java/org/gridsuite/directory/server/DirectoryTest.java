@@ -452,8 +452,8 @@ public class DirectoryTest {
         ElementAttributes contingencyListAttributes = toElementAttributes(UUID.randomUUID(), "study1", CONTINGENCY_LIST, false, "Doe");
         insertAndCheckSubElement(rootDirUuid, false, contingencyListAttributes);
 
-        webTestClient.post()
-            .uri("/v1/elements/" + contingencyListAttributes.getElementUuid() + "/notification")
+        webTestClient.put()
+            .uri(String.format("/v1/elements/%s/notif?notify=true", contingencyListAttributes.getElementUuid()))
             .header("userId", "Doe")
             .exchange()
             .expectStatus().isOk();
@@ -513,7 +513,7 @@ public class DirectoryTest {
 
     private void checkRootDirectoriesList(String userId, List<ElementAttributes> list) {
         webTestClient.get()
-            .uri("/v1/elements")
+            .uri("/v1/root-directories")
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
@@ -524,7 +524,7 @@ public class DirectoryTest {
 
     private UUID insertAndCheckRootDirectory(String rootDirectoryName, boolean isPrivate, String userId) {
         WebTestClient.BodySpec<ElementAttributes, ?> result = webTestClient.post()
-            .uri("/v1/elements")
+            .uri("/v1/root-directories")
             .header("userId", userId)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null))
@@ -570,7 +570,7 @@ public class DirectoryTest {
     private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) {
         // Insert a sub-element of type DIRECTORY
         WebTestClient.BodySpec<ElementAttributes, ?> result = webTestClient.post()
-            .uri("/v1/elements/" + parentDirectoryUUid + "/elements")
+            .uri("/v1/directories/" + parentDirectoryUUid + "/elements")
             .header("userId", subElementAttributes.getOwner())
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(subElementAttributes)
@@ -598,7 +598,7 @@ public class DirectoryTest {
 
     private void renameElement(UUID elementUuidToRename, UUID elementUuidHeader, String userId, String newName, boolean isRoot, boolean isPrivate) {
         webTestClient.put()
-            .uri(String.format("/v1/elements/%s?name=%s", elementUuidToRename, newName))
+            .uri(String.format("/v1/elements/%s?newName=%s", elementUuidToRename, newName))
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk();
@@ -618,13 +618,13 @@ public class DirectoryTest {
     private void renameElementExpectFail(UUID elementUuidToRename, String userId, String newName, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
             webTestClient.put()
-                .uri(String.format("/v1/elements/%s?name=%s", elementUuidToRename, newName))
+                .uri(String.format("/v1/elements/%s?newName=%s", elementUuidToRename, newName))
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isForbidden();
         } else if (httpCodeExpected == 404) {
             webTestClient.put()
-                .uri(String.format("/v1/elements/%s?name=%s", elementUuidToRename, newName))
+                .uri(String.format("/v1/elements/%s?newName=%s", elementUuidToRename, newName))
                 .header("userId", userId)
                 .exchange()
                 .expectStatus().isNotFound();
@@ -675,7 +675,7 @@ public class DirectoryTest {
 
     private void assertDirectoryIsEmpty(UUID uuidDir, String userId) {
         webTestClient.get()
-            .uri("/v1/elements/" + uuidDir + "/elements")
+            .uri("/v1/directories/" + uuidDir + "/elements")
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
@@ -697,7 +697,7 @@ public class DirectoryTest {
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementAttributes> list) {
         webTestClient.get()
-            .uri("/v1/elements/" + parentDirectoryUuid + "/elements")
+            .uri("/v1/directories/" + parentDirectoryUuid + "/elements")
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
@@ -716,7 +716,7 @@ public class DirectoryTest {
 
     private void checkElementNameExistInDirectory(UUID parentDirectoryUuid, String elementName, String userId, HttpStatus expectedStatus) {
         webTestClient.head()
-            .uri(String.format("/v1/elements/%s/elements/%s", parentDirectoryUuid, elementName))
+            .uri(String.format("/v1/directories/%s/elements/%s", parentDirectoryUuid, elementName))
             .header("userId", userId)
             .exchange()
             .expectStatus().isEqualTo(expectedStatus);
