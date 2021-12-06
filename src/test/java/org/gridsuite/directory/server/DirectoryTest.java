@@ -50,24 +50,20 @@ import static org.junit.Assert.*;
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class DirectoryTest {
-    @Autowired
-    private WebTestClient webTestClient;
-
-    @Autowired
-    ObjectMapper objectMapper;
-
-    @Autowired
-    private DirectoryElementRepository directoryElementRepository;
-
-    @Autowired
-    private OutputDestination output;
-
     private static final UUID STUDY_RENAME_UUID = UUID.randomUUID();
     private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID FILTER_UUID = UUID.randomUUID();
     private static final UUID CONTINGENCY_LIST_UUID = UUID.randomUUID();
+    @Autowired
+    ObjectMapper objectMapper;
+    @Autowired
+    private WebTestClient webTestClient;
+    @Autowired
+    private DirectoryElementRepository directoryElementRepository;
+    @Autowired
+    private OutputDestination output;
 
     private void cleanDB() {
         directoryElementRepository.deleteAll();
@@ -452,8 +448,8 @@ public class DirectoryTest {
         ElementAttributes contingencyListAttributes = toElementAttributes(UUID.randomUUID(), "study1", CONTINGENCY_LIST, false, "Doe");
         insertAndCheckSubElement(rootDirUuid, false, contingencyListAttributes);
 
-        webTestClient.put()
-            .uri(String.format("/v1/elements/%s/notif?notify=true", contingencyListAttributes.getElementUuid()))
+        webTestClient.post()
+            .uri(String.format("/v1/elements/%s/notification?type=update_directory", contingencyListAttributes.getElementUuid()))
             .header("userId", "Doe")
             .exchange()
             .expectStatus().isOk();
@@ -598,8 +594,10 @@ public class DirectoryTest {
 
     private void renameElement(UUID elementUuidToRename, UUID elementUuidHeader, String userId, String newName, boolean isRoot, boolean isPrivate) {
         webTestClient.put()
-            .uri(String.format("/v1/elements/%s?newName=%s", elementUuidToRename, newName))
+            .uri(String.format("/v1/elements/%s", elementUuidToRename))
             .header("userId", userId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(ElementAttributes.builder().elementName(newName).build())
             .exchange()
             .expectStatus().isOk();
 
@@ -618,14 +616,18 @@ public class DirectoryTest {
     private void renameElementExpectFail(UUID elementUuidToRename, String userId, String newName, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
             webTestClient.put()
-                .uri(String.format("/v1/elements/%s?newName=%s", elementUuidToRename, newName))
+                .uri(String.format("/v1/elements/%s", elementUuidToRename))
                 .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(ElementAttributes.builder().elementName(newName).build())
                 .exchange()
                 .expectStatus().isForbidden();
         } else if (httpCodeExpected == 404) {
             webTestClient.put()
-                .uri(String.format("/v1/elements/%s?newName=%s", elementUuidToRename, newName))
+                .uri(String.format("/v1/elements/%s", elementUuidToRename))
                 .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(ElementAttributes.builder().elementName(newName).build())
                 .exchange()
                 .expectStatus().isNotFound();
         } else {
@@ -635,9 +637,10 @@ public class DirectoryTest {
 
     private void updateAccessRights(UUID elementUuidToUpdate, UUID elementUuidHeader, String userId, boolean newIsPrivate, boolean isRoot, boolean isPrivate) {
         webTestClient.put()
-            .uri(String.format("/v1/elements/%s?private=%s", elementUuidToUpdate, newIsPrivate))
+            .uri(String.format("/v1/elements/%s", elementUuidToUpdate))
             .header("userId", userId)
             .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())
             .exchange()
             .expectStatus().isOk();
 
@@ -656,16 +659,18 @@ public class DirectoryTest {
     private void updateStudyAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
             webTestClient.put()
-                .uri(String.format("/v1/elements/%s?private=%s", elementUuidToUpdate, newIsPrivate))
+                .uri(String.format("/v1/elements/%s", elementUuidToUpdate))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())
                 .exchange()
                 .expectStatus().isForbidden();
         } else if (httpCodeExpected == 404) {
             webTestClient.put()
-                .uri(String.format("/v1/elements/%s?private=%s", elementUuidToUpdate, newIsPrivate))
+                .uri(String.format("/v1/elements/%s", elementUuidToUpdate))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())
                 .exchange()
                 .expectStatus().isNotFound();
         } else {

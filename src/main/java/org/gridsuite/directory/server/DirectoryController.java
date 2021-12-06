@@ -55,6 +55,14 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
     }
 
+    @DeleteMapping(value = "/elements/{elementUuid}")
+    @Operation(summary = "Remove directory/element")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"))
+    public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
+    }
+
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get root directories")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The root directories"))
@@ -78,38 +86,33 @@ public class DirectoryController {
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
     }
 
+    @GetMapping(value = "/elements")
+    @Operation(summary = "Get elements infos from ids given as parameters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The elements information")})
+    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("id") List<UUID> ids) {
+        return ResponseEntity.ok().body(service.getElements(ids));
+    }
+
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Modify element/directory's access rights")
+    @Operation(summary = "Update element/directory")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Element/directory was successfully updated"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),
-        @ApiResponse(responseCode = "403", description = "Not authorized to update this element access rights")
+        @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
     })
-    public ResponseEntity<Mono<Void>> setElementAccesRights(@PathVariable("elementUuid") UUID elementUuid,
-                                                      @RequestParam("private") boolean isPrivate,
-                                                      @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.setElementAccesRights(elementUuid, isPrivate, userId));
+    public ResponseEntity<Mono<Void>> updateElement(@PathVariable("elementUuid") UUID elementUuid,
+                                                    @RequestBody ElementAttributes elementAttributes,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.updateElement(elementUuid, elementAttributes, userId));
     }
 
-    @DeleteMapping(value = "/elements/{elementUuid}")
-    @Operation(summary = "Remove directory/element")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"))
-    public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
-                                                    @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
-    }
-
-    @PutMapping(value = "/elements/{elementUuid}")
-    @Operation(summary = "Rename element/directory")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Element/directory was successfully renamed"),
-        @ApiResponse(responseCode = "404", description = "The element was not found"),
-        @ApiResponse(responseCode = "403", description = "Not authorized to rename this element")
-    })
-    public ResponseEntity<Mono<Void>> renameElement(@PathVariable("elementUuid") UUID elementUuid,
-                                                    @RequestParam("newName") String newElementName,
-                                                    @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.renameElement(elementUuid, newElementName, userId));
+    @PostMapping(value = "/elements/{elementUuid}/notification")
+    @Operation(summary = "Create change element notification")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The notification has been sent")})
+    public ResponseEntity<Mono<Void>> notify(@PathVariable("elementUuid") UUID elementUuid,
+                                             @RequestParam("type") String notificationType,
+                                             @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.notify(notificationType, elementUuid, userId));
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/elements/{elementName}")
@@ -120,21 +123,5 @@ public class DirectoryController {
                                                     @PathVariable("elementName") String elementName,
                                                     @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, userId));
-    }
-
-    @GetMapping(value = "/elements")
-    @Operation(summary = "Get elements infos from ids given as parameters")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The elements information")})
-    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("id") List<UUID> ids) {
-        return ResponseEntity.ok().body(service.getElements(ids));
-    }
-
-    @PutMapping(value = "/elements/{elementUuid}/notif")
-    @Operation(summary = "Create change element notification")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The notification has been sent")})
-    public ResponseEntity<Mono<Void>> emitDirectoryChangedNotification(@PathVariable("elementUuid") UUID elementUuid,
-                                                                       @RequestParam("notify") boolean notify,
-                                                                       @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(notify ? service.emitDirectoryChangedNotification(elementUuid, userId) : Mono.empty());
     }
 }

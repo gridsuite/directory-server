@@ -18,7 +18,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
@@ -63,20 +66,47 @@ public class ElementAttributesTest {
     }
 
     @SneakyThrows
+    @Test
+    public void testNullValues() {
+        ElementAttributes elementAttributes = mapper.readValue("{}", ElementAttributes.class);
+        //ElementAttributes elementAttributes = objectMapper.readValue("{\"elementName\":\"newName\"}", ElementAttributes.class);
+        assertEquals("{}", mapper.writeValueAsString(elementAttributes));
+    }
+
+    @Test
+    public void testJsonString() {
+        assertEquals(
+            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\"}",
+            toJsonString(toElementAttributes(UUID.fromString("21297976-7445-44f1-9ccf-910cbb2f84f8"), "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description"))
+        );
+    }
+
+    @SneakyThrows
     private void verifyElementAttributes(ElementAttributes elementAttributes) {
         assertEquals(toJsonString(elementAttributes), mapper.writeValueAsString(elementAttributes));
     }
 
     private String toJsonString(ElementAttributes elementAttributes) {
-        return "{"
-            + toJsonString("elementUuid", elementAttributes.getElementUuid()) + ","
-            + toJsonString("elementName", elementAttributes.getElementName()) + ","
-            + toJsonString("type", elementAttributes.getType()) + ","
-            + toJsonString(elementAttributes.getAccessRights()) + ","
-            + toJsonString("owner", elementAttributes.getOwner()) + ","
-            + toJsonString("subdirectoriesCount", elementAttributes.getSubdirectoriesCount()) + ","
-            + toJsonString("description", elementAttributes.getDescription())
-            + "}";
+        Optional<String> jsonStringStream = Stream.of(
+                toJsonString("elementUuid", elementAttributes.getElementUuid()),
+                toJsonString("elementName", elementAttributes.getElementName()),
+                toJsonString("type", elementAttributes.getType()),
+                toJsonString(elementAttributes.getAccessRights()),
+                toJsonString("owner", elementAttributes.getOwner()),
+                toJsonString("subdirectoriesCount", elementAttributes.getSubdirectoriesCount()),
+                toJsonString("description", elementAttributes.getDescription())
+                )
+            .filter(Objects::nonNull)
+            .collect(toReversedList()).stream()
+            .reduce((j, r) -> r + "," + j);
+        return "{" + jsonStringStream.orElse("") + "}";
+    }
+
+    private static <T> Collector<T, ?, List<T>> toReversedList() {
+        return Collectors.collectingAndThen(Collectors.toList(), list -> {
+            Collections.reverse(list);
+            return list;
+        });
     }
 
     private String toJsonString(AccessRightsAttributes accessRightsAttributes) {
@@ -84,6 +114,6 @@ public class ElementAttributesTest {
     }
 
     private String toJsonString(String key, Object value) {
-        return String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
+        return value == null ? (String) value : String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
     }
 }

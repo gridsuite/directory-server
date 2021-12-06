@@ -15,7 +15,9 @@ class DirectoryException extends RuntimeException {
 
     public enum Type {
         NOT_ALLOWED,
-        NOT_FOUND
+        NOT_FOUND,
+        UNKNOWN_ACTION,
+        UNKNOWN_NOTIFICATION
     }
 
     private final Type type;
@@ -32,5 +34,15 @@ class DirectoryException extends RuntimeException {
 
     Type getType() {
         return type;
+    }
+
+    public static DirectoryException createActionUnknown(String action) {
+        Objects.requireNonNull(action);
+        return new DirectoryException(Type.UNKNOWN_ACTION, String.format("The action '%s' is unknown", action));
+    }
+
+    public static DirectoryException createNotificationUnknown(String action) {
+        Objects.requireNonNull(action);
+        return new DirectoryException(Type.UNKNOWN_NOTIFICATION, String.format("The action '%s' is unknown", action));
     }
 }
