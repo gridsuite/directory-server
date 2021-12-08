@@ -14,6 +14,7 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.utils.MatcherJson;
+import org.hamcrest.core.IsEqual;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +35,7 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 
 import java.util.*;
 
+import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.*;
@@ -437,6 +439,7 @@ public class DirectoryTest {
         checkDirectoryContent(rootDirUuid, "userId", List.of(study1Attributes));
     }
 
+    @SneakyThrows
     @Test
     public void testEmitDirectoryChangedNotification() {
         checkRootDirectoriesList("Doe", List.of());
@@ -464,6 +467,15 @@ public class DirectoryTest {
         assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        // Test unknown type notification
+        webTestClient.post()
+            .uri(String.format("/v1/elements/%s/notification?type=bad_type", contingencyListAttributes.getElementUuid()))
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isBadRequest()
+            .expectBody(String.class)
+            .value(new IsEqual<>(objectMapper.writeValueAsString(UNKNOWN_NOTIFICATION)));
     }
 
     @SneakyThrows

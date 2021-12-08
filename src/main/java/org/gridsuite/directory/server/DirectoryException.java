@@ -13,13 +13,6 @@ import java.util.Objects;
  */
 class DirectoryException extends RuntimeException {
 
-    public enum Type {
-        NOT_ALLOWED,
-        NOT_FOUND,
-        UNKNOWN_ACTION,
-        UNKNOWN_NOTIFICATION
-    }
-
     private final Type type;
 
     DirectoryException(Type type) {
@@ -32,17 +25,18 @@ class DirectoryException extends RuntimeException {
         this.type = type;
     }
 
+    public static DirectoryException createNotificationUnknown(String action) {
+        Objects.requireNonNull(action);
+        return new DirectoryException(Type.UNKNOWN_NOTIFICATION, String.format("The notification type '%s' is unknown", action));
+    }
+
     Type getType() {
         return type;
     }
 
-    public static DirectoryException createActionUnknown(String action) {
-        Objects.requireNonNull(action);
-        return new DirectoryException(Type.UNKNOWN_ACTION, String.format("The action '%s' is unknown", action));
-    }
-
-    public static DirectoryException createNotificationUnknown(String action) {
-        Objects.requireNonNull(action);
-        return new DirectoryException(Type.UNKNOWN_NOTIFICATION, String.format("The action '%s' is unknown", action));
+    public enum Type {
+        NOT_ALLOWED,
+        NOT_FOUND,
+        UNKNOWN_NOTIFICATION
     }
 }

@@ -59,7 +59,7 @@ public class DirectoryElementEntity {
         return this;
     }
 
-    public boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes) {
+    public static boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes) {
         return (// Updatable attributes
             StringUtils.isNotBlank(newElementAttributes.getElementName()) ||
                 Objects.nonNull(newElementAttributes.getAccessRights()))
@@ -68,6 +68,6 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getType()) &&
             Objects.isNull(newElementAttributes.getOwner()) &&
             Objects.isNull(newElementAttributes.getSubdirectoriesCount()) &&
-            StringUtils.isBlank(newElementAttributes.getDescription());
+            Objects.isNull(newElementAttributes.getDescription());
     }
 }

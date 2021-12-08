@@ -12,6 +12,7 @@ import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.utils.MatcherJson;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +25,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.gridsuite.directory.server.repository.DirectoryElementEntity.isAttributesUpdatable;
+import static org.junit.Assert.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -40,8 +42,32 @@ public class ElementAttributesTest {
     @Autowired
     ObjectMapper mapper;
 
+    private static <T> Collector<T, ?, List<T>> toReversedList() {
+        return Collectors.collectingAndThen(Collectors.toList(), list -> {
+            Collections.reverse(list);
+            return list;
+        });
+    }
+
     @Test
-    public void test() {
+    public void testElementEntityUpdate() {
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description");
+
+        assertTrue(isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build()));
+        assertTrue(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build()));
+
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build()));
+
+        elementEntity.update(ElementAttributes.builder().elementName("newName").accessRights(new AccessRightsAttributes(false)).build());
+        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
+    }
+
+    @Test
+    public void testElemenentAttributesCreation() {
         AccessRightsAttributes accessRightsAttributes = new AccessRightsAttributes(true);
 
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description"));
@@ -69,7 +95,6 @@ public class ElementAttributesTest {
     @Test
     public void testNullValues() {
         ElementAttributes elementAttributes = mapper.readValue("{}", ElementAttributes.class);
-        //ElementAttributes elementAttributes = objectMapper.readValue("{\"elementName\":\"newName\"}", ElementAttributes.class);
         assertEquals("{}", mapper.writeValueAsString(elementAttributes));
     }
 
@@ -95,18 +120,11 @@ public class ElementAttributesTest {
                 toJsonString("owner", elementAttributes.getOwner()),
                 toJsonString("subdirectoriesCount", elementAttributes.getSubdirectoriesCount()),
                 toJsonString("description", elementAttributes.getDescription())
-                )
+            )
             .filter(Objects::nonNull)
             .collect(toReversedList()).stream()
             .reduce((j, r) -> r + "," + j);
         return "{" + jsonStringStream.orElse("") + "}";
-    }
-
-    private static <T> Collector<T, ?, List<T>> toReversedList() {
-        return Collectors.collectingAndThen(Collectors.toList(), list -> {
-            Collections.reverse(list);
-            return list;
-        });
     }
 
     private String toJsonString(AccessRightsAttributes accessRightsAttributes) {

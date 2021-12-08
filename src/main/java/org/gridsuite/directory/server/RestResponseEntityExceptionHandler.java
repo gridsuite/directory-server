@@ -27,8 +27,6 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND);
-            case UNKNOWN_ACTION:
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_ACTION);
             case UNKNOWN_NOTIFICATION:
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION);
             default:

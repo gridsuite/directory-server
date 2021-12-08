@@ -174,7 +174,7 @@ public class DirectoryService {
         return getElementEntity(elementUuid)
             .filter(elementEntity -> userId.equals(elementEntity.getOwner()))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
-            .filter(e -> e.isAttributesUpdatable(newElementAttributes))
+            .filter(e -> DirectoryElementEntity.isAttributesUpdatable(newElementAttributes))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
             .map(e -> e.update(newElementAttributes))
             .map(directoryElementRepository::save)
@@ -259,8 +259,9 @@ public class DirectoryService {
         try {
             notification = ElementAttributes.Notification.valueOf(notificationName.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return Mono.error(DirectoryException.createActionUnknown(notificationName));
+            return Mono.error(DirectoryException.createNotificationUnknown(notificationName));
         }
+
         if (notification == UPDATE_DIRECTORY) {
             return emitDirectoryChangedNotification(elementUuid, userId);
         } else {

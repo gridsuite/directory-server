@@ -108,7 +108,10 @@ public class DirectoryController {
 
     @PostMapping(value = "/elements/{elementUuid}/notification")
     @Operation(summary = "Create change element notification")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The notification has been sent")})
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The notification has been sent"),
+        @ApiResponse(responseCode = "400", description = "The notification type is unknown")
+    })
     public ResponseEntity<Mono<Void>> notify(@PathVariable("elementUuid") UUID elementUuid,
                                              @RequestParam("type") String notificationType,
                                              @RequestHeader("userId") String userId) {
