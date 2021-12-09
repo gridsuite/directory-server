@@ -57,7 +57,10 @@ public class DirectoryController {
 
     @DeleteMapping(value = "/elements/{elementUuid}")
     @Operation(summary = "Remove directory/element")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"))
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"),
+        @ApiResponse(responseCode = "404", description = "The element was not found"),
+    })
     public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
@@ -80,7 +83,10 @@ public class DirectoryController {
 
     @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get element infos")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "element's infos"))
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The element information"),
+        @ApiResponse(responseCode = "404", description = "The element was not found"),
+    })
     public ResponseEntity<Mono<ElementAttributes>> getElement(@PathVariable("elementUuid") UUID elementUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElement(elementUuid)
             .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
@@ -88,7 +94,10 @@ public class DirectoryController {
 
     @GetMapping(value = "/elements")
     @Operation(summary = "Get elements infos from ids given as parameters")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The elements information")})
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The elements information"),
+        @ApiResponse(responseCode = "404", description = "At least one item was not found"),
+    })
     public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("id") List<UUID> ids) {
         return ResponseEntity.ok().body(service.getElements(ids));
     }
@@ -110,6 +119,7 @@ public class DirectoryController {
     @Operation(summary = "Create change element notification")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The notification has been sent"),
+        @ApiResponse(responseCode = "404", description = "The element was not found"),
         @ApiResponse(responseCode = "400", description = "The notification type is unknown")
     })
     public ResponseEntity<Mono<Void>> notify(@PathVariable("elementUuid") UUID elementUuid,

@@ -26,10 +26,6 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ElementAttributes {
 
-    public enum Notification {
-        UPDATE_DIRECTORY
-    }
-
     private UUID elementUuid;
 
     private String elementName;

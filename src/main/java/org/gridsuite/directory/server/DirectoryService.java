@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
-import static org.gridsuite.directory.server.dto.ElementAttributes.Notification.UPDATE_DIRECTORY;
+import static org.gridsuite.directory.server.NotificationType.UPDATE_DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 
 /**
@@ -84,7 +84,7 @@ public class DirectoryService {
                     deleteElement(studyUuid, userId).subscribe();
                 }
                 boolean isPrivate = isPrivateForNotification(parentUuid, isPrivateDirectory(studyUuid));
-                emitDirectoryChanged(parentUuid, userId, error, isPrivate, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
+                emitDirectoryChanged(parentUuid, userId, error, isPrivate, parentUuid == null, UPDATE_DIRECTORY);
             }
             return Mono.empty();
         }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
@@ -118,7 +118,7 @@ public class DirectoryService {
             userId,
             isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
             false,
-            NotificationType.UPDATE_DIRECTORY));
+            UPDATE_DIRECTORY));
     }
 
     /* methods */
@@ -185,7 +185,7 @@ public class DirectoryService {
                     // second parameter should be always false when we change the access mode of a folder because we should notify all clients
                     isPrivateForNotification(elementEntity.getParentId(), newElementAttributes.getAccessRights() == null && elementEntity.isPrivate()),
                     elementEntity.getParentId() == null,
-                    NotificationType.UPDATE_DIRECTORY
+                    UPDATE_DIRECTORY
                 )
             )
             .then();
@@ -200,7 +200,7 @@ public class DirectoryService {
             deleteObject(elementAttributes, userId);
             boolean isPrivate = isPrivateForNotification(parentUuid, elementAttributes.getAccessRights().isPrivate());
             emitDirectoryChanged(parentUuid == null ? elementUuid : parentUuid, userId, isPrivate, parentUuid == null,
-                parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY);
+                parentUuid == null ? NotificationType.DELETE_DIRECTORY : UPDATE_DIRECTORY);
             return Mono.empty();
         });
     }
@@ -251,13 +251,17 @@ public class DirectoryService {
     }
 
     public Flux<ElementAttributes> getElements(List<UUID> ids) {
-        return Flux.fromStream(() -> directoryElementRepository.findAllById(ids).stream().map(ElementAttributes::toElementAttributes));
+        return Mono.fromCallable(() -> directoryElementRepository.findAllById(ids))
+            .flatMapMany(elementEntities ->
+                elementEntities.size() != ids.size() ?
+                    Flux.error(new DirectoryException(NOT_FOUND)) :
+                    Flux.fromStream(elementEntities.stream().map(ElementAttributes::toElementAttributes)));
     }
 
     public Mono<Void> notify(@NonNull String notificationName, @NonNull UUID elementUuid, @NonNull String userId) {
-        ElementAttributes.Notification notification;
+        NotificationType notification;
         try {
-            notification = ElementAttributes.Notification.valueOf(notificationName.toUpperCase());
+            notification = NotificationType.valueOf(notificationName.toUpperCase());
         } catch (IllegalArgumentException e) {
             return Mono.error(DirectoryException.createNotificationUnknown(notificationName));
         }
@@ -273,7 +277,7 @@ public class DirectoryService {
         return getElement(elementUuid)
             .doOnNext(elementAttributes -> {
                 UUID parentUuid = getParentUuid(elementUuid);
-                emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null, NotificationType.UPDATE_DIRECTORY);
+                emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null, UPDATE_DIRECTORY);
             })
             .then();
     }

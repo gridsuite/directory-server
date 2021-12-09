@@ -496,7 +496,7 @@ public class DirectoryTest {
         ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, false, "user1");
         insertAndCheckSubElement(rootDirUuid, false, scriptAttributes);
 
-        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid(), UUID.randomUUID()), "user1");
+        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
         assertEquals(3, res.size());
         ToStringVerifier.forClass(ElementAttributes.class).verify();
 
