@@ -8,9 +8,9 @@ spring:
         definition: consumeStudyUpdate
       bindings:
         publishDirectoryUpdate-out-0:
-          destination: directory.update
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}directory.update
         consumeStudyUpdate-in-0:
-          destination: study.update
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
       source: publishDirectoryUpdate
 
 dbName: directory
