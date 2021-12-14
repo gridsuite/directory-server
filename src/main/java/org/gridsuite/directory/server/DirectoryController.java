@@ -113,7 +113,7 @@ public class DirectoryController {
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/{elementName}/{type}")
-    @Operation(summary = "Check if the element exists in the given directory")
+    @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
                            @ApiResponse(responseCode = "404", description = "The element doesn't exist")})
     public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,

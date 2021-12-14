@@ -120,7 +120,7 @@ public class DirectoryService {
         if (elementExistsInDirectory(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType())) {
             return Mono.error(new DirectoryException(NOT_ALLOWED));
         } else {
-            return insertElement(elementAttributes, parentDirectoryUuid).doOnSuccess(unused2 -> emitDirectoryChanged(
+            return insertElement(elementAttributes, parentDirectoryUuid).doOnSuccess(unused -> emitDirectoryChanged(
                     parentDirectoryUuid,
                     userId,
                     isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
@@ -271,7 +271,7 @@ public class DirectoryService {
     }
 
     public boolean elementExistsInDirectory(UUID parentDirectoryUuid, String elementName, String type) {
-        return (long) directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).size() > 0;
+        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
     }
 
     public Mono<Void> elementExistsMono(UUID parentDirectoryUuid, String elementName, String type) {
