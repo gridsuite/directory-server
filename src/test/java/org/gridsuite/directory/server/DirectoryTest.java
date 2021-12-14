@@ -94,8 +94,8 @@ public class DirectoryTest {
         insertAndCheckSubElement(uuidNewDirectory, false, subEltAttributes);
         checkDirectoryContent(uuidNewDirectory, "userId", List.of(subDirAttributes, subEltAttributes));
 
-        checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", "userId", HttpStatus.OK);
-        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", "userId", HttpStatus.NOT_FOUND);
+        checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", STUDY, HttpStatus.OK);
+        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", STUDY, HttpStatus.NOT_FOUND);
 
         // Delete the sub-directory newSubDir
         deleteElement(subDirAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false);
@@ -234,6 +234,38 @@ public class DirectoryTest {
 
         deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
         checkElementNotFound(rootDirUuid, "Doe");
+    }
+
+    @Test
+    public void testTwoUsersElementsWithSameName() {
+        checkRootDirectoriesList("Doe", List.of());
+
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a public study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, false, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
+
+        // Insert a public study with the same name in the root directory by the user1 and expect a 403
+        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, false, "user1");
+        insertExpectFail(rootDirUuid, study2Attributes);
+
+        // Insert a private study in the root directory by the user1
+        ElementAttributes study3Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, study3Attributes);
+
+        // Insert a private study with the same name in the root directory by the user1 and expect a 403
+        ElementAttributes study4Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "user1");
+        insertExpectFail(rootDirUuid, study4Attributes);
+
+        // Insert a private filter with the same name in the root directory by the user1 and expect ok since it's not the same type
+        ElementAttributes filterAttributes = toElementAttributes(UUID.randomUUID(), "study3", FILTER, true, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, filterAttributes);
+
+        // Insert a public study with the same name in the root directory by the user2 should not work even if the study by user 1 is private
+        ElementAttributes study5Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "user3");
+        insertExpectFail(rootDirUuid, study5Attributes);
     }
 
     @Test
@@ -596,6 +628,17 @@ public class DirectoryTest {
         assertElementIsProperlyInserted(subElementAttributes);
     }
 
+    private void insertExpectFail(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) {
+        // Insert a sub-element of type DIRECTORY and expect 403 forbidden
+        webTestClient.post()
+                .uri("/v1/directories/" + parentDirectoryUUid)
+                .header("userId", subElementAttributes.getOwner())
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(subElementAttributes)
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
     private void renameElement(UUID elementUuidToRename, UUID elementUuidHeader, String userId, String newName, boolean isRoot, boolean isPrivate) {
         webTestClient.put().uri("/v1/directories/" + elementUuidToRename + "/rename/" + newName)
             .header("userId", userId)
@@ -711,10 +754,9 @@ public class DirectoryTest {
             .expectStatus().isNotFound();
     }
 
-    private void checkElementNameExistInDirectory(UUID parentDirectoryUuid, String elementName, String userId, HttpStatus expectedStatus) {
+    private void checkElementNameExistInDirectory(UUID parentDirectoryUuid, String elementName, String type, HttpStatus expectedStatus) {
         webTestClient.head()
-            .uri("/v1/directories/" + parentDirectoryUuid + "/" + elementName)
-            .header("userId", userId)
+            .uri("/v1/directories/" + parentDirectoryUuid + "/" + elementName + "/" + type)
             .exchange()
             .expectStatus().isEqualTo(expectedStatus);
     }
