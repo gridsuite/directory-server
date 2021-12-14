@@ -12,18 +12,23 @@ import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.utils.MatcherJson;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.gridsuite.directory.server.repository.DirectoryElementEntity.isAttributesUpdatable;
+import static org.junit.Assert.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -37,8 +42,32 @@ public class ElementAttributesTest {
     @Autowired
     ObjectMapper mapper;
 
+    private static <T> Collector<T, ?, List<T>> toReversedList() {
+        return Collectors.collectingAndThen(Collectors.toList(), list -> {
+            Collections.reverse(list);
+            return list;
+        });
+    }
+
     @Test
-    public void test() {
+    public void testElementEntityUpdate() {
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description");
+
+        assertTrue(isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build()));
+        assertTrue(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build()));
+
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build()));
+
+        elementEntity.update(ElementAttributes.builder().elementName("newName").accessRights(new AccessRightsAttributes(false)).build());
+        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
+    }
+
+    @Test
+    public void testElemenentAttributesCreation() {
         AccessRightsAttributes accessRightsAttributes = new AccessRightsAttributes(true);
 
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description"));
@@ -63,20 +92,39 @@ public class ElementAttributesTest {
     }
 
     @SneakyThrows
+    @Test
+    public void testNullValues() {
+        ElementAttributes elementAttributes = mapper.readValue("{}", ElementAttributes.class);
+        assertEquals("{}", mapper.writeValueAsString(elementAttributes));
+    }
+
+    @Test
+    public void testJsonString() {
+        assertEquals(
+            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\"}",
+            toJsonString(toElementAttributes(UUID.fromString("21297976-7445-44f1-9ccf-910cbb2f84f8"), "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description"))
+        );
+    }
+
+    @SneakyThrows
     private void verifyElementAttributes(ElementAttributes elementAttributes) {
         assertEquals(toJsonString(elementAttributes), mapper.writeValueAsString(elementAttributes));
     }
 
     private String toJsonString(ElementAttributes elementAttributes) {
-        return "{"
-            + toJsonString("elementUuid", elementAttributes.getElementUuid()) + ","
-            + toJsonString("elementName", elementAttributes.getElementName()) + ","
-            + toJsonString("type", elementAttributes.getType()) + ","
-            + toJsonString(elementAttributes.getAccessRights()) + ","
-            + toJsonString("owner", elementAttributes.getOwner()) + ","
-            + toJsonString("subdirectoriesCount", elementAttributes.getSubdirectoriesCount()) + ","
-            + toJsonString("description", elementAttributes.getDescription())
-            + "}";
+        Optional<String> jsonStringStream = Stream.of(
+                toJsonString("elementUuid", elementAttributes.getElementUuid()),
+                toJsonString("elementName", elementAttributes.getElementName()),
+                toJsonString("type", elementAttributes.getType()),
+                toJsonString(elementAttributes.getAccessRights()),
+                toJsonString("owner", elementAttributes.getOwner()),
+                toJsonString("subdirectoriesCount", elementAttributes.getSubdirectoriesCount()),
+                toJsonString("description", elementAttributes.getDescription())
+            )
+            .filter(Objects::nonNull)
+            .collect(toReversedList()).stream()
+            .reduce((j, r) -> r + "," + j);
+        return "{" + jsonStringStream.orElse("") + "}";
     }
 
     private String toJsonString(AccessRightsAttributes accessRightsAttributes) {
@@ -84,6 +132,6 @@ public class ElementAttributesTest {
     }
 
     private String toJsonString(String key, Object value) {
-        return String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
+        return value == null ? (String) value : String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
     }
 }

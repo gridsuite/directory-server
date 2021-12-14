@@ -6,7 +6,9 @@
  */
 package org.gridsuite.directory.server.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
 import java.util.UUID;
@@ -19,9 +21,11 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@SuperBuilder
 @ToString
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ElementAttributes {
+
     private UUID elementUuid;
 
     private String elementName;
@@ -32,7 +36,7 @@ public class ElementAttributes {
 
     private String owner;
 
-    private long subdirectoriesCount;
+    private Long subdirectoriesCount;
 
     private String description;
 
@@ -60,6 +64,9 @@ public class ElementAttributes {
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull AccessRightsAttributes accessRights, @NonNull String userId,
                                                         long subdirectoriesCount, String elementDescription) {
-        return new ElementAttributes(elementUuid, elementName, elementType, accessRights, userId, subdirectoriesCount, elementDescription);
+        return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
+            .type(elementType).accessRights(accessRights).owner(userId)
+            .subdirectoriesCount(subdirectoriesCount).description(elementDescription)
+            .build();
     }
 }
