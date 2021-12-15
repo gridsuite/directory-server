@@ -112,12 +112,17 @@ public class DirectoryService {
 
     /* methods */
     public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
-        return insertElement(elementAttributes, parentDirectoryUuid).doOnSuccess(unused -> emitDirectoryChanged(
-            parentDirectoryUuid,
-            userId,
-            isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
-            false,
-            NotificationType.UPDATE_DIRECTORY));
+        if (elementExistsInDirectory(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType())) {
+            return Mono.error(new DirectoryException(NOT_ALLOWED));
+        } else {
+            return insertElement(elementAttributes, parentDirectoryUuid).doOnSuccess(unused -> emitDirectoryChanged(
+                    parentDirectoryUuid,
+                    userId,
+                    isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
+                    false,
+                    NotificationType.UPDATE_DIRECTORY)
+            );
+        }
     }
 
     /* methods */
@@ -244,9 +249,12 @@ public class DirectoryService {
         }
     }
 
-    public Mono<Void> elementExists(UUID parentDirectoryUuid, String elementName, String userId) {
-        return directoryElementRepository.findDirectoryContentByUserId(parentDirectoryUuid, userId).stream().anyMatch(e -> e.getName().equals(elementName))
-            ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND));
+    public boolean elementExistsInDirectory(UUID parentDirectoryUuid, String elementName, String type) {
+        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
+    }
+
+    public Mono<Void> elementExistsMono(UUID parentDirectoryUuid, String elementName, String type) {
+        return elementExistsInDirectory(parentDirectoryUuid, elementName, type) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND));
     }
 
     public Flux<ElementAttributes> getElements(List<UUID> ids) {

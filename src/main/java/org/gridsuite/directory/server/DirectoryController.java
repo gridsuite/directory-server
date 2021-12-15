@@ -48,7 +48,8 @@ public class DirectoryController {
 
     @PostMapping(value = "/directories/{directoryUuid}/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element in a directory")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The created element"))
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
+            @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                  @RequestBody ElementAttributes elementAttributes,
                                                                  @RequestHeader("userId") String userId) {
@@ -128,13 +129,13 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.notify(notificationType, elementUuid, userId));
     }
 
-    @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/elements/{elementName}")
-    @Operation(summary = "Check if an element exists in a directory")
+    @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/elements/{elementName}/types/{type}")
+    @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
         @ApiResponse(responseCode = "404", description = "The element doesn't exist")})
     public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
-                                                    @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, userId));
+                                                    @PathVariable("type") String type) {
+        return ResponseEntity.ok().body(service.elementExistsMono(directoryUuid, elementName, type));
     }
 }

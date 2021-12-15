@@ -50,4 +50,6 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Transactional
     void deleteById(UUID id);
 
+    List<DirectoryElementEntity> findByNameAndParentIdAndType(String name, UUID parentId, String type);
+
 }
