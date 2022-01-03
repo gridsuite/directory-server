@@ -21,10 +21,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -230,8 +227,8 @@ public class DirectoryService {
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_FOUND)));
     }
 
-    private UUID getParentUuid(UUID directoryUuid) {
-        return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::getParentId).orElse(null);
+    private UUID getParentUuid(UUID elementUuid) {
+        return directoryElementRepository.findById(elementUuid).map(DirectoryElementEntity::getParentId).orElse(null);
     }
 
     private boolean isPrivateDirectory(UUID directoryUuid) {
@@ -265,6 +262,23 @@ public class DirectoryService {
                     Flux.fromStream(elementEntities.stream().map(ElementAttributes::toElementAttributes)));
     }
 
+    public Flux<ElementAttributes> getParentDirectories(List<UUID> elementIds) {
+        return Mono.fromCallable(() -> directoryElementRepository.findAllById(elementIds))
+            .flatMapMany(elementEntities -> {
+                    if (elementEntities.size() != elementIds.size()) {
+                        Flux.error(new DirectoryException(NOT_FOUND));
+                    }
+                    List<UUID> directoryIds = elementEntities.stream()
+                        .map(DirectoryElementEntity::getParentId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+                    return (directoryIds.size() != elementEntities.size()) ?
+                        Flux.error(new DirectoryException(NOT_FOUND)) :
+                        getElements(directoryIds);
+                }
+            );
+    }
+
     public Mono<Void> notify(@NonNull String notificationName, @NonNull UUID elementUuid, @NonNull String userId) {
         NotificationType notification;
         try {
@@ -290,8 +304,8 @@ public class DirectoryService {
     }
 
     public Mono<Void> areElementsAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
-        return getElements(elementUuids)
-            .map(e -> e.isAllowed(userId) ? e : new DirectoryException(NOT_ALLOWED))
+        return getParentDirectories(elementUuids)
+            .flatMap(e -> e.isAllowed(userId) ? Mono.empty() : Mono.error(new DirectoryException(NOT_ALLOWED)))
             .then();
     }
 }

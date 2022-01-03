@@ -52,18 +52,23 @@ import static org.junit.Assert.*;
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class DirectoryTest {
+
     private static final UUID STUDY_RENAME_UUID = UUID.randomUUID();
     private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID FILTER_UUID = UUID.randomUUID();
     private static final UUID CONTINGENCY_LIST_UUID = UUID.randomUUID();
+
     @Autowired
     ObjectMapper objectMapper;
+
     @Autowired
     private WebTestClient webTestClient;
+
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
+
     @Autowired
     private OutputDestination output;
 
