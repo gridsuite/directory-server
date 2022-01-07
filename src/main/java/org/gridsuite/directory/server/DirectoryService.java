@@ -257,7 +257,7 @@ public class DirectoryService {
     public Flux<ElementAttributes> getElements(List<UUID> ids) {
         return Mono.fromCallable(() -> directoryElementRepository.findAllById(ids))
             .flatMapMany(elementEntities ->
-                elementEntities.size() != ids.size() ?
+                elementEntities.size() != ids.stream().distinct().count() ?
                     Flux.error(new DirectoryException(NOT_FOUND)) :
                     Flux.fromStream(elementEntities.stream().map(ElementAttributes::toElementAttributes)));
     }
@@ -300,6 +300,12 @@ public class DirectoryService {
                 UUID parentUuid = getParentUuid(elementUuid);
                 emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null, NotificationType.UPDATE_DIRECTORY);
             })
+            .then();
+    }
+
+    public Mono<Void> areDirectoriesAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
+        return getElements(elementUuids)
+            .flatMap(e -> e.isAllowed(userId) ? Mono.empty() : Mono.error(new DirectoryException(NOT_ALLOWED)))
             .then();
     }
 

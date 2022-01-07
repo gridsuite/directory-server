@@ -99,18 +99,30 @@ public class DirectoryController {
         @ApiResponse(responseCode = "200", description = "The elements information"),
         @ApiResponse(responseCode = "404", description = "At least one item was not found"),
     })
-    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("id") List<UUID> ids) {
+    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids) {
         return ResponseEntity.ok().body(service.getElements(ids));
+    }
+
+    @RequestMapping(method = RequestMethod.HEAD, value = "/directories")
+    @Operation(summary = "Control directories access permissions for a user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "All directories are accessible"),
+        @ApiResponse(responseCode = "404", description = "At least one directory was not found"),
+        @ApiResponse(responseCode = "403", description = "Access forbidden for at least one directory")
+    })
+    public ResponseEntity<Mono<Void>> areDirectoriesAccessible(@RequestParam("ids") List<UUID> directoryUuids,
+                                                            @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.areDirectoriesAccessible(userId, directoryUuids));
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
     @Operation(summary = "Control elements access permissions for a user")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "All elements are accessible"),
-        @ApiResponse(responseCode = "404", description = "At least one item was not found"),
-        @ApiResponse(responseCode = "403", description = "Access forbidden")
+        @ApiResponse(responseCode = "404", description = "At least one element was not found"),
+        @ApiResponse(responseCode = "403", description = "Access forbidden for at least one element")
     })
-    public ResponseEntity<Mono<Void>> areElementsAccessible(@RequestParam("id") List<UUID> elementUuids,
+    public ResponseEntity<Mono<Void>> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                             @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.areElementsAccessible(userId, elementUuids));
     }

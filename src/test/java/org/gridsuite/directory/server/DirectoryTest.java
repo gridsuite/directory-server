@@ -34,6 +34,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.config.EnableWebFlux;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.*;
@@ -598,11 +599,9 @@ public class DirectoryTest {
     }
 
     private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId) {
-        var ids = new StringJoiner("&id=");
-        elementUuids.stream().map(UUID::toString).forEach(ids::add);
-        // Insert a sub-element of type DIRECTORY
+        var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
         return webTestClient.get()
-            .uri("/v1/elements?id=" + ids)
+            .uri("/v1/elements?ids=" + ids)
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
