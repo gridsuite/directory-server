@@ -67,7 +67,7 @@ public class ElementAttributesTest {
     }
 
     @Test
-    public void testElemenentAttributesCreation() {
+    public void testElementAttributesCreation() {
         AccessRightsAttributes accessRightsAttributes = new AccessRightsAttributes(true);
 
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description"));

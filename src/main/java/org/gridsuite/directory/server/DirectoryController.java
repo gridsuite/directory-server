@@ -12,11 +12,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -89,8 +87,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element was not found"),
     })
     public ResponseEntity<Mono<ElementAttributes>> getElement(@PathVariable("elementUuid") UUID elementUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElement(elementUuid)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElement(elementUuid));
     }
 
     @GetMapping(value = "/elements")
@@ -111,7 +108,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "403", description = "Access forbidden for at least one directory")
     })
     public ResponseEntity<Mono<Void>> areDirectoriesAccessible(@RequestParam("ids") List<UUID> directoryUuids,
-                                                            @RequestHeader("userId") String userId) {
+                                                               @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.areDirectoriesAccessible(userId, directoryUuids));
     }
 
@@ -160,6 +157,6 @@ public class DirectoryController {
     public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
                                                     @PathVariable("type") String type) {
-        return ResponseEntity.ok().body(service.elementExistsMono(directoryUuid, elementName, type));
+        return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, type));
     }
 }

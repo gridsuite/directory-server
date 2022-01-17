@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.util.Pair;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class DirectoryService {
     public static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
     public static final String FILTER = "FILTER";
     public static final String DIRECTORY = "DIRECTORY";
+    public static final String ELEMENT = "ELEMENT";
     static final String HEADER_USER_ID = "userId";
     static final String HEADER_UPDATE_TYPE = "updateType";
     static final String UPDATE_TYPE_DIRECTORIES = "directories";
@@ -109,17 +111,33 @@ public class DirectoryService {
 
     /* methods */
     public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
-        if (elementExistsInDirectory(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType())) {
-            return Mono.error(new DirectoryException(NOT_ALLOWED));
-        } else {
-            return insertElement(elementAttributes, parentDirectoryUuid).doOnSuccess(unused -> emitDirectoryChanged(
-                    parentDirectoryUuid,
-                    userId,
-                    isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
-                    false,
-                    NotificationType.UPDATE_DIRECTORY)
-            );
-        }
+        return assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType())
+            .and(assertAccessibleDirectory(parentDirectoryUuid, userId))
+            .then(insertElement(elementAttributes, parentDirectoryUuid))
+            .doOnSuccess(unused -> emitDirectoryChanged(
+                parentDirectoryUuid,
+                userId,
+                isPrivateForNotification(parentDirectoryUuid, elementAttributes.getAccessRights().isPrivate()),
+                false,
+                NotificationType.UPDATE_DIRECTORY));
+    }
+
+    private Mono<Void> assertElementNotExist(UUID parentDirectoryUuid, String elementName, String type) {
+        return isElementExists(parentDirectoryUuid, elementName, type)
+            .log()
+            .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.error(new DirectoryException(NOT_ALLOWED)) : Mono.empty());
+    }
+
+    private Mono<Void> assertRootDirectoryNotExist(String rootName) {
+        return isRootDirectoryExist(rootName)
+            .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.error(new DirectoryException(NOT_ALLOWED)) : Mono.empty());
+    }
+
+    private Mono<Void> assertAccessibleDirectory(UUID dirUuid, String user) {
+        return getElement(dirUuid)
+            .filter(e -> e.isAllowed(user))
+            .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
+            .then();
     }
 
     /* methods */
@@ -140,26 +158,30 @@ public class DirectoryService {
     }
 
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
-        return insertElement(toElementAttributes(rootDirectoryAttributes), null)
+        return assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName())
+            .then(insertElement(toElementAttributes(rootDirectoryAttributes), null))
             .doOnSuccess(element ->
                 emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true, NotificationType.ADD_DIRECTORY)
             );
     }
 
-    public Flux<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId) {
-        return Flux.fromStream(directoryContentStream(directoryUuid, userId));
-    }
-
-    public Map<UUID, Long> getSubDirectoriesInfos(List<UUID> subDirectories, String userId) {
-        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = directoryElementRepository.getSubdirectoriesCounts(subDirectories, userId);
+    private Map<UUID, Long> getSubDirectoriesInfos(List<UUID> subDirectories) {
+        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = directoryElementRepository.getSubdirectoriesCounts(subDirectories);
         Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
         subdirectoriesCountsList.forEach(e -> subdirectoriesCountsMap.put(e.getId(), e.getCount()));
         return subdirectoriesCountsMap;
     }
 
-    private Stream<ElementAttributes> directoryContentStream(UUID directoryUuid, String userId) {
-        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findDirectoryContentByUserId(directoryUuid, userId);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), userId);
+    public Flux<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId) {
+        return getElement(directoryUuid)
+            .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(DIRECTORY, directoryUuid)))
+            .filter(d -> d.isAllowed(userId))
+            .flatMapIterable(d -> getDirectoryElementsStream(directoryUuid).collect(Collectors.toList()));
+    }
+
+    private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid) {
+        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentId(directoryUuid);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()));
         return directoryElements
             .stream()
             .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
@@ -167,13 +189,15 @@ public class DirectoryService {
 
     public Flux<ElementAttributes> getRootDirectories(String userId) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findRootDirectoriesByUserId(userId);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), userId);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()));
         return Flux.fromStream(directoryElements.stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L))));
     }
 
+    // TODO test on name change if not already exist
     public Mono<Void> updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
-        return getElementEntity(elementUuid)
-            .filter(elementEntity -> userId.equals(elementEntity.getOwner()))
+        return getElementEntityMono(elementUuid)
+            .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
+            .filter(e -> isElementUpdatable(toElementAttributes(e), userId, false))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
             .filter(e -> DirectoryElementEntity.isAttributesUpdatable(newElementAttributes))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
@@ -192,43 +216,79 @@ public class DirectoryService {
             .then();
     }
 
-    public Mono<Void> deleteElement(UUID elementUuid, String userId) {
-        return getElement(elementUuid).flatMap(elementAttributes -> {
-            if (!userId.equals(elementAttributes.getOwner())) {
-                return Mono.error(new DirectoryException(NOT_ALLOWED));
-            }
-            UUID parentUuid = getParentUuid(elementUuid);
-            deleteObject(elementAttributes, userId);
-            boolean isPrivate = isPrivateForNotification(parentUuid, elementAttributes.getAccessRights().isPrivate());
-            emitDirectoryChanged(parentUuid == null ? elementUuid : parentUuid, userId, isPrivate, parentUuid == null,
-                parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY);
-            return Mono.empty();
-        });
+    //
+    private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {
+        if (element.getType().equals(DIRECTORY)) {
+            return element.getOwner().equals(userId) && // Only owner
+                (!forDeletion || getDirectoryElementsStream(element.getElementUuid())
+                    .filter(e -> e.getType().equals(DIRECTORY))
+                    .allMatch(e -> isElementUpdatable(e, userId, true))
+                );
+        } else {
+            return getParentElement(element.getElementUuid()).isAllowed(userId);
+        }
     }
 
-    private void deleteObject(ElementAttributes elementAttributes, String userId) {
+    public Mono<Void> deleteElement(UUID elementUuid, String userId) {
+        return getElementEntityMono(elementUuid)
+            .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
+            .map(ElementAttributes::toElementAttributes)
+            .filter(e -> isElementUpdatable(e, userId, true))
+            .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
+            .map(e -> {
+                UUID parentUuid = getParentUuid(elementUuid);
+                deleteObject(e);
+                return Pair.of(e, Optional.ofNullable(parentUuid));
+            })
+            .doOnSuccess(p -> {
+                UUID parentUuid = p.getSecond().orElse(null);
+                boolean isPrivate = isPrivateForNotification(parentUuid, p.getFirst().getAccessRights().isPrivate());
+                emitDirectoryChanged(parentUuid == null ? elementUuid : parentUuid, userId, isPrivate, parentUuid == null,
+                    parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY);
+            })
+            .then();
+    }
+
+    private void deleteObject(ElementAttributes elementAttributes) {
         if (elementAttributes.getType().equals(DIRECTORY)) {
-            deleteSubElements(elementAttributes.getElementUuid(), userId);
+            deleteSubElements(elementAttributes.getElementUuid());
         }
         directoryElementRepository.deleteById(elementAttributes.getElementUuid());
     }
 
-    private void deleteSubElements(UUID elementUuid, String userId) {
-        directoryContentStream(elementUuid, userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
+    private void deleteSubElements(UUID elementUuid) {
+        getDirectoryElementsStream(elementUuid).forEach(this::deleteObject);
     }
 
     public Mono<ElementAttributes> getElement(UUID elementUuid) {
-        return getElementEntity(elementUuid).map(ElementAttributes::toElementAttributes);
+        return getElementEntityMono(elementUuid).map(ElementAttributes::toElementAttributes)
+            .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)));
     }
 
-    private Mono<DirectoryElementEntity> getElementEntity(UUID elementUuid) {
-        return Mono.fromCallable(() -> directoryElementRepository.findById(elementUuid))
-            .flatMap(Mono::justOrEmpty)
-            .switchIfEmpty(Mono.error(new DirectoryException(NOT_FOUND)));
+    private Mono<DirectoryElementEntity> getElementEntityMono(UUID elementUuid) {
+        return Mono.fromCallable(() -> getElementEntity(elementUuid)).flatMap(Mono::justOrEmpty);
+    }
+
+    private Optional<DirectoryElementEntity> getElementEntity(UUID elementUuid) {
+        return directoryElementRepository.findById(elementUuid);
+    }
+
+    private ElementAttributes getParentElement(UUID elementUuid) {
+        return Stream.of(getParentUuid(elementUuid))
+            .filter(Objects::nonNull)
+            .map(this::getElementEntity)
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .map(ElementAttributes::toElementAttributes)
+            .findFirst()
+            .orElseThrow(() -> DirectoryException.createElementNotFound("Parent of", elementUuid));
     }
 
     private UUID getParentUuid(UUID elementUuid) {
-        return directoryElementRepository.findById(elementUuid).map(DirectoryElementEntity::getParentId).orElse(null);
+        return directoryElementRepository
+            .findById(elementUuid)
+            .map(DirectoryElementEntity::getParentId)
+            .orElse(null);
     }
 
     private boolean isPrivateDirectory(UUID directoryUuid) {
@@ -246,12 +306,21 @@ public class DirectoryService {
         }
     }
 
-    public boolean elementExistsInDirectory(UUID parentDirectoryUuid, String elementName, String type) {
-        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
+    private Mono<Boolean> isRootDirectoryExist(String rootName) {
+        return Mono.fromCallable(() ->
+            !directoryElementRepository.findRootDirectoriesByName(rootName).isEmpty()
+        );
     }
 
-    public Mono<Void> elementExistsMono(UUID parentDirectoryUuid, String elementName, String type) {
-        return elementExistsInDirectory(parentDirectoryUuid, elementName, type) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND));
+    private Mono<Boolean> isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
+        return Mono.fromCallable(() ->
+            !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty()
+        ).log();
+    }
+
+    public Mono<Void> elementExists(UUID parentDirectoryUuid, String elementName, String type) {
+        return isElementExists(parentDirectoryUuid, elementName, type)
+            .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND)));
     }
 
     public Flux<ElementAttributes> getElements(List<UUID> ids) {

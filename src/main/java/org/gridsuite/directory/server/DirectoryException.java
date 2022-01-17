@@ -6,7 +6,10 @@
  */
 package org.gridsuite.directory.server;
 
+import lombok.NonNull;
+
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -25,9 +28,12 @@ class DirectoryException extends RuntimeException {
         this.type = type;
     }
 
-    public static DirectoryException createNotificationUnknown(String action) {
-        Objects.requireNonNull(action);
+    public static DirectoryException createNotificationUnknown(@NonNull String action) {
         return new DirectoryException(Type.UNKNOWN_NOTIFICATION, String.format("The notification type '%s' is unknown", action));
+    }
+
+    public static DirectoryException createElementNotFound(@NonNull String type, @NonNull UUID uuid) {
+        return new DirectoryException(Type.NOT_FOUND, String.format("%s '%s' not found !", type, uuid));
     }
 
     Type getType() {
