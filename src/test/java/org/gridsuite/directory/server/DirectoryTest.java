@@ -403,11 +403,11 @@ public class DirectoryTest {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "Doe");
 
         //the name should not change
         renameElementExpectFail(rootDirUuid, "user1", "newName1", 403);
-        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, false, "Doe")));
+        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, true, "Doe")));
     }
 
     @Test
@@ -503,6 +503,47 @@ public class DirectoryTest {
     @SneakyThrows
     @Test
     public void testGetElement() {
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1");
+
+        // Insert a public contingency list in the root directory by the user1
+        ElementAttributes contingencyAttributes = toElementAttributes(CONTINGENCY_LIST_UUID, "Contingency", CONTINGENCY_LIST, false, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, contingencyAttributes);
+
+        // Insert a public filter in the root directory by the user1
+        ElementAttributes filterAttributes = toElementAttributes(FILTER_UUID, "Filter", FILTER, false, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, filterAttributes);
+
+        // Insert a public script in the root directory by the user1
+        ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, false, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, scriptAttributes);
+
+        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
+        assertEquals(3, res.size());
+        ToStringVerifier.forClass(ElementAttributes.class).verify();
+
+        res.sort(Comparator.comparing(ElementAttributes::getElementName));
+        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(contingencyAttributes, filterAttributes, scriptAttributes)));
+
+        renameElement(contingencyAttributes.getElementUuid(), rootDirUuid, "user1", "newContingency", false, false);
+        renameElement(filterAttributes.getElementUuid(), rootDirUuid, "user1", "newFilter", false, false);
+        renameElement(scriptAttributes.getElementUuid(), rootDirUuid, "user1", "newScript", false, false);
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
+        assertEquals(3, res.size());
+
+        res.sort(Comparator.comparing(ElementAttributes::getElementName));
+        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
+            List.of(
+                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, false, "user1"),
+                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, false, "user1"),
+                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, false, "user1")
+            ))
+        );
+    }
+
+    @SneakyThrows
+    @Test
+    public void testElementAccessControl() {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1");
 

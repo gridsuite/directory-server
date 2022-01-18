@@ -29,6 +29,7 @@ import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.repository.DirectoryElementEntity.isAttributesUpdatable;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertThrows;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -89,6 +90,17 @@ public class ElementAttributesTest {
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", null, accessRightsAttributes, "userId", 1L, "description"));
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, null, "userId", 1L, "description"));
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, accessRightsAttributes, null, 1L, "description"));
+    }
+
+    @Test
+    public void testAllowedUser() {
+        assertTrue(toElementAttributes(ELEMENT_UUID, "dir", DIRECTORY, false, "user").isAllowed("user"));
+        assertTrue(toElementAttributes(ELEMENT_UUID, "dir", DIRECTORY, false, "user").isAllowed("user1"));
+        assertTrue(toElementAttributes(ELEMENT_UUID, "dir", DIRECTORY, true, "user").isAllowed("user"));
+        assertFalse(toElementAttributes(ELEMENT_UUID, "dir", DIRECTORY, true, "user").isAllowed("user1"));
+
+        ElementAttributes notDirectory = toElementAttributes(ELEMENT_UUID, "study", STUDY, false, "userId");
+        assertThrows("NOT_DIRECTORY", DirectoryException.class, () -> notDirectory.isAllowed("userId"));
     }
 
     @SneakyThrows

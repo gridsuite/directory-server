@@ -216,10 +216,9 @@ public class DirectoryService {
             .then();
     }
 
-    //
     private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {
         if (element.getType().equals(DIRECTORY)) {
-            return element.getOwner().equals(userId) && // Only owner
+            return element.isAllowed(userId) &&
                 (!forDeletion || getDirectoryElementsStream(element.getElementUuid())
                     .filter(e -> e.getType().equals(DIRECTORY))
                     .allMatch(e -> isElementUpdatable(e, userId, true))

@@ -14,16 +14,16 @@ import java.util.UUID;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-class DirectoryException extends RuntimeException {
+public class DirectoryException extends RuntimeException {
 
     private final Type type;
 
-    DirectoryException(Type type) {
+    public DirectoryException(Type type) {
         super(Objects.requireNonNull(type.name()));
         this.type = type;
     }
 
-    DirectoryException(Type type, String message) {
+    public DirectoryException(Type type, String message) {
         super(message);
         this.type = type;
     }
@@ -43,6 +43,7 @@ class DirectoryException extends RuntimeException {
     public enum Type {
         NOT_ALLOWED,
         NOT_FOUND,
+        NOT_DIRECTORY,
         UNKNOWN_NOTIFICATION
     }
 }
