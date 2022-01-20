@@ -96,8 +96,9 @@ public class DirectoryController {
         @ApiResponse(responseCode = "200", description = "The elements information"),
         @ApiResponse(responseCode = "404", description = "At least one item was not found"),
     })
-    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids) {
-        return ResponseEntity.ok().body(service.getElements(ids));
+    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
+                                                               @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
+        return ResponseEntity.ok().body(service.getElements(ids, strictMode));
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/directories")
