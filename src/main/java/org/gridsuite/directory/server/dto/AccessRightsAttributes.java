@@ -17,5 +17,5 @@ import lombok.*;
 @AllArgsConstructor
 @ToString
 public class AccessRightsAttributes {
-    private boolean isPrivate;
+    private Boolean isPrivate;
 }

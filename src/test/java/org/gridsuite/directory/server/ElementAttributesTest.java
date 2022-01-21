@@ -54,14 +54,16 @@ public class ElementAttributesTest {
     public void testElementEntityUpdate() {
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description");
 
-        assertTrue(isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build()));
-        assertTrue(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build()));
+        assertTrue(isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), DIRECTORY));
+        assertTrue(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), DIRECTORY));
 
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build()));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build()));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build()));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build()));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build()));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build(), DIRECTORY));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build(), DIRECTORY));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build(), DIRECTORY));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build(), DIRECTORY));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build(), DIRECTORY));
+
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), STUDY));
 
         elementEntity.update(ElementAttributes.builder().elementName("newName").accessRights(new AccessRightsAttributes(false)).build());
         org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
@@ -113,7 +115,7 @@ public class ElementAttributesTest {
     @Test
     public void testJsonString() {
         assertEquals(
-            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\"}",
+            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"isPrivate\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\"}",
             toJsonString(toElementAttributes(UUID.fromString("21297976-7445-44f1-9ccf-910cbb2f84f8"), "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description"))
         );
     }
@@ -140,7 +142,7 @@ public class ElementAttributesTest {
     }
 
     private String toJsonString(AccessRightsAttributes accessRightsAttributes) {
-        return "\"accessRights\":{" + toJsonString("private", accessRightsAttributes.isPrivate()) + "}";
+        return "\"accessRights\":{" + toJsonString("isPrivate", accessRightsAttributes.getIsPrivate()) + "}";
     }
 
     private String toJsonString(String key, Object value) {
