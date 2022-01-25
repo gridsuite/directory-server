@@ -342,11 +342,11 @@ public class DirectoryTest {
         // Insert a private root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "userId");
 
-        // Insert a public study in the root directory bu the userId
+        // Insert a public study in the root directory by the userId
         ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, true, "userId", "descr study1");
         insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
 
-        // Insert a public study in the root directory bu the userId;
+        // Insert a public study in the root directory by the userId;
         ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, true, "userId");
         insertAndCheckSubElement(rootDirUuid, true, study2Attributes);
 
@@ -354,7 +354,7 @@ public class DirectoryTest {
         ElementAttributes subDirAttributes = toElementAttributes(UUID.randomUUID(), "subDir", DIRECTORY, true, "userId");
         insertAndCheckSubElement(rootDirUuid, true, subDirAttributes);
 
-        // Insert a public study in the root directory bu the userId
+        // Insert a public study in the subdirectory by the userId
         ElementAttributes subDirStudyAttributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "userId", "descr study3");
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), true, subDirStudyAttributes);
 
