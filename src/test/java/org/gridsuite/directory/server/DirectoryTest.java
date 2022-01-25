@@ -471,7 +471,14 @@ public class DirectoryTest {
         ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, scriptAttributes);
 
-        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
+        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), UUID.randomUUID()), "user1", true, 404);
+        assertTrue(res.isEmpty());
+
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), UUID.randomUUID()), "user1", false, 200);
+        assertEquals(2, res.size());
+        ToStringVerifier.forClass(ElementAttributes.class).verify();
+
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
         ToStringVerifier.forClass(ElementAttributes.class).verify();
 
@@ -481,7 +488,7 @@ public class DirectoryTest {
         renameElement(contingencyAttributes.getElementUuid(), rootDirUuid, "user1", "newContingency", false, false);
         renameElement(filterAttributes.getElementUuid(), rootDirUuid, "user1", "newFilter", false, false);
         renameElement(scriptAttributes.getElementUuid(), rootDirUuid, "user1", "newScript", false, false);
-        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
@@ -512,7 +519,7 @@ public class DirectoryTest {
         ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, scriptAttributes);
 
-        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
+        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
         ToStringVerifier.forClass(ElementAttributes.class).verify();
 
@@ -522,7 +529,7 @@ public class DirectoryTest {
         renameElement(contingencyAttributes.getElementUuid(), rootDirUuid, "user1", "newContingency", false, false);
         renameElement(filterAttributes.getElementUuid(), rootDirUuid, "user1", "newFilter", false, false);
         renameElement(scriptAttributes.getElementUuid(), rootDirUuid, "user1", "newScript", false, false);
-        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
@@ -576,17 +583,29 @@ public class DirectoryTest {
         return uuidNewDirectory;
     }
 
-    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId) {
+    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, int httpCodeExpected) {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        return webTestClient.get()
-            .uri("/v1/elements?ids=" + ids)
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(ElementAttributes.class)
-            .returnResult()
-            .getResponseBody();
+        // Insert a sub-element of type DIRECTORY
+        if (httpCodeExpected == 200) {
+            return webTestClient.get()
+                .uri("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
+                .header("userId", userId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(ElementAttributes.class)
+                .returnResult()
+                .getResponseBody();
+        } else if (httpCodeExpected == 404) {
+            webTestClient.get()
+                .uri("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
+                .header("userId", userId)
+                .exchange()
+                .expectStatus().isNotFound();
+        } else {
+            fail("unexpected case");
+        }
+        return Collections.emptyList();
     }
 
     private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) {

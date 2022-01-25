@@ -325,10 +325,10 @@ public class DirectoryService {
             .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND)));
     }
 
-    public Flux<ElementAttributes> getElements(List<UUID> ids) {
+    public Flux<ElementAttributes> getElements(List<UUID> ids, boolean strictMode) {
         return Mono.fromCallable(() -> directoryElementRepository.findAllById(ids))
             .flatMapMany(elementEntities ->
-                elementEntities.size() != ids.stream().distinct().count() ?
+                strictMode && elementEntities.size() != ids.stream().distinct().count() ?
                     Flux.error(new DirectoryException(NOT_FOUND)) :
                     Flux.fromStream(elementEntities.stream().map(ElementAttributes::toElementAttributes)));
     }
@@ -345,7 +345,7 @@ public class DirectoryService {
                         .collect(Collectors.toList());
                     return (directoryIds.size() != elementEntities.size()) ?
                         Flux.error(new DirectoryException(NOT_FOUND)) :
-                        getElements(directoryIds);
+                        getElements(directoryIds, true);
                 }
             );
     }
@@ -379,7 +379,7 @@ public class DirectoryService {
     }
 
     public Mono<Void> areDirectoriesAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
-        return getElements(elementUuids)
+        return getElements(elementUuids, true)
             .flatMap(e -> e.isAllowed(userId) ? Mono.empty() : Mono.error(new DirectoryException(NOT_ALLOWED)))
             .then();
     }
