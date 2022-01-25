@@ -54,16 +54,17 @@ public class ElementAttributesTest {
     public void testElementEntityUpdate() {
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description");
 
-        assertTrue(isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), DIRECTORY));
-        assertTrue(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), DIRECTORY));
+        assertTrue(isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), ElementAttributes.builder().type(DIRECTORY).owner("userId").build(), "userId"));
+        assertTrue(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), ElementAttributes.builder().type(DIRECTORY).owner("userId").build(), "userId"));
 
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build(), DIRECTORY));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build(), DIRECTORY));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build(), DIRECTORY));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build(), DIRECTORY));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build(), DIRECTORY));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), ElementAttributes.builder().type(DIRECTORY).owner("userId").build(), "userId2"));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build(), ElementAttributes.builder().type(DIRECTORY).owner("userId").build(), "userId"));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build(), ElementAttributes.builder().type(DIRECTORY).owner("userId").build(), "userId"));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build(), ElementAttributes.builder().type(DIRECTORY).owner("userId").build(), "userId"));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build(), ElementAttributes.builder().type(DIRECTORY).owner("userId").build(), "userId"));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build(), ElementAttributes.builder().type(DIRECTORY).owner("userId").build(), "userId"));
 
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), STUDY));
+        assertFalse(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), ElementAttributes.builder().type(STUDY).owner("userId").build(), "userId"));
 
         elementEntity.update(ElementAttributes.builder().elementName("newName").accessRights(new AccessRightsAttributes(false)).build());
         org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));

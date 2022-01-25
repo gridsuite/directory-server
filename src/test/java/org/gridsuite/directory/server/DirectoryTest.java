@@ -391,7 +391,7 @@ public class DirectoryTest {
         insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
 
         //set study to private -> not updatable
-        updateStudyAccessRightFail(study1Attributes.getElementUuid(), "user1", true, 403);
+        updateAccessRightFail(study1Attributes.getElementUuid(), "user1", true, 403);
         checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, null, "user1")));
     }
 
@@ -410,9 +410,8 @@ public class DirectoryTest {
         updateAccessRights(rootDirUuid, rootDirUuid, "Doe", false, true, false);
         checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, false, "Doe")));
 
-        //FIXME : This works now but it SHOULDNT remind me if i make the PR with that (Making a directory that you don't own private thus loosing view of it...)
-        updateAccessRights(rootDirUuid, rootDirUuid, "User1", true, true, false);
-        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, true, "Doe")));
+        updateAccessRightFail(rootDirUuid, "User1", true, 403);
+        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, false, "Doe")));
     }
 
     @SneakyThrows
@@ -694,7 +693,7 @@ public class DirectoryTest {
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
     }
 
-    private void updateStudyAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) {
+    private void updateAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
             webTestClient.put()
                 .uri(String.format("/v1/elements/%s", elementUuidToUpdate))

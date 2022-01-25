@@ -61,10 +61,11 @@ public class DirectoryElementEntity {
         return this;
     }
 
-    public static boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes, String elementType) {
+    public static boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes, ElementAttributes elementAttributes, String userId) {
         return (// Updatable attributes
             StringUtils.isNotBlank(newElementAttributes.getElementName()) ||
-                    (elementType.equals(DIRECTORY) && Objects.nonNull(newElementAttributes.getAccessRights())))
+                    //Only the owner can update the accessRights of a directory (to avoid user locking themselves out of a directory they don't own
+                    (elementAttributes.getType().equals(DIRECTORY) && Objects.nonNull(newElementAttributes.getAccessRights()) && userId.equals(elementAttributes.getOwner())))
             && // Non updatable attributes
             Objects.isNull(newElementAttributes.getElementUuid()) &&
             Objects.isNull(newElementAttributes.getType()) &&
