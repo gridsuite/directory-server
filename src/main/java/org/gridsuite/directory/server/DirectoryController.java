@@ -12,11 +12,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -49,7 +47,7 @@ public class DirectoryController {
     @PostMapping(value = "/directories/{directoryUuid}/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element in a directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
-            @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
+        @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                  @RequestBody ElementAttributes elementAttributes,
                                                                  @RequestHeader("userId") String userId) {
@@ -89,8 +87,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element was not found"),
     })
     public ResponseEntity<Mono<ElementAttributes>> getElement(@PathVariable("elementUuid") UUID elementUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElement(elementUuid)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND))));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElement(elementUuid));
     }
 
     @GetMapping(value = "/elements")
@@ -99,8 +96,21 @@ public class DirectoryController {
         @ApiResponse(responseCode = "200", description = "The elements information"),
         @ApiResponse(responseCode = "404", description = "At least one item was not found"),
     })
-    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("id") List<UUID> ids) {
-        return ResponseEntity.ok().body(service.getElements(ids));
+    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
+                                                               @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
+        return ResponseEntity.ok().body(service.getElements(ids, strictMode));
+    }
+
+    @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
+    @Operation(summary = "Control elements access permissions for a user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "All elements are accessible"),
+        @ApiResponse(responseCode = "404", description = "At least one element was not found"),
+        @ApiResponse(responseCode = "403", description = "Access forbidden for at least one element")
+    })
+    public ResponseEntity<Mono<Void>> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
+                                                            @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.areElementsAccessible(userId, elementUuids));
     }
 
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -136,6 +146,6 @@ public class DirectoryController {
     public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
                                                     @PathVariable("type") String type) {
-        return ResponseEntity.ok().body(service.elementExistsMono(directoryUuid, elementName, type));
+        return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, type));
     }
 }

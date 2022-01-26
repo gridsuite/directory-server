@@ -34,6 +34,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.config.EnableWebFlux;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.*;
@@ -52,18 +53,23 @@ import static org.junit.Assert.*;
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class DirectoryTest {
+
     private static final UUID STUDY_RENAME_UUID = UUID.randomUUID();
     private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID FILTER_UUID = UUID.randomUUID();
     private static final UUID CONTINGENCY_LIST_UUID = UUID.randomUUID();
+
     @Autowired
     ObjectMapper objectMapper;
+
     @Autowired
     private WebTestClient webTestClient;
+
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
+
     @Autowired
     private OutputDestination output;
 
@@ -73,6 +79,7 @@ public class DirectoryTest {
 
     @Before
     public void setup() {
+        cleanDB();
     }
 
     @Test
@@ -273,7 +280,7 @@ public class DirectoryTest {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a public study in the root directory by the user1
+        // Insert a private study in the root directory by the user1
         ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, true, "user1", "descr study1");
         insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
 
@@ -285,7 +292,7 @@ public class DirectoryTest {
         checkDirectoryContent(rootDirUuid, "user1", List.of(study1Attributes, study2Attributes));
 
         // check user2 visible studies
-        checkDirectoryContent(rootDirUuid, "user2", List.of(study2Attributes));
+        checkDirectoryContent(rootDirUuid, "user2", List.of(study1Attributes, study2Attributes));
 
         deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, false);
         checkElementNotFound(study1Attributes.getElementUuid(), "user1");
@@ -313,10 +320,10 @@ public class DirectoryTest {
         insertAndCheckSubElement(rootDirUuid, false, study2Attributes);
 
         // check user1 visible studies
-        checkDirectoryContent(rootDirUuid, "user1", List.of(study1Attributes));
+        checkDirectoryContent(rootDirUuid, "user1", List.of(study1Attributes, study2Attributes));
 
         // check user2 visible studies
-        checkDirectoryContent(rootDirUuid, "user2", List.of(study2Attributes));
+        checkDirectoryContent(rootDirUuid, "user2", List.of(study1Attributes, study2Attributes));
 
         deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, false);
         checkElementNotFound(study1Attributes.getElementUuid(), "user1");
@@ -335,11 +342,11 @@ public class DirectoryTest {
         // Insert a private root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "userId");
 
-        // Insert a public study in the root directory bu the userId
+        // Insert a public study in the root directory by the userId
         ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, true, "userId", "descr study1");
         insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
 
-        // Insert a public study in the root directory bu the userId;
+        // Insert a public study in the root directory by the userId;
         ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, true, "userId");
         insertAndCheckSubElement(rootDirUuid, true, study2Attributes);
 
@@ -347,7 +354,7 @@ public class DirectoryTest {
         ElementAttributes subDirAttributes = toElementAttributes(UUID.randomUUID(), "subDir", DIRECTORY, true, "userId");
         insertAndCheckSubElement(rootDirUuid, true, subDirAttributes);
 
-        // Insert a public study in the root directory bu the userId
+        // Insert a public study in the subdirectory by the userId
         ElementAttributes subDirStudyAttributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "userId", "descr study3");
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), true, subDirStudyAttributes);
 
@@ -377,18 +384,18 @@ public class DirectoryTest {
 
     @Test
     public void testRenameStudyForbiddenFail() {
-        checkRootDirectoriesList("Doe", List.of());
+        checkRootDirectoriesList("user1", List.of());
 
         // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "user1");
 
         // Insert a public study in the root directory by the user1
         ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_FORBIDDEN_UUID, "study1", STUDY, false, "user1");
-        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
+        insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
 
         //the name should not change
         renameElementExpectFail(study1Attributes.getElementUuid(), "user2", "newName1", 403);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(study1Attributes));
+        checkDirectoryContent(rootDirUuid, "user2", List.of());
     }
 
     @Test
@@ -396,11 +403,11 @@ public class DirectoryTest {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "Doe");
 
         //the name should not change
         renameElementExpectFail(rootDirUuid, "user1", "newName1", 403);
-        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, false, "Doe")));
+        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, true, "Doe")));
     }
 
     @Test
@@ -425,50 +432,33 @@ public class DirectoryTest {
 
     @Test
     public void testUpdateStudyAccessRightForbiddenFail() {
-        checkRootDirectoriesList("Doe", List.of());
+        checkRootDirectoriesList("user1", List.of());
 
         // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "user1");
 
         // Insert a public study in the root directory by the user1
         ElementAttributes study1Attributes = toElementAttributes(STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID, "study1", STUDY, false, "user1", "descr study1");
-        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
+        insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
 
         //the access rights should not change
         updateStudyAccessRightFail(study1Attributes.getElementUuid(), "user2", true, 403);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, false, "user1", "descr study1")));
+        checkDirectoryContent(rootDirUuid, "user2", List.of());
     }
 
     @Test
     public void testUpdateStudyAccessRightWithWrongUser() {
-        checkRootDirectoriesList("Doe", List.of());
+        checkRootDirectoriesList("user1", List.of());
 
         // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "user1");
 
         // Insert a public study in the root directory by the user1
         ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, false, "user1");
-        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
+        insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
 
-        //try to update the study1 (of user1) with the user2 -> the access rights should not change because it's not allowed
         updateStudyAccessRightFail(study1Attributes.getElementUuid(), "user2", true, 403);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, false, "user1")));
-    }
-
-    @Test
-    public void testDeleteStudyWithWrongUser() {
-        checkRootDirectoriesList("Doe", List.of());
-
-        // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
-
-        // Insert a public study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, false, "user1");
-        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
-
-        //try to delete the study1 (of user1) with the user2 -> the should still be here
-        deleteElementFail(study1Attributes.getElementUuid(), "user2", 403);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(study1Attributes));
+        checkDirectoryContent(rootDirUuid, "user2", List.of());
     }
 
     @SneakyThrows
@@ -528,7 +518,14 @@ public class DirectoryTest {
         ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, false, "user1");
         insertAndCheckSubElement(rootDirUuid, false, scriptAttributes);
 
-        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
+        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), UUID.randomUUID()), "user1", true, 404);
+        assertTrue(res.isEmpty());
+
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), UUID.randomUUID()), "user1", false, 200);
+        assertEquals(2, res.size());
+        ToStringVerifier.forClass(ElementAttributes.class).verify();
+
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
         ToStringVerifier.forClass(ElementAttributes.class).verify();
 
@@ -538,7 +535,48 @@ public class DirectoryTest {
         renameElement(contingencyAttributes.getElementUuid(), rootDirUuid, "user1", "newContingency", false, false);
         renameElement(filterAttributes.getElementUuid(), rootDirUuid, "user1", "newFilter", false, false);
         renameElement(scriptAttributes.getElementUuid(), rootDirUuid, "user1", "newScript", false, false);
-        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1");
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
+        assertEquals(3, res.size());
+
+        res.sort(Comparator.comparing(ElementAttributes::getElementName));
+        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
+            List.of(
+                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, false, "user1"),
+                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, false, "user1"),
+                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, false, "user1")
+            ))
+        );
+    }
+
+    @SneakyThrows
+    @Test
+    public void testElementAccessControl() {
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1");
+
+        // Insert a public contingency list in the root directory by the user1
+        ElementAttributes contingencyAttributes = toElementAttributes(CONTINGENCY_LIST_UUID, "Contingency", CONTINGENCY_LIST, false, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, contingencyAttributes);
+
+        // Insert a public filter in the root directory by the user1
+        ElementAttributes filterAttributes = toElementAttributes(FILTER_UUID, "Filter", FILTER, false, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, filterAttributes);
+
+        // Insert a public script in the root directory by the user1
+        ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, false, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, scriptAttributes);
+
+        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
+        assertEquals(3, res.size());
+        ToStringVerifier.forClass(ElementAttributes.class).verify();
+
+        res.sort(Comparator.comparing(ElementAttributes::getElementName));
+        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(contingencyAttributes, filterAttributes, scriptAttributes)));
+
+        renameElement(contingencyAttributes.getElementUuid(), rootDirUuid, "user1", "newContingency", false, false);
+        renameElement(filterAttributes.getElementUuid(), rootDirUuid, "user1", "newFilter", false, false);
+        renameElement(scriptAttributes.getElementUuid(), rootDirUuid, "user1", "newScript", false, false);
+        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
@@ -592,19 +630,29 @@ public class DirectoryTest {
         return uuidNewDirectory;
     }
 
-    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId) {
-        var ids = new StringJoiner("&id=");
-        elementUuids.stream().map(UUID::toString).forEach(ids::add);
+    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, int httpCodeExpected) {
+        var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
         // Insert a sub-element of type DIRECTORY
-        return webTestClient.get()
-            .uri("/v1/elements?id=" + ids)
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(ElementAttributes.class)
-            .returnResult()
-            .getResponseBody();
+        if (httpCodeExpected == 200) {
+            return webTestClient.get()
+                .uri("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
+                .header("userId", userId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(ElementAttributes.class)
+                .returnResult()
+                .getResponseBody();
+        } else if (httpCodeExpected == 404) {
+            webTestClient.get()
+                .uri("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
+                .header("userId", userId)
+                .exchange()
+                .expectStatus().isNotFound();
+        } else {
+            fail("unexpected case");
+        }
+        return Collections.emptyList();
     }
 
     private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) {
@@ -814,7 +862,6 @@ public class DirectoryTest {
 
     @After
     public void tearDown() {
-        cleanDB();
         assertNull("Should not be any messages", output.receive(1000));
     }
 }

@@ -9,14 +9,17 @@ package org.gridsuite.directory.server.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.directory.server.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
 import java.util.UUID;
 
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
+ * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @Getter
 @Setter
@@ -39,6 +42,13 @@ public class ElementAttributes {
     private Long subdirectoriesCount;
 
     private String description;
+
+    public boolean isAllowed(@NonNull String userId) {
+        if (!type.equals(DIRECTORY)) {
+            throw new DirectoryException(NOT_DIRECTORY);
+        }
+        return owner.equals(userId) || !accessRights.isPrivate();
+    }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
         return toElementAttributes(entity, 0L);
