@@ -76,23 +76,23 @@ public class AccessRightsControlTest {
         UUID rootUuid3 = insertRootDirectory("user3", "root3", true);
 
         // Test with empty list
-        controlDirectoriesAccess("user", List.of(), HttpStatus.OK);
+        controlElementsAccess("user", List.of(), HttpStatus.OK);
 
         // Any user has access to public root directories
-        controlDirectoriesAccess("user", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
-        controlDirectoriesAccess("user1", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
-        controlDirectoriesAccess("user2", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
-        controlDirectoriesAccess("user3", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
+        controlElementsAccess("user", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
+        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
+        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
+        controlElementsAccess("user3", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
 
         // Only owner has access to a private root directory
-        controlDirectoriesAccess("user", List.of(rootUuid3), HttpStatus.FORBIDDEN);
-        controlDirectoriesAccess("user1", List.of(rootUuid3), HttpStatus.FORBIDDEN);
-        controlDirectoriesAccess("user2", List.of(rootUuid3), HttpStatus.FORBIDDEN);
-        controlDirectoriesAccess("user3", List.of(rootUuid3), HttpStatus.OK);
-        controlDirectoriesAccess("user", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
-        controlDirectoriesAccess("user1", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
-        controlDirectoriesAccess("user2", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
-        controlDirectoriesAccess("user3", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.OK);
+        controlElementsAccess("user", List.of(rootUuid3), HttpStatus.FORBIDDEN);
+        controlElementsAccess("user1", List.of(rootUuid3), HttpStatus.FORBIDDEN);
+        controlElementsAccess("user2", List.of(rootUuid3), HttpStatus.FORBIDDEN);
+        controlElementsAccess("user3", List.of(rootUuid3), HttpStatus.OK);
+        controlElementsAccess("user", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
+        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
+        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
+        controlElementsAccess("user3", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.OK);
     }
 
     @Test
@@ -111,10 +111,10 @@ public class AccessRightsControlTest {
         UUID eltUuid2 = insertSubElement(dirUuid2, toElementAttributes(null, "study2", STUDY, true, "user2"));
 
         // Dir2 is private directory and only accessible by user2
-        controlDirectoriesAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1), HttpStatus.OK);
-        controlDirectoriesAccess("user1", List.of(dirUuid2), HttpStatus.FORBIDDEN);
-        controlDirectoriesAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2), HttpStatus.FORBIDDEN);
-        controlDirectoriesAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2), HttpStatus.OK);
+        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1), HttpStatus.OK);
+        controlElementsAccess("user1", List.of(dirUuid2), HttpStatus.FORBIDDEN);
+        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2), HttpStatus.FORBIDDEN);
+        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2), HttpStatus.OK);
 
         // Dir2 is private and only sub elements creation for user2
         insertSubElement(dirUuid2, toElementAttributes(null, "dir", DIRECTORY, true, "user1"), HttpStatus.FORBIDDEN);
@@ -181,17 +181,9 @@ public class AccessRightsControlTest {
     }
 
     private void controlElementsAccess(String userId, List<UUID> uuids, HttpStatus expectedStatus) {
-        controlDirectoriesAccess(userId, uuids, true, expectedStatus);
-    }
-
-    private void controlDirectoriesAccess(String userId, List<UUID> uuids, HttpStatus expectedStatus) {
-        controlDirectoriesAccess(userId, uuids, false, expectedStatus);
-    }
-
-    private void controlDirectoriesAccess(String userId, List<UUID> uuids, boolean isElementsControl, HttpStatus expectedStatus) {
         var ids = uuids.stream().map(UUID::toString).collect(Collectors.joining(","));
         webTestClient.head()
-            .uri((isElementsControl ? "/v1/elements?ids=" : "/v1/directories?ids=") + ids)
+            .uri("/v1/elements?ids=" + ids)
             .header("userId", userId)
             .exchange()
             .expectStatus()

@@ -127,7 +127,6 @@ public class DirectoryService {
 
     private Mono<Void> assertElementNotExist(UUID parentDirectoryUuid, String elementName, String type) {
         return isElementExists(parentDirectoryUuid, elementName, type)
-            .log()
             .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.error(new DirectoryException(NOT_ALLOWED)) : Mono.empty());
     }
 
@@ -327,7 +326,7 @@ public class DirectoryService {
     private Mono<Boolean> isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
         return Mono.fromCallable(() ->
             !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty()
-        ).log();
+        );
     }
 
     public Mono<Void> elementExists(UUID parentDirectoryUuid, String elementName, String type) {
@@ -341,23 +340,6 @@ public class DirectoryService {
                 strictMode && elementEntities.size() != ids.stream().distinct().count() ?
                     Flux.error(new DirectoryException(NOT_FOUND)) :
                     Flux.fromStream(elementEntities.stream().map(ElementAttributes::toElementAttributes)));
-    }
-
-    public Flux<ElementAttributes> getParentDirectories(List<UUID> elementIds) {
-        return Mono.fromCallable(() -> directoryElementRepository.findAllById(elementIds))
-            .flatMapMany(elementEntities -> {
-                    if (elementEntities.size() != elementIds.size()) {
-                        Flux.error(new DirectoryException(NOT_FOUND));
-                    }
-                    List<UUID> directoryIds = elementEntities.stream()
-                        .map(DirectoryElementEntity::getParentId)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toList());
-                    return (directoryIds.size() != elementEntities.size()) ?
-                        Flux.error(new DirectoryException(NOT_FOUND)) :
-                        getElements(directoryIds, true);
-                }
-            );
     }
 
     public Mono<Void> notify(@NonNull String notificationName, @NonNull UUID elementUuid, @NonNull String userId) {
@@ -388,14 +370,9 @@ public class DirectoryService {
             .then();
     }
 
-    public Mono<Void> areDirectoriesAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
-        return getElements(elementUuids, true)
-            .flatMap(e -> e.isAllowed(userId) ? Mono.empty() : Mono.error(new DirectoryException(NOT_ALLOWED)))
-            .then();
-    }
-
     public Mono<Void> areElementsAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
-        return getParentDirectories(elementUuids)
+        return getElements(elementUuids, true)
+            .map(e -> e.getType().equals(DIRECTORY) ? e : getParentElement(e.getElementUuid()))
             .flatMap(e -> e.isAllowed(userId) ? Mono.empty() : Mono.error(new DirectoryException(NOT_ALLOWED)))
             .then();
     }
