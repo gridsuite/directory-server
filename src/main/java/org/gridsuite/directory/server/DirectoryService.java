@@ -179,15 +179,25 @@ public class DirectoryService {
         return getElement(directoryUuid)
             .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(DIRECTORY, directoryUuid)))
             .filter(d -> d.isAllowed(userId))
-            .flatMapIterable(d -> getDirectoryElementsStream(directoryUuid).collect(Collectors.toList()));
+            .flatMapIterable(d -> getDirectoryElementsStream(directoryUuid, userId).collect(Collectors.toList()));
     }
 
-    private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid) {
+    private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentId(directoryUuid);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()));
         return directoryElements
             .stream()
+                .filter(directoryElementEntity -> directoryElementEntity.getIsPrivate() == null || !directoryElementEntity.getIsPrivate()
+                        || (directoryElementEntity.getIsPrivate() && directoryElementEntity.getOwner().equals(userId)))
             .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
+    }
+
+    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid) {
+        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentId(directoryUuid);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()));
+        return directoryElements
+                .stream()
+                .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
     public Flux<ElementAttributes> getRootDirectories(String userId) {
@@ -221,7 +231,7 @@ public class DirectoryService {
     private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {
         if (element.getType().equals(DIRECTORY)) {
             return element.isAllowed(userId) &&
-                (!forDeletion || getDirectoryElementsStream(element.getElementUuid())
+                (!forDeletion || getDirectoryElementsStream(element.getElementUuid(), userId)
                     .filter(e -> e.getType().equals(DIRECTORY))
                     .allMatch(e -> isElementUpdatable(e, userId, true))
                 );
@@ -259,7 +269,7 @@ public class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid) {
-        getDirectoryElementsStream(elementUuid).forEach(this::deleteObject);
+        getAllDirectoryElementsStream(elementUuid).forEach(this::deleteObject);
     }
 
     public Mono<ElementAttributes> getElement(UUID elementUuid) {
