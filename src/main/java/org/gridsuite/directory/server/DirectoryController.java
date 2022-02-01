@@ -101,18 +101,6 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getElements(ids, strictMode));
     }
 
-    @RequestMapping(method = RequestMethod.HEAD, value = "/directories")
-    @Operation(summary = "Control directories access permissions for a user")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "All directories are accessible"),
-        @ApiResponse(responseCode = "404", description = "At least one directory was not found"),
-        @ApiResponse(responseCode = "403", description = "Access forbidden for at least one directory")
-    })
-    public ResponseEntity<Mono<Void>> areDirectoriesAccessible(@RequestParam("ids") List<UUID> directoryUuids,
-                                                               @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.areDirectoriesAccessible(userId, directoryUuids));
-    }
-
     @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
     @Operation(summary = "Control elements access permissions for a user")
     @ApiResponses(value = {

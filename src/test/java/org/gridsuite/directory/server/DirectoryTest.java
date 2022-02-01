@@ -317,6 +317,7 @@ public class DirectoryTest {
 
         // Insert a public study in the root directory by the userId;
         ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, null, "userId");
+
         insertAndCheckSubElement(rootDirUuid, true, study2Attributes);
 
         // Insert a subDirectory
@@ -325,6 +326,7 @@ public class DirectoryTest {
 
         // Insert a study in the root directory by the userId
         ElementAttributes subDirStudyAttributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, null, "userId", "descr study3");
+
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), true, subDirStudyAttributes);
 
         deleteElement(rootDirUuid, rootDirUuid, "userId", true, true);
