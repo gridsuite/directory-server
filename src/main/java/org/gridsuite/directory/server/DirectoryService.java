@@ -187,9 +187,8 @@ public class DirectoryService {
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()));
         return directoryElements
             .stream()
-                .filter(directoryElementEntity -> directoryElementEntity.getIsPrivate() == null || !directoryElementEntity.getIsPrivate()
-                        || (directoryElementEntity.getIsPrivate() && directoryElementEntity.getOwner().equals(userId)))
-            .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
+                .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
+                .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) || elementAttributes.isAllowed(userId));
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid) {
