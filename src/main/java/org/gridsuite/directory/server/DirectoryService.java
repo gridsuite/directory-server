@@ -115,7 +115,7 @@ public class DirectoryService {
             .and(assertAccessibleDirectory(parentDirectoryUuid, userId))
             .then(insertElement(elementAttributes, parentDirectoryUuid))
             .doOnSuccess(unused -> {
-                var isCurrentElementPrivate = elementAttributes.getAccessRights() != null ? elementAttributes.getAccessRights().getIsPrivate() : null;
+                var isCurrentElementPrivate = elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null;
                 emitDirectoryChanged(
                         parentDirectoryUuid,
                         userId,
@@ -163,7 +163,7 @@ public class DirectoryService {
         return assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName())
             .then(insertElement(toElementAttributes(rootDirectoryAttributes), null))
             .doOnSuccess(element ->
-                emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().getIsPrivate(), true, NotificationType.ADD_DIRECTORY)
+                emitDirectoryChanged(element.getElementUuid(), userId, element.getAccessRights().isPrivate(), true, NotificationType.ADD_DIRECTORY)
             );
     }
 
@@ -182,11 +182,7 @@ public class DirectoryService {
     }
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId) {
-        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentId(directoryUuid);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesInfos(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()));
-        return directoryElements
-            .stream()
-                .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
+        return getAllDirectoryElementsStream(directoryUuid)
                 .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) || elementAttributes.isAllowed(userId));
     }
 
@@ -210,7 +206,7 @@ public class DirectoryService {
             .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
             .filter(e -> isElementUpdatable(toElementAttributes(e), userId, false))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
-            .filter(e -> DirectoryElementEntity.isAttributesUpdatable(newElementAttributes, toElementAttributes(e), userId))
+            .filter(e -> e.isAttributesUpdatable(newElementAttributes, userId))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
             .map(e -> e.update(newElementAttributes))
             .map(directoryElementRepository::save)
@@ -251,7 +247,7 @@ public class DirectoryService {
             })
             .doOnSuccess(p -> {
                 UUID parentUuid = p.getSecond().orElse(null);
-                var isCurrentElementPrivate = p.getFirst().getAccessRights() != null ? p.getFirst().getAccessRights().getIsPrivate() : null;
+                var isCurrentElementPrivate = p.getFirst().getAccessRights() != null ? p.getFirst().getAccessRights().isPrivate() : null;
                 boolean isPrivate = isPrivateForNotification(parentUuid, isCurrentElementPrivate);
                 emitDirectoryChanged(parentUuid == null ? elementUuid : parentUuid, userId, isPrivate, parentUuid == null,
                     parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY);
@@ -360,10 +356,10 @@ public class DirectoryService {
         return getElement(elementUuid)
             .doOnNext(elementAttributes -> {
                 UUID parentUuid = getParentUuid(elementUuid);
-                if (elementAttributes.getAccessRights().getIsPrivate() == null) {
-                    getElement(parentUuid).doOnNext(parentDirectory -> emitDirectoryChanged(parentUuid, userId, parentDirectory.getAccessRights().getIsPrivate(), parentUuid == null, NotificationType.UPDATE_DIRECTORY)).subscribe();
+                if (elementAttributes.getAccessRights().isPrivate() == null) {
+                    getElement(parentUuid).doOnNext(parentDirectory -> emitDirectoryChanged(parentUuid, userId, parentDirectory.getAccessRights().isPrivate(), parentUuid == null, NotificationType.UPDATE_DIRECTORY)).subscribe();
                 } else {
-                    emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().getIsPrivate(), parentUuid == null, NotificationType.UPDATE_DIRECTORY);
+                    emitDirectoryChanged(parentUuid, userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null, NotificationType.UPDATE_DIRECTORY);
                 }
             })
             .then();

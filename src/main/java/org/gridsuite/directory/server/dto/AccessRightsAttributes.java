@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 /**
@@ -17,5 +18,11 @@ import lombok.*;
 @AllArgsConstructor
 @ToString
 public class AccessRightsAttributes {
+
     private Boolean isPrivate;
+
+    @JsonIgnore
+    public Boolean isPrivate() {
+        return isPrivate;
+    }
 }

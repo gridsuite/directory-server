@@ -47,7 +47,7 @@ public class ElementAttributes {
         if (!type.equals(DIRECTORY)) {
             throw new DirectoryException(NOT_DIRECTORY);
         }
-        return owner.equals(userId) || !accessRights.getIsPrivate();
+        return owner.equals(userId) || !accessRights.isPrivate();
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
