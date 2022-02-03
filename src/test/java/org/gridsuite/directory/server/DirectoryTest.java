@@ -95,7 +95,7 @@ public class DirectoryTest {
         checkDirectoryContent(uuidNewDirectory, "userId", List.of(subDirAttributes));
 
         // Insert a  sub-element of type STUDY
-        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, false, "userId", "descr study");
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, null, "userId", "descr study");
         insertAndCheckSubElement(uuidNewDirectory, false, subEltAttributes);
         checkDirectoryContent(uuidNewDirectory, "userId", List.of(subDirAttributes, subEltAttributes));
 
@@ -212,18 +212,18 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoPublicStudies() {
+    public void testTwoUsersTwoStudiesInPublicDirectory() {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a public study in the root directory bu the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, false, "user1");
+        // Insert a study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
 
-        // Insert a public study in the root directory bu the user1
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, false, "user2", "descr study2");
+        // Insert a study in the root directory by the user1
+        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, null, "user2", "descr study2");
         insertAndCheckSubElement(rootDirUuid, false, study2Attributes);
 
         // check user1 visible studies
@@ -248,75 +248,44 @@ public class DirectoryTest {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a public study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, false, "user1");
+        // Insert a study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
 
-        // Insert a public study with the same name in the root directory by the user1 and expect a 403
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, false, "user1");
+        // Insert a study with the same name in the root directory by the user1 and expect a 403
+        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, null, "user1");
         insertExpectFail(rootDirUuid, study2Attributes);
 
-        // Insert a private study in the root directory by the user1
-        ElementAttributes study3Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "user1");
+        // Insert a study in the root directory by the user1
+        ElementAttributes study3Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, study3Attributes);
 
-        // Insert a private study with the same name in the root directory by the user1 and expect a 403
-        ElementAttributes study4Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "user1");
+        // Insert a study with the same name in the root directory by the user1 and expect a 403
+        ElementAttributes study4Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, null, "user1");
         insertExpectFail(rootDirUuid, study4Attributes);
 
-        // Insert a private filter with the same name in the root directory by the user1 and expect ok since it's not the same type
-        ElementAttributes filterAttributes = toElementAttributes(UUID.randomUUID(), "study3", FILTER, true, "user1");
+        // Insert a filter with the same name in the root directory by the user1 and expect ok since it's not the same type
+        ElementAttributes filterAttributes = toElementAttributes(UUID.randomUUID(), "study3", FILTER, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, filterAttributes);
 
-        // Insert a public study with the same name in the root directory by the user2 should not work even if the study by user 1 is private
-        ElementAttributes study5Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "user3");
+        // Insert a study with the same name in the root directory by the user2 should not work even if the study by user 1 is private
+        ElementAttributes study5Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, null, "user3");
         insertExpectFail(rootDirUuid, study5Attributes);
     }
 
     @Test
-    public void testTwoUsersOnePublicOnePrivateStudies() {
+    public void testTwoUsersTwoStudies() {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a private study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, true, "user1", "descr study1");
+        // Insert a public study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
 
         // Insert a public study in the root directory by the user1
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, false, "user2", "descr study2");
-        insertAndCheckSubElement(rootDirUuid, false, study2Attributes);
-
-        // check user1 visible studies
-        checkDirectoryContent(rootDirUuid, "user1", List.of(study1Attributes, study2Attributes));
-
-        // check user2 visible studies
-        checkDirectoryContent(rootDirUuid, "user2", List.of(study1Attributes, study2Attributes));
-
-        deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, false);
-        checkElementNotFound(study1Attributes.getElementUuid(), "user1");
-
-        deleteElement(study2Attributes.getElementUuid(), rootDirUuid, "user2", false, false);
-        checkElementNotFound(study2Attributes.getElementUuid(), "user2");
-
-        deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
-        checkElementNotFound(rootDirUuid, "Doe");
-    }
-
-    @Test
-    public void testTwoUsersTwoPrivateStudies() {
-        checkRootDirectoriesList("Doe", List.of());
-
-        // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
-
-        // Insert a public study in the root directory bu the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, true, "user1");
-        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
-
-        // Insert a public study in the root directory bu the user1
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, true, "user2");
+        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, null, "user2");
         insertAndCheckSubElement(rootDirUuid, false, study2Attributes);
 
         // check user1 visible studies
@@ -343,19 +312,21 @@ public class DirectoryTest {
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "userId");
 
         // Insert a public study in the root directory by the userId
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, true, "userId", "descr study1");
+        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, null, "userId", "descr study1");
         insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
 
         // Insert a public study in the root directory by the userId;
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, true, "userId");
+        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, null, "userId");
+
         insertAndCheckSubElement(rootDirUuid, true, study2Attributes);
 
         // Insert a subDirectory
         ElementAttributes subDirAttributes = toElementAttributes(UUID.randomUUID(), "subDir", DIRECTORY, true, "userId");
         insertAndCheckSubElement(rootDirUuid, true, subDirAttributes);
 
-        // Insert a public study in the subdirectory by the userId
-        ElementAttributes subDirStudyAttributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, true, "userId", "descr study3");
+        // Insert a study in the root directory by the userId
+        ElementAttributes subDirStudyAttributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, null, "userId", "descr study3");
+
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), true, subDirStudyAttributes);
 
         deleteElement(rootDirUuid, rootDirUuid, "userId", true, true);
@@ -374,12 +345,12 @@ public class DirectoryTest {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a public study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_UUID, "study1", STUDY, false, "user1");
+        // Insert a study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_UUID, "study1", STUDY, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
 
         renameElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", "newName1", false, false);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "newName1", STUDY, false, "user1")));
+        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "newName1", STUDY, null, "user1")));
     }
 
     @Test
@@ -389,8 +360,8 @@ public class DirectoryTest {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "user1");
 
-        // Insert a public study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_FORBIDDEN_UUID, "study1", STUDY, false, "user1");
+        // Insert a study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_FORBIDDEN_UUID, "study1", STUDY, null, "user1");
         insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
 
         //the name should not change
@@ -417,48 +388,32 @@ public class DirectoryTest {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a public study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(STUDY_UPDATE_ACCESS_RIGHT_UUID, "study1", STUDY, false, "user1");
+        // Insert a study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(STUDY_UPDATE_ACCESS_RIGHT_UUID, "study1", STUDY, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
 
-        //set study to private
-        updateAccessRights(study1Attributes.getElementUuid(), rootDirUuid, "user1", true, false, false);
-        checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, true, "user1")));
-
-        //set study back to public
-        updateAccessRights(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, false, false);
-        checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, false, "user1")));
+        //set study to private -> not updatable
+        updateAccessRightFail(study1Attributes.getElementUuid(), "user1", true, 403);
+        checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, null, "user1")));
     }
 
     @Test
-    public void testUpdateStudyAccessRightForbiddenFail() {
-        checkRootDirectoriesList("user1", List.of());
+    public void testUpdateDirectoryAccessRight() {
+        checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "user1");
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a public study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID, "study1", STUDY, false, "user1", "descr study1");
-        insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
+        //set directory to private
+        updateAccessRights(rootDirUuid, rootDirUuid, "Doe", true, true, false);
+        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, true, "Doe")));
 
-        //the access rights should not change
-        updateStudyAccessRightFail(study1Attributes.getElementUuid(), "user2", true, 403);
-        checkDirectoryContent(rootDirUuid, "user2", List.of());
-    }
+        //reset it to public
+        updateAccessRights(rootDirUuid, rootDirUuid, "Doe", false, true, false);
+        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, false, "Doe")));
 
-    @Test
-    public void testUpdateStudyAccessRightWithWrongUser() {
-        checkRootDirectoriesList("user1", List.of());
-
-        // Insert a public root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", true, "user1");
-
-        // Insert a public study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, false, "user1");
-        insertAndCheckSubElement(rootDirUuid, true, study1Attributes);
-
-        updateStudyAccessRightFail(study1Attributes.getElementUuid(), "user2", true, 403);
-        checkDirectoryContent(rootDirUuid, "user2", List.of());
+        updateAccessRightFail(rootDirUuid, "User1", true, 403);
+        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, false, "Doe")));
     }
 
     @SneakyThrows
@@ -469,8 +424,8 @@ public class DirectoryTest {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        // Insert a public study in the root directory by the user1
-        ElementAttributes contingencyListAttributes = toElementAttributes(UUID.randomUUID(), "study1", CONTINGENCY_LIST, false, "Doe");
+        // Insert a contingency list in the root directory by the user1
+        ElementAttributes contingencyListAttributes = toElementAttributes(UUID.randomUUID(), "CL1", CONTINGENCY_LIST, null, "Doe");
         insertAndCheckSubElement(rootDirUuid, false, contingencyListAttributes);
 
         webTestClient.post()
@@ -506,16 +461,16 @@ public class DirectoryTest {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1");
 
-        // Insert a public contingency list in the root directory by the user1
-        ElementAttributes contingencyAttributes = toElementAttributes(CONTINGENCY_LIST_UUID, "Contingency", CONTINGENCY_LIST, false, "user1");
+        // Insert a contingency list in the root directory by the user1
+        ElementAttributes contingencyAttributes = toElementAttributes(CONTINGENCY_LIST_UUID, "Contingency", CONTINGENCY_LIST, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, contingencyAttributes);
 
-        // Insert a public filter in the root directory by the user1
-        ElementAttributes filterAttributes = toElementAttributes(FILTER_UUID, "Filter", FILTER, false, "user1");
+        // Insert a filter in the root directory by the user1
+        ElementAttributes filterAttributes = toElementAttributes(FILTER_UUID, "Filter", FILTER, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, filterAttributes);
 
-        // Insert a public script in the root directory by the user1
-        ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, false, "user1");
+        // Insert a script in the root directory by the user1
+        ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, scriptAttributes);
 
         var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), UUID.randomUUID()), "user1", true, 404);
@@ -541,9 +496,9 @@ public class DirectoryTest {
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
         org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
             List.of(
-                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, false, "user1"),
-                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, false, "user1"),
-                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, false, "user1")
+                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, null, "user1"),
+                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, null, "user1"),
+                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1")
             ))
         );
     }
@@ -554,16 +509,16 @@ public class DirectoryTest {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "user1");
 
-        // Insert a public contingency list in the root directory by the user1
-        ElementAttributes contingencyAttributes = toElementAttributes(CONTINGENCY_LIST_UUID, "Contingency", CONTINGENCY_LIST, false, "user1");
+        // Insert a contingency list in the root directory by the user1
+        ElementAttributes contingencyAttributes = toElementAttributes(CONTINGENCY_LIST_UUID, "Contingency", CONTINGENCY_LIST, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, contingencyAttributes);
 
-        // Insert a public filter in the root directory by the user1
-        ElementAttributes filterAttributes = toElementAttributes(FILTER_UUID, "Filter", FILTER, false, "user1");
+        // Insert a filter in the root directory by the user1
+        ElementAttributes filterAttributes = toElementAttributes(FILTER_UUID, "Filter", FILTER, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, filterAttributes);
 
-        // Insert a public script in the root directory by the user1
-        ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, false, "user1");
+        // Insert a script in the root directory by the user1
+        ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, scriptAttributes);
 
         var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
@@ -582,9 +537,9 @@ public class DirectoryTest {
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
         org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
             List.of(
-                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, false, "user1"),
-                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, false, "user1"),
-                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, false, "user1")
+                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, null, "user1"),
+                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, null, "user1"),
+                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1")
             ))
         );
     }
@@ -759,7 +714,7 @@ public class DirectoryTest {
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
     }
 
-    private void updateStudyAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) {
+    private void updateAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) {
         if (httpCodeExpected == 403) {
             webTestClient.put()
                 .uri(String.format("/v1/elements/%s", elementUuidToUpdate))

@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.repository.DirectoryElementEntity.isAttributesUpdatable;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertThrows;
 
@@ -53,15 +52,19 @@ public class ElementAttributesTest {
     @Test
     public void testElementEntityUpdate() {
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description");
+        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", STUDY, true, "userId", "description");
 
-        assertTrue(isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build()));
-        assertTrue(isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build()));
+        assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), "userId"));
+        assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId"));
 
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build()));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build()));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build()));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build()));
-        assertFalse(isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build()));
+        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId2"));
+        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build(), "userId"));
+        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build(), "userId"));
+        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build(), "userId"));
+        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build(), "userId"));
+        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build(), "userId"));
+
+        assertFalse(elementEntity2.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId"));
 
         elementEntity.update(ElementAttributes.builder().elementName("newName").accessRights(new AccessRightsAttributes(false)).build());
         org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
@@ -113,7 +116,7 @@ public class ElementAttributesTest {
     @Test
     public void testJsonString() {
         assertEquals(
-            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"private\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\"}",
+            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"isPrivate\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\"}",
             toJsonString(toElementAttributes(UUID.fromString("21297976-7445-44f1-9ccf-910cbb2f84f8"), "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description"))
         );
     }
@@ -140,7 +143,7 @@ public class ElementAttributesTest {
     }
 
     private String toJsonString(AccessRightsAttributes accessRightsAttributes) {
-        return "\"accessRights\":{" + toJsonString("private", accessRightsAttributes.isPrivate()) + "}";
+        return "\"accessRights\":{" + toJsonString("isPrivate", accessRightsAttributes.isPrivate()) + "}";
     }
 
     private String toJsonString(String key, Object value) {

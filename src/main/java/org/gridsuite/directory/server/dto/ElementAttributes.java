@@ -55,19 +55,19 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.isPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription());
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
         return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, boolean isPrivate, @NonNull String userId) {
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, Boolean isPrivate, @NonNull String userId) {
         return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, null);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        boolean isPrivate, @NonNull String userId, @NonNull String elementDescription) {
+                                                        Boolean isPrivate, @NonNull String userId, @NonNull String elementDescription) {
         return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription);
     }
 

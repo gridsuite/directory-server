@@ -14,6 +14,8 @@ import javax.persistence.*;
 import java.util.Objects;
 import java.util.UUID;
 
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
@@ -38,8 +40,8 @@ public class DirectoryElementEntity {
     @Column(name = "type", length = 30, nullable = false)
     private String type;
 
-    @Column(name = "isPrivate", nullable = false)
-    private boolean isPrivate;
+    @Column(name = "isPrivate")
+    private Boolean isPrivate;
 
     @Column(name = "owner", length = 80, nullable = false)
     private String owner;
@@ -59,10 +61,11 @@ public class DirectoryElementEntity {
         return this;
     }
 
-    public static boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes) {
+    public boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes, String userId) {
         return (// Updatable attributes
             StringUtils.isNotBlank(newElementAttributes.getElementName()) ||
-                Objects.nonNull(newElementAttributes.getAccessRights()))
+                    //Only the owner can update the accessRights of a directory (to avoid user locking themselves out of a directory they don't own
+                    (type.equals(DIRECTORY) && Objects.nonNull(newElementAttributes.getAccessRights()) && userId.equals(owner)))
             && // Non updatable attributes
             Objects.isNull(newElementAttributes.getElementUuid()) &&
             Objects.isNull(newElementAttributes.getType()) &&
