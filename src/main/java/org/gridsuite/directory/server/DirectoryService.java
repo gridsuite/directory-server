@@ -272,6 +272,36 @@ public class DirectoryService {
         getAllDirectoryElementsStream(elementUuid).forEach(this::deleteObject);
     }
 
+    /***
+     * Retrieve informations of an element's parents, filtered by user's access rights
+     * @param elementUuid
+     * @param userId
+     * @return ElementAttributes of all element's parents up to root directory, filtered by user's access rights
+     */
+    public Flux<ElementAttributes> getElementParents(UUID elementUuid, String userId) {
+        return getElement(elementUuid)
+            .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
+            .flatMapMany(element ->
+                getElementAndParentsList(element.getElementUuid())
+            )
+            .filter(e -> !elementUuid.equals(e.getElementUuid()))
+            .filter(e -> e.isAllowed(userId))
+            .switchIfEmpty(Flux.empty());
+    }
+
+    /***
+     * Retrieve informations of an element and its parents
+     * @param elementUuid
+     * @return ElementAttributes of element and all it's parents up to root directory
+     */
+    private Flux<ElementAttributes> getElementAndParentsList(UUID elementUuid) {
+        if (getParentUuid(elementUuid) == null) {
+            return Flux.from(getElement(elementUuid));
+        }
+
+        return Flux.concat(getElement(elementUuid), getElementAndParentsList(getParentUuid(elementUuid)));
+    }
+
     public Mono<ElementAttributes> getElement(UUID elementUuid) {
         return getElementEntityMono(elementUuid).map(ElementAttributes::toElementAttributes)
             .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)));

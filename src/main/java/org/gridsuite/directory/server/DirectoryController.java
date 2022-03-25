@@ -54,6 +54,14 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
     }
 
+    @GetMapping(value = "/elements/{elementUuid}/parents", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get element parents info")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
+    public ResponseEntity<Flux<ElementAttributes>> getElementParent(@PathVariable("elementUuid") UUID elementUuid,
+                                                                        @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementParents(elementUuid, userId));
+    }
+
     @DeleteMapping(value = "/elements/{elementUuid}")
     @Operation(summary = "Remove directory/element")
     @ApiResponses(value = {

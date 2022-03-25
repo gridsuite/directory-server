@@ -142,6 +142,60 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testGetElementParentsInfo() {
+     // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a subDirectory1 in the root directory
+        UUID directory1UUID = UUID.randomUUID();
+        ElementAttributes directory1Attributes = toElementAttributes(directory1UUID, "directory1", DIRECTORY, null, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, directory1Attributes);
+
+        // Insert a subDirectory2 in the subDirectory1 directory
+        UUID directory2UUID = UUID.randomUUID();
+        ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, null, "Doe");
+        insertAndCheckSubElement(directory1UUID, false, directory2Attributes);
+
+        // Insert a study in the directory2
+        UUID study1UUID = UUID.randomUUID();
+        ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", STUDY, null, "Doe");
+        insertAndCheckSubElement(directory2UUID, false, study1Attributes);
+
+        List<ElementAttributes> parentsList = getElementParentsList(study1UUID, "Doe");
+
+        //Check if all element's parents are retrieved in the right order
+        assertEquals(
+                parentsList.stream()
+                    .map(parent -> parent.getElementUuid())
+                    .collect(Collectors.toList()),
+                Arrays.asList(directory2UUID, directory1UUID, rootDirUuid)
+        );
+    }
+
+    @Test
+    public void testGetElementParentsInfoOfRootDir() {
+     // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        List<ElementAttributes> parentsList = getElementParentsList(rootDirUuid, "Doe");
+
+        assertTrue(parentsList.isEmpty());
+    }
+
+    @Test
+    public void testGetElementParentsInfoOfNotFound() {
+        UUID unknownElementUuid = UUID.randomUUID();
+
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        webTestClient.get()
+            .uri("/v1/elements/" + unknownElementUuid + "/parents")
+            .header("userId", "user1")
+            .exchange()
+            .expectStatus().isNotFound();
+    }
+
+    @Test
     public void testTwoUsersTwoPublicDirectories() {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
@@ -542,6 +596,18 @@ public class DirectoryTest {
                 toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1")
             ))
         );
+    }
+
+    private List<ElementAttributes> getElementParentsList(UUID elementUuid, String userId) {
+        return webTestClient.get()
+            .uri("/v1/elements/" + elementUuid + "/parents")
+            .header("userId", userId)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBodyList(ElementAttributes.class)
+            .returnResult()
+            .getResponseBody();
     }
 
     private void checkRootDirectoriesList(String userId, List<ElementAttributes> list) {
