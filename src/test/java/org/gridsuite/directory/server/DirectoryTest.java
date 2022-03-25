@@ -168,7 +168,7 @@ public class DirectoryTest {
                 parentsList.stream()
                     .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
-                Arrays.asList(directory2UUID, directory1UUID, rootDirUuid)
+                Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
         );
     }
 
@@ -179,7 +179,12 @@ public class DirectoryTest {
 
         List<ElementAttributes> parentsList = getElementParentsList(rootDirUuid, "Doe");
 
-        assertTrue(parentsList.isEmpty());
+        assertEquals(
+                parentsList.stream()
+                    .map(parent -> parent.getElementUuid())
+                    .collect(Collectors.toList()),
+                Arrays.asList(rootDirUuid)
+        );
     }
 
     @Test

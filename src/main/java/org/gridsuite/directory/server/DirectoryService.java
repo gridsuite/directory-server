@@ -276,7 +276,7 @@ public class DirectoryService {
      * Retrieve informations of an element's parents, filtered by user's access rights
      * @param elementUuid
      * @param userId
-     * @return ElementAttributes of all element's parents up to root directory, filtered by user's access rights
+     * @return ElementAttributes of element and all it's parents up to root directory, filtered by user's access rights
      */
     public Flux<ElementAttributes> getElementParents(UUID elementUuid, String userId) {
         return getElement(elementUuid)
@@ -284,9 +284,8 @@ public class DirectoryService {
             .flatMapMany(element ->
                 getElementAndParentsList(element.getElementUuid())
             )
-            .filter(e -> !elementUuid.equals(e.getElementUuid()))
-            .filter(e -> e.isAllowed(userId))
-            .switchIfEmpty(Flux.empty());
+            .filter(e -> STUDY.equals(e.getType()) || e.isAllowed(userId))
+            .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)));
     }
 
     /***
