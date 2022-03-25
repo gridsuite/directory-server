@@ -106,7 +106,7 @@ public class DirectoryService {
             .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
             .setHeader(HEADER_ELEMENT_NAME, elementName)
             .setHeader(HEADER_IS_ROOT_DIRECTORY, isRoot)
-            .setHeader(HEADER_IS_PUBLIC_DIRECTORY, !isPrivate)
+            .setHeader(HEADER_IS_PUBLIC_DIRECTORY, isPrivate == null || !isPrivate) // null may only come from borked REST request
             .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
             .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
             .setHeader(HEADER_ERROR, error);
@@ -312,7 +312,7 @@ public class DirectoryService {
 
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
         if (parentDirectoryUuid == null) {
-            return isCurrentElementPrivate;
+            return isCurrentElementPrivate != null && isCurrentElementPrivate; // null may only come from borked REST request
         } else {
             return isPrivateDirectory(parentDirectoryUuid);
         }
