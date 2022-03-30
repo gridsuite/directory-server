@@ -25,6 +25,8 @@ public class RestResponseEntityExceptionHandler {
         switch (directoryException.getType()) {
             case NOT_ALLOWED:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
+            case DIFFERENT_ACCESS_RIGHT:
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(DIFFERENT_ACCESS_RIGHT);
             case NOT_FOUND:
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND);
             case UNKNOWN_NOTIFICATION:

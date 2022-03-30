@@ -29,6 +29,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
+import static org.gridsuite.directory.server.DirectoryException.Type.IS_DIRECTORY;
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 
@@ -228,6 +230,51 @@ public class DirectoryService {
             .then();
     }
 
+    public Mono<Void> updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
+        ElementAttributes oldParent = getParentElement(elementUuid);
+        Optional<DirectoryElementEntity> newParent = getElementEntity(newDirectoryUuid);
+        if (newParent.isEmpty()) {
+            return Mono.error(DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid));
+        }
+        if (!newParent.get().getType().equals(DIRECTORY)) {
+            return Mono.error(new DirectoryException(NOT_DIRECTORY));
+        }
+        return getElementEntityMono(elementUuid)
+                .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
+                .filter(e -> isElementUpdatable(toElementAttributes(e), userId, false))
+                .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
+                .filter(e -> !e.getType().equals(DIRECTORY))
+                .switchIfEmpty(Mono.error(new DirectoryException(IS_DIRECTORY)))
+                .filter(e -> oldParent.getAccessRights().isPrivate().equals(getElementEntity(newDirectoryUuid).get().getIsPrivate()))
+                .switchIfEmpty(Mono.error(DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid)))
+                .map(e -> {
+                    e.setParentId(newDirectoryUuid);
+                    return e;
+                })
+                .map(directoryElementRepository::save)
+                // update NEW directory notification
+                .doOnSuccess(elementEntity -> emitDirectoryChanged(
+                            elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
+                            elementEntity.getName(),
+                            userId,
+                            isPrivateForNotification(elementEntity.getParentId(), false),
+                            elementEntity.getParentId() == null,
+                            NotificationType.UPDATE_DIRECTORY
+                        )
+                )
+                // update OLD directory notification
+                .doOnSuccess(elementEntity -> emitDirectoryChanged(
+                            oldParent.getElementUuid(),
+                            elementEntity.getName(),
+                            userId,
+                            isPrivateForNotification(elementEntity.getParentId(), false),
+                            elementEntity.getParentId() == null,
+                            NotificationType.UPDATE_DIRECTORY
+                        )
+                )
+                .then();
+    }
+
     private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {
         if (element.getType().equals(DIRECTORY)) {
             return element.isAllowed(userId) &&
@@ -270,6 +317,35 @@ public class DirectoryService {
 
     private void deleteSubElements(UUID elementUuid) {
         getAllDirectoryElementsStream(elementUuid).forEach(this::deleteObject);
+    }
+
+    /***
+     * Retrieve informations of an element's parents, filtered by user's access rights
+     * @param elementUuid
+     * @param userId
+     * @return ElementAttributes of element and all it's parents up to root directory, filtered by user's access rights
+     */
+    public Flux<ElementAttributes> getElementParents(UUID elementUuid, String userId) {
+        return getElement(elementUuid)
+            .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
+            .flatMapMany(element ->
+                getElementAndParentsList(element.getElementUuid())
+            )
+            .filter(e -> !DIRECTORY.equals(e.getType()) || e.isAllowed(userId))
+            .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)));
+    }
+
+    /***
+     * Retrieve informations of an element and its parents
+     * @param elementUuid
+     * @return ElementAttributes of element and all it's parents up to root directory
+     */
+    private Flux<ElementAttributes> getElementAndParentsList(UUID elementUuid) {
+        if (getParentUuid(elementUuid) == null) {
+            return Flux.from(getElement(elementUuid));
+        }
+
+        return Flux.concat(getElement(elementUuid), getElementAndParentsList(getParentUuid(elementUuid)));
     }
 
     public Mono<ElementAttributes> getElement(UUID elementUuid) {
