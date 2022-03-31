@@ -127,11 +127,11 @@ public class DirectoryController {
     }
 
     @PatchMapping(value = "/elements/{elementUuid}/move")
-    @Operation(summary = "Patch element")
+    @Operation(summary = "Move element within directory tree")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Element was successfully updated"),
-        @ApiResponse(responseCode = "404", description = "The element was not found"),
-        @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
+        @ApiResponse(responseCode = "404", description = "The element or the targeted directory was not found"),
+        @ApiResponse(responseCode = "403", description = "Not authorized execute this update")
     })
     public ResponseEntity<Mono<Void>> patchElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestParam UUID newDirectory,

@@ -280,7 +280,7 @@ public class DirectoryTest {
             .uri("/v1/elements/" + filter1Uuid + "/move?newDirectory=" + filter2Uuid)
             .header("userId", "Doe")
             .exchange()
-            .expectStatus().is5xxServerError();
+            .expectStatus().isForbidden();
     }
 
     @Test
@@ -297,7 +297,7 @@ public class DirectoryTest {
             .uri("/v1/elements/" + directory21UUID + "/move?newDirectory=" + rootDir10Uuid)
             .header("userId", "Doe")
             .exchange()
-            .expectStatus().is5xxServerError();
+            .expectStatus().isForbidden();
     }
 
     @Test
