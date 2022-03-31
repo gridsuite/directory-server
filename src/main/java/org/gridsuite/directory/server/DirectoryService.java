@@ -232,11 +232,12 @@ public class DirectoryService {
 
     public Mono<Void> updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
         ElementAttributes oldParent = getParentElement(elementUuid);
-        Optional<DirectoryElementEntity> newParent = getElementEntity(newDirectoryUuid);
-        if (newParent.isEmpty()) {
+        Optional<DirectoryElementEntity> newParentOpt = getElementEntity(newDirectoryUuid);
+        if (newParentOpt.isEmpty()) {
             return Mono.error(DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid));
         }
-        if (!newParent.get().getType().equals(DIRECTORY)) {
+        DirectoryElementEntity newParent = newParentOpt.get();
+        if (!newParent.getType().equals(DIRECTORY)) {
             return Mono.error(new DirectoryException(NOT_DIRECTORY));
         }
         return getElementEntityMono(elementUuid)
@@ -245,7 +246,7 @@ public class DirectoryService {
                 .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
                 .filter(e -> !e.getType().equals(DIRECTORY))
                 .switchIfEmpty(Mono.error(new DirectoryException(IS_DIRECTORY)))
-                .filter(e -> oldParent.getAccessRights().isPrivate().equals(getElementEntity(newDirectoryUuid).get().getIsPrivate()))
+                .filter(e -> getParentElement(e.getId()).getAccessRights().isPrivate().equals(newParent.getIsPrivate()))
                 .switchIfEmpty(Mono.error(DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid)))
                 .map(e -> {
                     e.setParentId(newDirectoryUuid);
@@ -254,11 +255,11 @@ public class DirectoryService {
                 .map(directoryElementRepository::save)
                 // update NEW directory notification
                 .doOnSuccess(elementEntity -> emitDirectoryChanged(
-                            elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
+                            elementEntity.getParentId(),
                             elementEntity.getName(),
                             userId,
                             isPrivateForNotification(elementEntity.getParentId(), false),
-                            elementEntity.getParentId() == null,
+                            isRootDirectory(elementEntity.getParentId()),
                             NotificationType.UPDATE_DIRECTORY
                         )
                 )
@@ -268,7 +269,7 @@ public class DirectoryService {
                             elementEntity.getName(),
                             userId,
                             isPrivateForNotification(elementEntity.getParentId(), false),
-                            elementEntity.getParentId() == null,
+                            isRootDirectory(oldParent.getElementUuid()),
                             NotificationType.UPDATE_DIRECTORY
                         )
                 )
@@ -355,6 +356,10 @@ public class DirectoryService {
         // Should be done after deleting the notification sent by the study server on delete (!)
         return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::getIsPrivate).orElse(false);
         //.orElseThrow(() -> new DirectoryServerException(directoryUuid + " not found!"));
+    }
+
+    private boolean isRootDirectory(UUID directoryUuid) {
+        return getParentUuid(directoryUuid) == null;
     }
 
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
