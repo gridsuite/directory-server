@@ -57,7 +57,7 @@ public class DirectoryController {
     @GetMapping(value = "/elements/{elementUuid}/parents", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get element parents info")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List info of an element and its parents"))
-    public ResponseEntity<Flux<ElementAttributes>> getElementParent(@PathVariable("elementUuid") UUID elementUuid,
+    public ResponseEntity<Flux<ElementAttributes>> getElementParents(@PathVariable("elementUuid") UUID elementUuid,
                                                                         @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementParents(elementUuid, userId));
     }

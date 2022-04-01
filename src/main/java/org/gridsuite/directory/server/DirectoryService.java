@@ -284,7 +284,7 @@ public class DirectoryService {
             .flatMapMany(element ->
                 getElementAndParentsList(element.getElementUuid())
             )
-            .filter(e -> STUDY.equals(e.getType()) || e.isAllowed(userId))
+            .filter(e -> !DIRECTORY.equals(e.getType()) || e.isAllowed(userId))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)));
     }
 

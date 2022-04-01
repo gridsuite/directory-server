@@ -142,7 +142,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetElementParentsInfo() {
+    public void testGetElementParentsInfoOfStudy() {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -169,6 +169,37 @@ public class DirectoryTest {
                     .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
+        );
+    }
+
+    @Test
+    public void testGetElementParentsInfoOfFilter() {
+     // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a subDirectory1 in the root directory
+        UUID directory1UUID = UUID.randomUUID();
+        ElementAttributes directory1Attributes = toElementAttributes(directory1UUID, "directory1", DIRECTORY, null, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, directory1Attributes);
+
+        // Insert a subDirectory2 in the subDirectory1 directory
+        UUID directory2UUID = UUID.randomUUID();
+        ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, null, "Doe");
+        insertAndCheckSubElement(directory1UUID, false, directory2Attributes);
+
+        // Insert a filter in the directory2
+        UUID filter1UUID = UUID.randomUUID();
+        ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory2UUID, false, study1Attributes);
+
+        List<ElementAttributes> parentsList = getElementParentsList(filter1UUID, "Doe");
+
+        //Check if all element's parents are retrieved in the right order
+        assertEquals(
+                parentsList.stream()
+                    .map(parent -> parent.getElementUuid())
+                    .collect(Collectors.toList()),
+                Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
         );
     }
 
