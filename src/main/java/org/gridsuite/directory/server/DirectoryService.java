@@ -248,8 +248,8 @@ public class DirectoryService {
                 .filter(e -> !e.getType().equals(DIRECTORY))
                 .switchIfEmpty(Mono.error(new DirectoryException(IS_DIRECTORY)))
                 .filter(
-                    e -> !getDirectoryElementsStream(newDirectoryUuid, userId)
-                            .anyMatch(
+                    e -> getDirectoryElementsStream(newDirectoryUuid, userId)
+                            .noneMatch(
                                 element -> element.getType().equals(e.getType())
                                     && element.getElementName().equals(e.getName())
                     )
