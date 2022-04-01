@@ -240,12 +240,21 @@ public class DirectoryService {
         if (!newParent.getType().equals(DIRECTORY)) {
             return Mono.error(new DirectoryException(NOT_DIRECTORY));
         }
+
         return getElementEntityMono(elementUuid)
                 .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
                 .filter(e -> isElementUpdatable(toElementAttributes(e), userId, false))
                 .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
                 .filter(e -> !e.getType().equals(DIRECTORY))
                 .switchIfEmpty(Mono.error(new DirectoryException(IS_DIRECTORY)))
+                .filter(
+                    e -> !getDirectoryElementsStream(newDirectoryUuid, userId)
+                            .anyMatch(
+                                element -> element.getType().equals(e.getType())
+                                    && element.getElementName().equals(e.getName())
+                    )
+                )
+                .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
                 .filter(e -> getParentElement(e.getId()).getAccessRights().isPrivate().equals(newParent.getIsPrivate()))
                 .switchIfEmpty(Mono.error(DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid)))
                 .map(e -> {
@@ -259,7 +268,7 @@ public class DirectoryService {
                             elementEntity.getName(),
                             userId,
                             isPrivateForNotification(elementEntity.getParentId(), false),
-                            isRootDirectory(elementEntity.getParentId()),
+                            isRootDirectory(elementEntity.getId()),
                             NotificationType.UPDATE_DIRECTORY
                         )
                 )
@@ -269,7 +278,7 @@ public class DirectoryService {
                             elementEntity.getName(),
                             userId,
                             isPrivateForNotification(elementEntity.getParentId(), false),
-                            isRootDirectory(oldParent.getElementUuid()),
+                            isRootDirectory(elementEntity.getId()),
                             NotificationType.UPDATE_DIRECTORY
                         )
                 )
