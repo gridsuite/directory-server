@@ -273,30 +273,39 @@ public class DirectoryService {
     }
 
     /***
-     * Retrieve informations of an element's parents, filtered by user's access rights
+     * Retrieve path of an element
      * @param elementUuid
      * @param userId
-     * @return ElementAttributes of element and all it's parents up to root directory, filtered by user's access rights
+     * @return ElementAttributes of element and all it's parents up to root directory
      */
-    public List<ElementAttributes> getElementParents(UUID elementUuid, String userId) {
-        Optional<DirectoryElementEntity> elementOpt = getElementEntity(elementUuid);
-        if (elementOpt.isEmpty()) {
+    public List<ElementAttributes> getPath(UUID elementUuid, String userId) {
+        Optional<DirectoryElementEntity> currentElementOpt = getElementEntity(elementUuid);
+        ArrayList<ElementAttributes> path = new ArrayList<>();
+        boolean allowed;
+        if (currentElementOpt.isEmpty()) {
             throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
         }
-        DirectoryElementEntity element = elementOpt.get();
+        DirectoryElementEntity currentElement = currentElementOpt.get();
 
-        ArrayList<ElementAttributes> elementParents = new ArrayList<ElementAttributes>();
-        elementParents.add(toElementAttributes(element));
-
-        while (element.getParentId() != null) {
-            element = getElementEntity(element.getParentId()).get();
-            ElementAttributes currentElementAttributes = toElementAttributes(element);
-            if (currentElementAttributes.isAllowed(userId)) {
-                elementParents.add(currentElementAttributes);
-            }
+        if (currentElement.getType().equals(DIRECTORY)) {
+            allowed = toElementAttributes(currentElement).isAllowed(userId);
+        } else {
+            allowed = toElementAttributes(getElementEntity(currentElement.getParentId()).get()).isAllowed(userId);
         }
 
-        return elementParents;
+        if (!allowed) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+
+        path.add(toElementAttributes(currentElement));
+
+        while (currentElement.getParentId() != null) {
+            currentElement = getElementEntity(currentElement.getParentId()).get();
+            ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
+            path.add(currentElementAttributes);
+        }
+
+        return path;
     }
 
     public Mono<ElementAttributes> getElement(UUID elementUuid) {

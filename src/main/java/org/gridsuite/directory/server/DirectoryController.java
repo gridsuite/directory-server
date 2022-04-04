@@ -60,7 +60,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The searched element was not found")})
     public ResponseEntity<Mono<List<ElementAttributes>>> getElementParents(@PathVariable("elementUuid") UUID elementUuid,
                                                                         @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Mono.fromCallable(() -> service.getElementParents(elementUuid, userId)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Mono.fromCallable(() -> service.getPath(elementUuid, userId)));
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")

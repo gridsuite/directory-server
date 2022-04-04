@@ -48,7 +48,7 @@ import static org.junit.Assert.*;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient(timeout = "20000")
+@AutoConfigureWebTestClient(timeout = "2000000")
 @EnableWebFlux
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
@@ -201,6 +201,41 @@ public class DirectoryTest {
                     .collect(Collectors.toList()),
                 Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
         );
+    }
+
+    @Test
+    public void testGetElementParentsInfoOfNotAllowed() {
+     // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a subDirectory1 in the root directory
+        UUID directory1UUID = UUID.randomUUID();
+        ElementAttributes directory1Attributes = toElementAttributes(directory1UUID, "directory1", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, directory1Attributes);
+
+        // Insert a private subDirectory2 in the subDirectory1 directory
+        UUID directory2UUID = UUID.randomUUID();
+        ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, true, "Doe");
+        insertAndCheckSubElement(directory1UUID, false, directory2Attributes);
+
+        // Insert a filter in the directory2
+        UUID filter1UUID = UUID.randomUUID();
+        ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory2UUID, true, study1Attributes);
+
+        // Trying to get path of forbidden element
+        webTestClient.get()
+            .uri("/v1/elements/" + filter1UUID + "/parents")
+            .header("userId", "Unallowed User")
+            .exchange()
+            .expectStatus().isForbidden();
+
+        // Trying to get path of forbidden element
+        webTestClient.get()
+            .uri("/v1/elements/" + directory2UUID + "/parents")
+            .header("userId", "Unallowed User")
+            .exchange()
+            .expectStatus().isForbidden();
     }
 
     @Test
