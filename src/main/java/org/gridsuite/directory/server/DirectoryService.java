@@ -231,58 +231,68 @@ public class DirectoryService {
     }
 
     public Mono<Void> updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
-        ElementAttributes oldParent = getParentElement(elementUuid);
-        Optional<DirectoryElementEntity> newParentOpt = getElementEntity(newDirectoryUuid);
-        if (newParentOpt.isEmpty()) {
-            return Mono.error(DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid));
+        Optional<DirectoryElementEntity> optElement = getElementEntity(elementUuid);
+        Optional<DirectoryElementEntity> optNewDirectory = getElementEntity(newDirectoryUuid);
+        DirectoryElementEntity oldDirectory;
+        DirectoryElementEntity element;
+        DirectoryElementEntity newDirectory;
+        if (optElement.isEmpty()) {
+            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
         }
-        DirectoryElementEntity newParent = newParentOpt.get();
-        if (!newParent.getType().equals(DIRECTORY)) {
-            return Mono.error(new DirectoryException(NOT_DIRECTORY));
+        if (optNewDirectory.isEmpty()) {
+            throw DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid);
+        }
+        element = optElement.get();
+        newDirectory = optNewDirectory.get();
+
+        if (element.getType().equals(DIRECTORY)) {
+            throw new DirectoryException(IS_DIRECTORY);
+        }
+        if (!newDirectory.getType().equals(DIRECTORY)) {
+            throw new DirectoryException(NOT_DIRECTORY);
+        }
+        if (!isElementUpdatable(toElementAttributes(element), userId, false)) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+        if (directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType())) {
+            throw new DirectoryException(NOT_ALLOWED);
         }
 
-        return getElementEntityMono(elementUuid)
-                .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
-                .filter(e -> isElementUpdatable(toElementAttributes(e), userId, false))
-                .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
-                .filter(e -> !e.getType().equals(DIRECTORY))
-                .switchIfEmpty(Mono.error(new DirectoryException(IS_DIRECTORY)))
-                .filter(
-                    e -> getDirectoryElementsStream(newDirectoryUuid, userId)
-                            .noneMatch(
-                                element -> element.getType().equals(e.getType())
-                                    && element.getElementName().equals(e.getName())
-                    )
-                )
-                .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
-                .filter(e -> getParentElement(e.getId()).getAccessRights().isPrivate().equals(newParent.getIsPrivate()))
-                .switchIfEmpty(Mono.error(DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid)))
-                .map(e -> {
-                    e.setParentId(newDirectoryUuid);
-                    return e;
-                })
-                .map(directoryElementRepository::save)
-                // update NEW directory notification
-                .doOnSuccess(elementEntity -> emitDirectoryChanged(
-                            elementEntity.getParentId(),
-                            elementEntity.getName(),
-                            userId,
-                            isPrivateForNotification(elementEntity.getParentId(), false),
-                            isRootDirectory(elementEntity.getId()),
-                            NotificationType.UPDATE_DIRECTORY
-                        )
-                )
-                // update OLD directory notification
-                .doOnSuccess(elementEntity -> emitDirectoryChanged(
-                            oldParent.getElementUuid(),
-                            elementEntity.getName(),
-                            userId,
-                            isPrivateForNotification(elementEntity.getParentId(), false),
-                            isRootDirectory(elementEntity.getId()),
-                            NotificationType.UPDATE_DIRECTORY
-                        )
-                )
-                .then();
+        oldDirectory = getElementEntity(element.getParentId()).get();
+        if (!newDirectory.getIsPrivate().equals(oldDirectory.getIsPrivate())) {
+            throw DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid);
+        }
+
+        element.setParentId(newDirectoryUuid);
+        directoryElementRepository.save(element);
+
+        emitDirectoryChanged(
+            element.getParentId(),
+            element.getName(),
+            userId,
+            isPrivateForNotification(element.getParentId(), false),
+            isRootDirectory(element.getId()),
+            NotificationType.UPDATE_DIRECTORY
+        );
+
+        emitDirectoryChanged(
+            oldDirectory.getId(),
+            element.getName(),
+            userId,
+            isPrivateForNotification(element.getParentId(), false),
+            isRootDirectory(element.getId()),
+            NotificationType.UPDATE_DIRECTORY
+        );
+
+        return null;
+    }
+
+    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String userId, String elementName, String elementType) {
+        return getDirectoryElementsStream(directoryUUID, userId)
+            .anyMatch(
+                e -> e.getType().equals(elementType)
+                    && e.getElementName().equals(elementName)
+            );
     }
 
     private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {

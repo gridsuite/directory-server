@@ -190,7 +190,8 @@ public class DirectoryTest {
         webTestClient.put()
             .uri("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
             .header("userId", "Doe")
-            .exchange();
+            .exchange()
+            .expectStatus().isOk();
 
         // assert that the broker message has been sent a root directory creation request message
         Message<byte[]> message = output.receive(1000);
@@ -322,6 +323,23 @@ public class DirectoryTest {
 
         webTestClient.put()
             .uri("/v1/elements/" + directory21UUID + "?newDirectory=" + rootDir10Uuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testMoveRootDirectory() {
+        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
+
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        UUID directory21UUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + rootDir10Uuid + "?newDirectory=" + rootDir20Uuid)
             .header("userId", "Doe")
             .exchange()
             .expectStatus().isForbidden();
