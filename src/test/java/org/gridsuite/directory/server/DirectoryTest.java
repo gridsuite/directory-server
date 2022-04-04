@@ -243,6 +243,30 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testMoveUnallowedElement() {
+        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", true, "Unallowed User");
+
+        // Insert another public root20 directory
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", true, "Doe");
+
+        // Insert a subDirectory20 in the root20 directory
+        UUID directory21PrivateUUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21PrivateUUID, "directory20", DIRECTORY, true, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, true, directory20Attributes);
+
+        // Insert a filter in the last subdirectory
+        UUID filterUuid = UUID.randomUUID();
+        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory21PrivateUUID, true, filterAttributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+            .header("userId", "Unallowed User")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
     public void testMoveElementNotFound() {
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
 
