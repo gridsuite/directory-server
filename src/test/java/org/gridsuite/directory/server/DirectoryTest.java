@@ -48,7 +48,7 @@ import static org.junit.Assert.*;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient(timeout = "2000000")
+@AutoConfigureWebTestClient(timeout = "20000")
 @EnableWebFlux
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
