@@ -278,27 +278,25 @@ public class DirectoryService {
      * @param userId
      * @return ElementAttributes of element and all it's parents up to root directory, filtered by user's access rights
      */
-    public Flux<ElementAttributes> getElementParents(UUID elementUuid, String userId) {
-        return getElement(elementUuid)
-            .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
-            .flatMapMany(element ->
-                getElementAndParentsList(element.getElementUuid())
-            )
-            .filter(e -> !DIRECTORY.equals(e.getType()) || e.isAllowed(userId))
-            .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)));
-    }
+    public List<ElementAttributes> getElementParents(UUID elementUuid, String userId) {
+        Optional<DirectoryElementEntity> elementOpt = getElementEntity(elementUuid);
+        if (elementOpt.isEmpty()) {
+            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+        }
+        DirectoryElementEntity element = elementOpt.get();
 
-    /***
-     * Retrieve informations of an element and its parents
-     * @param elementUuid
-     * @return ElementAttributes of element and all it's parents up to root directory
-     */
-    private Flux<ElementAttributes> getElementAndParentsList(UUID elementUuid) {
-        if (getParentUuid(elementUuid) == null) {
-            return Flux.from(getElement(elementUuid));
+        ArrayList<ElementAttributes> elementParents = new ArrayList<ElementAttributes>();
+        elementParents.add(toElementAttributes(element));
+
+        while (element.getParentId() != null) {
+            element = getElementEntity(element.getParentId()).get();
+            ElementAttributes currentElementAttributes = toElementAttributes(element);
+            if (currentElementAttributes.isAllowed(userId)) {
+                elementParents.add(currentElementAttributes);
+            }
         }
 
-        return Flux.concat(getElement(elementUuid), getElementAndParentsList(getParentUuid(elementUuid)));
+        return elementParents;
     }
 
     public Mono<ElementAttributes> getElement(UUID elementUuid) {

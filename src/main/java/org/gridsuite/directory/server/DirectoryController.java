@@ -56,10 +56,11 @@ public class DirectoryController {
 
     @GetMapping(value = "/elements/{elementUuid}/parents", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get element parents info")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "List info of an element and its parents"))
-    public ResponseEntity<Flux<ElementAttributes>> getElementParents(@PathVariable("elementUuid") UUID elementUuid,
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List info of an element and its parents"),
+        @ApiResponse(responseCode = "404", description = "The searched element was not found")})
+    public ResponseEntity<Mono<List<ElementAttributes>>> getElementParents(@PathVariable("elementUuid") UUID elementUuid,
                                                                         @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementParents(elementUuid, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Mono.fromCallable(() -> service.getElementParents(elementUuid, userId)));
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")
