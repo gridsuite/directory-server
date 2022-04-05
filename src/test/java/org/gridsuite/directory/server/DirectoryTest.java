@@ -142,7 +142,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetElementParentsInfoOfStudy() {
+    public void testGetPathOfStudy() {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -161,11 +161,11 @@ public class DirectoryTest {
         ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", STUDY, null, "Doe");
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
 
-        List<ElementAttributes> parentsList = getElementParentsList(study1UUID, "Doe");
+        List<ElementAttributes> path = getPath(study1UUID, "Doe");
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
-                parentsList.stream()
+                path.stream()
                     .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
@@ -173,7 +173,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetElementParentsInfoOfFilter() {
+    public void testGetPathOfFilter() {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -192,11 +192,11 @@ public class DirectoryTest {
         ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
 
-        List<ElementAttributes> parentsList = getElementParentsList(filter1UUID, "Doe");
+        List<ElementAttributes> path = getPath(filter1UUID, "Doe");
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
-                parentsList.stream()
+                path.stream()
                     .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
@@ -204,7 +204,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetElementParentsInfoOfNotAllowed() {
+    public void testGetPathOfNotAllowed() {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -225,28 +225,28 @@ public class DirectoryTest {
 
         // Trying to get path of forbidden element
         webTestClient.get()
-            .uri("/v1/elements/" + filter1UUID + "/parents")
+            .uri("/v1/elements/" + filter1UUID + "/path")
             .header("userId", "Unallowed User")
             .exchange()
             .expectStatus().isForbidden();
 
         // Trying to get path of forbidden element
         webTestClient.get()
-            .uri("/v1/elements/" + directory2UUID + "/parents")
+            .uri("/v1/elements/" + directory2UUID + "/path")
             .header("userId", "Unallowed User")
             .exchange()
             .expectStatus().isForbidden();
     }
 
     @Test
-    public void testGetElementParentsInfoOfRootDir() {
+    public void testGetPathOfRootDir() {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        List<ElementAttributes> parentsList = getElementParentsList(rootDirUuid, "Doe");
+        List<ElementAttributes> path = getPath(rootDirUuid, "Doe");
 
         assertEquals(
-                parentsList.stream()
+                path.stream()
                     .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(rootDirUuid)
@@ -254,13 +254,13 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetElementParentsInfoOfNotFound() {
+    public void testGetPathOfNotFound() {
         UUID unknownElementUuid = UUID.randomUUID();
 
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
         webTestClient.get()
-            .uri("/v1/elements/" + unknownElementUuid + "/parents")
+            .uri("/v1/elements/" + unknownElementUuid + "/path")
             .header("userId", "user1")
             .exchange()
             .expectStatus().isNotFound();
@@ -669,9 +669,9 @@ public class DirectoryTest {
         );
     }
 
-    private List<ElementAttributes> getElementParentsList(UUID elementUuid, String userId) {
+    private List<ElementAttributes> getPath(UUID elementUuid, String userId) {
         return webTestClient.get()
-            .uri("/v1/elements/" + elementUuid + "/parents")
+            .uri("/v1/elements/" + elementUuid + "/path")
             .header("userId", userId)
             .exchange()
             .expectStatus().isOk()
