@@ -54,6 +54,16 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
     }
 
+    @GetMapping(value = "/elements/{elementUuid}/path", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get path of element")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List info of an element and its parents in order to get its path"),
+        @ApiResponse(responseCode = "403", description = "Access forbidden for the element"),
+        @ApiResponse(responseCode = "404", description = "The searched element was not found")})
+    public ResponseEntity<Mono<List<ElementAttributes>>> getPath(@PathVariable("elementUuid") UUID elementUuid,
+                                                                        @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Mono.fromCallable(() -> service.getPath(elementUuid, userId)));
+    }
+
     @DeleteMapping(value = "/elements/{elementUuid}")
     @Operation(summary = "Remove directory/element")
     @ApiResponses(value = {
