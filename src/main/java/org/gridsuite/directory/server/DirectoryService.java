@@ -215,6 +215,10 @@ public class DirectoryService {
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
             .filter(e -> e.isAttributesUpdatable(newElementAttributes, userId))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
+            .filter(e -> e.getName().equals(newElementAttributes.getElementName())
+                    || !directoryHasElementOfNameAndType(e.getParentId(), userId, newElementAttributes.getElementName(), e.getType())
+            )
+            .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
             .map(e -> e.update(newElementAttributes))
             .map(directoryElementRepository::save)
             .doOnSuccess(elementEntity -> emitDirectoryChanged(

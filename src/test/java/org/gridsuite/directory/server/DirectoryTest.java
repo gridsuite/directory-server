@@ -694,6 +694,23 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testRenameElementWithSameNameAndTypeInSameDirectory() {
+        // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a public study1 in the root directory by Doe
+        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, null, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
+
+        // Insert a public study2 in the root directory by Doe;
+        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, null, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, study2Attributes);
+
+        // Renaming file to an already existing name should fail
+        renameElementExpectFail(study1Attributes.getElementUuid(), "Doe", "study2", 403);
+    }
+
+    @Test
     public void testRenameDirectoryNotAllowed() {
         checkRootDirectoriesList("Doe", List.of());
 
