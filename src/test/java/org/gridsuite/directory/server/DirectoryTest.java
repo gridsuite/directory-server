@@ -296,6 +296,205 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testMoveElement() {
+        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
+
+        // Insert another public root20 directory
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        // Insert a subDirectory20 in the root20 directory
+        UUID directory21UUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
+
+        // Insert a filter in the last subdirectory
+        UUID filterUuid = UUID.randomUUID();
+        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory21UUID, false, filterAttributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isOk();
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(rootDir10Uuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        // assert that the broker message has been sent a root directory creation request message
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(directory21UUID, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        checkElementNameExistInDirectory(rootDir10Uuid, "filter", FILTER, HttpStatus.OK);
+    }
+
+    @Test
+    public void testMoveElementFromDifferentAccessRightsFolder() {
+        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
+
+        // Insert another public root20 directory
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        // Insert a subDirectory20 in the root20 directory
+        UUID directory21PrivateUUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21PrivateUUID, "directory20", DIRECTORY, true, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
+
+        // Insert a filter in the last subdirectory
+        UUID filterUuid = UUID.randomUUID();
+        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory21PrivateUUID, true, filterAttributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testMoveUnallowedElement() {
+        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", true, "Unallowed User");
+
+        // Insert another public root20 directory
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", true, "Doe");
+
+        // Insert a subDirectory20 in the root20 directory
+        UUID directory21PrivateUUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21PrivateUUID, "directory20", DIRECTORY, true, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, true, directory20Attributes);
+
+        // Insert a filter in the last subdirectory
+        UUID filterUuid = UUID.randomUUID();
+        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory21PrivateUUID, true, filterAttributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+            .header("userId", "Unallowed User")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testMoveElementNotFound() {
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        UUID filterUuid = UUID.randomUUID();
+        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, filterAttributes);
+
+        UUID unknownUuid = UUID.randomUUID();
+
+        webTestClient.put()
+            .uri("/v1/elements/" + unknownUuid + "?newDirectory=" + rootDir20Uuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isNotFound();
+
+        webTestClient.put()
+            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + unknownUuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isNotFound();
+    }
+
+    @Test
+    public void testMoveElementWithAlreadyExistingNameAndTypeInDestination() {
+        // Insert public root20 directory
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        // Insert a filter in this directory
+        UUID filterUuid = UUID.randomUUID();
+        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, filterAttributes);
+
+        // Insert a subDirectory20 in the root20 directory
+        UUID directory21UUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
+
+        // Insert a filter in the last subdirectory with the same name and type as the 1st one
+        UUID filterwithSameNameAndTypeUuid = UUID.randomUUID();
+        ElementAttributes filterwithSameNameAndTypeAttributes = toElementAttributes(filterwithSameNameAndTypeUuid, "filter", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory21UUID, false, filterwithSameNameAndTypeAttributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + filterwithSameNameAndTypeUuid + "?newDirectory=" + rootDir20Uuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testMoveElementToNotDirectory() {
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        UUID filter1Uuid = UUID.randomUUID();
+        ElementAttributes filter1Attributes = toElementAttributes(filter1Uuid, "filter1", FILTER, null, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, filter1Attributes);
+
+        UUID filter2Uuid = UUID.randomUUID();
+        ElementAttributes filter2Attributes = toElementAttributes(filter2Uuid, "filter2", FILTER, null, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, filter2Attributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + filter1Uuid + "?newDirectory=" + filter2Uuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testMoveDirectory() {
+        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
+
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        UUID directory21UUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + directory21UUID + "?newDirectory=" + rootDir10Uuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testMoveRootDirectory() {
+        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
+
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        UUID directory21UUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
+
+        webTestClient.put()
+            .uri("/v1/elements/" + rootDir10Uuid + "?newDirectory=" + rootDir20Uuid)
+            .header("userId", "Doe")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
     public void testTwoUsersOnePublicOnePrivateDirectories() {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());

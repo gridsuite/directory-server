@@ -136,6 +136,19 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.updateElement(elementUuid, elementAttributes, userId));
     }
 
+    @PutMapping(value = "/elements/{elementUuid}", params = "newDirectory")
+    @Operation(summary = "Move element within directory tree")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Element was successfully updated"),
+        @ApiResponse(responseCode = "404", description = "The element or the targeted directory was not found"),
+        @ApiResponse(responseCode = "403", description = "Not authorized execute this update")
+    })
+    public ResponseEntity<Mono<Void>> updateElementDirectory(@PathVariable("elementUuid") UUID elementUuid,
+                                                    @RequestParam UUID newDirectory,
+                                                    @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(Mono.fromRunnable(() -> service.updateElementDirectory(elementUuid, newDirectory, userId)));
+    }
+
     @PostMapping(value = "/elements/{elementUuid}/notification")
     @Operation(summary = "Create change element notification")
     @ApiResponses(value = {

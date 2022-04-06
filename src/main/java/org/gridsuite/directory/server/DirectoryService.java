@@ -29,6 +29,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
+import static org.gridsuite.directory.server.DirectoryException.Type.IS_DIRECTORY;
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 
@@ -228,6 +230,69 @@ public class DirectoryService {
             .then();
     }
 
+    public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
+        Optional<DirectoryElementEntity> optElement = getElementEntity(elementUuid);
+        Optional<DirectoryElementEntity> optNewDirectory = getElementEntity(newDirectoryUuid);
+        DirectoryElementEntity oldDirectory;
+        DirectoryElementEntity element;
+        DirectoryElementEntity newDirectory;
+        if (optElement.isEmpty()) {
+            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+        }
+        if (optNewDirectory.isEmpty()) {
+            throw DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid);
+        }
+        element = optElement.get();
+        newDirectory = optNewDirectory.get();
+
+        if (element.getType().equals(DIRECTORY)) {
+            throw new DirectoryException(IS_DIRECTORY);
+        }
+        if (!newDirectory.getType().equals(DIRECTORY)) {
+            throw new DirectoryException(NOT_DIRECTORY);
+        }
+        if (!isElementUpdatable(toElementAttributes(element), userId, false)) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+        if (directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType())) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+
+        oldDirectory = getElementEntity(element.getParentId()).get();
+        if (!newDirectory.getIsPrivate().equals(oldDirectory.getIsPrivate())) {
+            throw DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid);
+        }
+
+        element.setParentId(newDirectoryUuid);
+        directoryElementRepository.save(element);
+
+        emitDirectoryChanged(
+            element.getParentId(),
+            element.getName(),
+            userId,
+            isPrivateForNotification(element.getParentId(), false),
+            isRootDirectory(element.getId()),
+            NotificationType.UPDATE_DIRECTORY
+        );
+
+        emitDirectoryChanged(
+            oldDirectory.getId(),
+            element.getName(),
+            userId,
+            isPrivateForNotification(element.getParentId(), false),
+            isRootDirectory(element.getId()),
+            NotificationType.UPDATE_DIRECTORY
+        );
+    }
+
+    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String userId, String elementName, String elementType) {
+        return getDirectoryElementsStream(directoryUUID, userId)
+            .anyMatch(
+                e -> e.getType().equals(elementType)
+                    && e.getElementName().equals(elementName)
+            );
+    }
+
     private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {
         if (element.getType().equals(DIRECTORY)) {
             return element.isAllowed(userId) &&
@@ -344,6 +409,10 @@ public class DirectoryService {
         // Should be done after deleting the notification sent by the study server on delete (!)
         return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::getIsPrivate).orElse(false);
         //.orElseThrow(() -> new DirectoryServerException(directoryUuid + " not found!"));
+    }
+
+    private boolean isRootDirectory(UUID directoryUuid) {
+        return getParentUuid(directoryUuid) == null;
     }
 
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
