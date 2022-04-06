@@ -279,7 +279,7 @@ public class DirectoryService {
             oldDirectory.getId(),
             element.getName(),
             userId,
-            isPrivateForNotification(element.getParentId(), false),
+            isPrivateForNotification(oldDirectory.getId(), false),
             isRootDirectory(element.getId()),
             NotificationType.UPDATE_DIRECTORY
         );
