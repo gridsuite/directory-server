@@ -142,6 +142,131 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testGetPathOfStudy() {
+     // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a subDirectory1 in the root directory
+        UUID directory1UUID = UUID.randomUUID();
+        ElementAttributes directory1Attributes = toElementAttributes(directory1UUID, "directory1", DIRECTORY, null, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, directory1Attributes);
+
+        // Insert a subDirectory2 in the subDirectory1 directory
+        UUID directory2UUID = UUID.randomUUID();
+        ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, null, "Doe");
+        insertAndCheckSubElement(directory1UUID, false, directory2Attributes);
+
+        // Insert a study in the directory2
+        UUID study1UUID = UUID.randomUUID();
+        ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", STUDY, null, "Doe");
+        insertAndCheckSubElement(directory2UUID, false, study1Attributes);
+
+        List<ElementAttributes> path = getPath(study1UUID, "Doe");
+
+        //Check if all element's parents are retrieved in the right order
+        assertEquals(
+                path.stream()
+                    .map(parent -> parent.getElementUuid())
+                    .collect(Collectors.toList()),
+                Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
+        );
+    }
+
+    @Test
+    public void testGetPathOfFilter() {
+     // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a subDirectory1 in the root directory
+        UUID directory1UUID = UUID.randomUUID();
+        ElementAttributes directory1Attributes = toElementAttributes(directory1UUID, "directory1", DIRECTORY, null, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, directory1Attributes);
+
+        // Insert a subDirectory2 in the subDirectory1 directory
+        UUID directory2UUID = UUID.randomUUID();
+        ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, null, "Doe");
+        insertAndCheckSubElement(directory1UUID, false, directory2Attributes);
+
+        // Insert a filter in the directory2
+        UUID filter1UUID = UUID.randomUUID();
+        ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory2UUID, false, study1Attributes);
+
+        List<ElementAttributes> path = getPath(filter1UUID, "Doe");
+
+        //Check if all element's parents are retrieved in the right order
+        assertEquals(
+                path.stream()
+                    .map(parent -> parent.getElementUuid())
+                    .collect(Collectors.toList()),
+                Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
+        );
+    }
+
+    @Test
+    public void testGetPathOfNotAllowed() {
+     // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a subDirectory1 in the root directory
+        UUID directory1UUID = UUID.randomUUID();
+        ElementAttributes directory1Attributes = toElementAttributes(directory1UUID, "directory1", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, directory1Attributes);
+
+        // Insert a private subDirectory2 in the subDirectory1 directory
+        UUID directory2UUID = UUID.randomUUID();
+        ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, true, "Doe");
+        insertAndCheckSubElement(directory1UUID, false, directory2Attributes);
+
+        // Insert a filter in the directory2
+        UUID filter1UUID = UUID.randomUUID();
+        ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory2UUID, true, study1Attributes);
+
+        // Trying to get path of forbidden element
+        webTestClient.get()
+            .uri("/v1/elements/" + filter1UUID + "/path")
+            .header("userId", "Unallowed User")
+            .exchange()
+            .expectStatus().isForbidden();
+
+        // Trying to get path of forbidden element
+        webTestClient.get()
+            .uri("/v1/elements/" + directory2UUID + "/path")
+            .header("userId", "Unallowed User")
+            .exchange()
+            .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testGetPathOfRootDir() {
+     // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        List<ElementAttributes> path = getPath(rootDirUuid, "Doe");
+
+        assertEquals(
+                path.stream()
+                    .map(parent -> parent.getElementUuid())
+                    .collect(Collectors.toList()),
+                Arrays.asList(rootDirUuid)
+        );
+    }
+
+    @Test
+    public void testGetPathOfNotFound() {
+        UUID unknownElementUuid = UUID.randomUUID();
+
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        webTestClient.get()
+            .uri("/v1/elements/" + unknownElementUuid + "/path")
+            .header("userId", "user1")
+            .exchange()
+            .expectStatus().isNotFound();
+    }
+
+    @Test
     public void testTwoUsersTwoPublicDirectories() {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
@@ -741,6 +866,18 @@ public class DirectoryTest {
                 toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1")
             ))
         );
+    }
+
+    private List<ElementAttributes> getPath(UUID elementUuid, String userId) {
+        return webTestClient.get()
+            .uri("/v1/elements/" + elementUuid + "/path")
+            .header("userId", userId)
+            .exchange()
+            .expectStatus().isOk()
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBodyList(ElementAttributes.class)
+            .returnResult()
+            .getResponseBody();
     }
 
     private void checkRootDirectoriesList(String userId, List<ElementAttributes> list) {

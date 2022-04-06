@@ -337,6 +337,42 @@ public class DirectoryService {
         getAllDirectoryElementsStream(elementUuid).forEach(this::deleteObject);
     }
 
+    /***
+     * Retrieve path of an element
+     * @param elementUuid
+     * @param userId
+     * @return ElementAttributes of element and all it's parents up to root directory
+     */
+    public List<ElementAttributes> getPath(UUID elementUuid, String userId) {
+        Optional<DirectoryElementEntity> currentElementOpt = getElementEntity(elementUuid);
+        ArrayList<ElementAttributes> path = new ArrayList<>();
+        boolean allowed;
+        if (currentElementOpt.isEmpty()) {
+            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+        }
+        DirectoryElementEntity currentElement = currentElementOpt.get();
+
+        if (currentElement.getType().equals(DIRECTORY)) {
+            allowed = toElementAttributes(currentElement).isAllowed(userId);
+        } else {
+            allowed = toElementAttributes(getElementEntity(currentElement.getParentId()).get()).isAllowed(userId);
+        }
+
+        if (!allowed) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+
+        path.add(toElementAttributes(currentElement));
+
+        while (currentElement.getParentId() != null) {
+            currentElement = getElementEntity(currentElement.getParentId()).get();
+            ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
+            path.add(currentElementAttributes);
+        }
+
+        return path;
+    }
+
     public Mono<ElementAttributes> getElement(UUID elementUuid) {
         return getElementEntityMono(elementUuid).map(ElementAttributes::toElementAttributes)
             .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)));
