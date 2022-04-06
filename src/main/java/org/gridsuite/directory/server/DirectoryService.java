@@ -230,7 +230,7 @@ public class DirectoryService {
             .then();
     }
 
-    public Mono<Void> updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
+    public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
         Optional<DirectoryElementEntity> optElement = getElementEntity(elementUuid);
         Optional<DirectoryElementEntity> optNewDirectory = getElementEntity(newDirectoryUuid);
         DirectoryElementEntity oldDirectory;
@@ -283,8 +283,6 @@ public class DirectoryService {
             isRootDirectory(element.getId()),
             NotificationType.UPDATE_DIRECTORY
         );
-
-        return null;
     }
 
     private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String userId, String elementName, String elementType) {

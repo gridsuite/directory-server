@@ -136,7 +136,7 @@ public class DirectoryController {
     public ResponseEntity<Mono<Void>> updateElementDirectory(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestParam UUID newDirectory,
                                                     @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.updateElementDirectory(elementUuid, newDirectory, userId));
+        return ResponseEntity.ok().body(Mono.fromRunnable(() -> service.updateElementDirectory(elementUuid, newDirectory, userId)));
     }
 
     @PostMapping(value = "/elements/{elementUuid}/notification")
