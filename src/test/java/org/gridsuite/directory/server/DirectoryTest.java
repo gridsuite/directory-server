@@ -885,6 +885,21 @@ public class DirectoryTest {
         );
     }
 
+    @Test
+    public void testRootDirectoryExists() {
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
+
+        UUID directoryUUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directoryUUID, "directoryToFind", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, directory20Attributes);
+
+        checkRootDirectoryExists("rootDirToFind");
+        checkRootDirectoryNotExists("directoryToFind");
+        checkRootDirectoryNotExists("notExistingRootDir");
+
+    }
+
     private List<ElementAttributes> getPath(UUID elementUuid, String userId) {
         return webTestClient.get()
             .uri("/v1/elements/" + elementUuid + "/path")
@@ -1166,6 +1181,20 @@ public class DirectoryTest {
         } else {
             fail("unexpected case");
         }
+    }
+
+    private void checkRootDirectoryExists(String rootDirectoryName) {
+        webTestClient.head()
+            .uri("/v1/root-directories?directoryName=" + rootDirectoryName)
+            .exchange()
+            .expectStatus().isOk();
+    }
+
+    private void checkRootDirectoryNotExists(String rootDirectoryName) {
+        webTestClient.head()
+            .uri("/v1/root-directories?directoryName=" + rootDirectoryName)
+            .exchange()
+            .expectStatus().isNotFound();
     }
 
     @After

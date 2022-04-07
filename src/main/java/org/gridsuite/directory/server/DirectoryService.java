@@ -439,6 +439,11 @@ public class DirectoryService {
         );
     }
 
+    public Mono<Void> rootDirectoryExists(String rootDirectoryName) {
+        return isRootDirectoryExist(rootDirectoryName)
+            .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND)));
+    }
+
     public Mono<Void> elementExists(UUID parentDirectoryUuid, String elementName, String type) {
         return isElementExists(parentDirectoryUuid, elementName, type)
             .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND)));

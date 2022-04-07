@@ -82,6 +82,16 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getRootDirectories(userId));
     }
 
+    @RequestMapping(value = "/root-directories", method = RequestMethod.HEAD)
+    @Operation(summary = "Get if a root directory of this name exists")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The root directory exists"),
+        @ApiResponse(responseCode = "404", description = "The root directory doesn't exist"),
+    })
+    public ResponseEntity<Mono<Void>> rootDirectoryExists(@RequestParam("directoryName") String directoryName) {
+        return ResponseEntity.ok().body(service.rootDirectoryExists(directoryName));
+    }
+
     @GetMapping(value = "/directories/{directoryUuid}/elements", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get directory elements")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
