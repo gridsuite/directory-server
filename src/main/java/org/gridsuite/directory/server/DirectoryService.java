@@ -117,6 +117,10 @@ public class DirectoryService {
 
     /* methods */
     public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
+        if (elementAttributes.getElementName().isBlank()) {
+            return Mono.error(new DirectoryException(NOT_ALLOWED));
+        }
+
         return assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType())
             .and(assertAccessibleDirectory(parentDirectoryUuid, userId))
             .then(insertElement(elementAttributes, parentDirectoryUuid))
@@ -167,6 +171,10 @@ public class DirectoryService {
     }
 
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
+        if (rootDirectoryAttributes.getElementName().isBlank()) {
+            return Mono.error(new DirectoryException(NOT_ALLOWED));
+        }
+
         return assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName())
             .then(insertElement(toElementAttributes(rootDirectoryAttributes), null))
             .doOnSuccess(element ->

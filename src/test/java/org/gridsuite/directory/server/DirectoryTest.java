@@ -900,6 +900,39 @@ public class DirectoryTest {
 
     }
 
+    @Test
+    public void testCreateDirectoryWithEmptyName() {
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
+
+        // Insert a directory with empty name in the root directory and expect a 403
+        ElementAttributes directoryWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", DIRECTORY, null, "user1");
+        insertExpectFail(rootDirUuid, directoryWithoutNameAttributes);
+
+     // Insert a public root directory user1 with empty name and expect 403
+        webTestClient.post()
+                .uri("/v1/root-directories")
+                .header("userId", "user1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RootDirectoryAttributes("", new AccessRightsAttributes(false), "userId", null))
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testCreateElementWithEmptyName() {
+     // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
+
+        // Insert a study with empty name in the root directory and expect a 403
+        ElementAttributes studyWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", STUDY, null, "user1");
+        insertExpectFail(rootDirUuid, studyWithoutNameAttributes);
+
+     // Insert a filter with empty name in the root directory and expect a 403
+        ElementAttributes filterWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", FILTER, null, "user1");
+        insertExpectFail(rootDirUuid, filterWithoutNameAttributes);
+    }
+
     private List<ElementAttributes> getPath(UUID elementUuid, String userId) {
         return webTestClient.get()
             .uri("/v1/elements/" + elementUuid + "/path")
