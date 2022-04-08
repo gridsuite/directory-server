@@ -678,6 +678,22 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testRenameStudyToSameName() {
+        checkRootDirectoriesList("Doe", List.of());
+
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_UUID, "study1", STUDY, null, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
+
+        // Updating to same name should not send error
+        renameElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", "study1", false, false);
+        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, null, "user1")));
+    }
+
+    @Test
     public void testRenameStudyForbiddenFail() {
         checkRootDirectoriesList("user1", List.of());
 
