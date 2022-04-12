@@ -215,7 +215,6 @@ public class DirectoryService {
         return Flux.fromStream(directoryElements.stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L))));
     }
 
-    // TODO test on name change if not already exist
     public Mono<Void> updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
         return getElementEntityMono(elementUuid)
             .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
