@@ -117,6 +117,10 @@ public class DirectoryService {
 
     /* methods */
     public Mono<ElementAttributes> createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
+        if (elementAttributes.getElementName().isBlank()) {
+            return Mono.error(new DirectoryException(NOT_ALLOWED));
+        }
+
         return assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType())
             .and(assertAccessibleDirectory(parentDirectoryUuid, userId))
             .then(insertElement(elementAttributes, parentDirectoryUuid))
@@ -167,6 +171,10 @@ public class DirectoryService {
     }
 
     public Mono<ElementAttributes> createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
+        if (rootDirectoryAttributes.getElementName().isBlank()) {
+            return Mono.error(new DirectoryException(NOT_ALLOWED));
+        }
+
         return assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName())
             .then(insertElement(toElementAttributes(rootDirectoryAttributes), null))
             .doOnSuccess(element ->
@@ -207,13 +215,16 @@ public class DirectoryService {
         return Flux.fromStream(directoryElements.stream().map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L))));
     }
 
-    // TODO test on name change if not already exist
     public Mono<Void> updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
         return getElementEntityMono(elementUuid)
             .switchIfEmpty(Mono.error(DirectoryException.createElementNotFound(ELEMENT, elementUuid)))
             .filter(e -> isElementUpdatable(toElementAttributes(e), userId, false))
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
             .filter(e -> e.isAttributesUpdatable(newElementAttributes, userId))
+            .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
+            .filter(e -> e.getName().equals(newElementAttributes.getElementName())
+                    || !directoryHasElementOfNameAndType(e.getParentId(), userId, newElementAttributes.getElementName(), e.getType())
+            )
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
             .map(e -> e.update(newElementAttributes))
             .map(directoryElementRepository::save)
@@ -433,6 +444,11 @@ public class DirectoryService {
         return Mono.fromCallable(() ->
             !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty()
         );
+    }
+
+    public Mono<Void> rootDirectoryExists(String rootDirectoryName) {
+        return isRootDirectoryExist(rootDirectoryName)
+            .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND)));
     }
 
     public Mono<Void> elementExists(UUID parentDirectoryUuid, String elementName, String type) {

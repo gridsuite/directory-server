@@ -678,6 +678,22 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testRenameStudyToSameName() {
+        checkRootDirectoriesList("Doe", List.of());
+
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a study in the root directory by the user1
+        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_UUID, "study1", STUDY, null, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
+
+        // Updating to same name should not send error
+        renameElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", "study1", false, false);
+        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, null, "user1")));
+    }
+
+    @Test
     public void testRenameStudyForbiddenFail() {
         checkRootDirectoriesList("user1", List.of());
 
@@ -691,6 +707,23 @@ public class DirectoryTest {
         //the name should not change
         renameElementExpectFail(study1Attributes.getElementUuid(), "user2", "newName1", 403);
         checkDirectoryContent(rootDirUuid, "user2", List.of());
+    }
+
+    @Test
+    public void testRenameElementWithSameNameAndTypeInSameDirectory() {
+        // Insert a public root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+
+        // Insert a public study1 in the root directory by Doe
+        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, null, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
+
+        // Insert a public study2 in the root directory by Doe;
+        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, null, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, study2Attributes);
+
+        // Renaming file to an already existing name should fail
+        renameElementExpectFail(study1Attributes.getElementUuid(), "Doe", "study2", 403);
     }
 
     @Test
@@ -866,6 +899,54 @@ public class DirectoryTest {
                 toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1")
             ))
         );
+    }
+
+    @Test
+    public void testRootDirectoryExists() {
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
+
+        UUID directoryUUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directoryUUID, "directoryToFind", DIRECTORY, false, "Doe");
+        insertAndCheckSubElement(rootDirUuid, false, directory20Attributes);
+
+        checkRootDirectoryExists("rootDirToFind");
+        checkRootDirectoryNotExists("directoryToFind");
+        checkRootDirectoryNotExists("notExistingRootDir");
+
+    }
+
+    @Test
+    public void testCreateDirectoryWithEmptyName() {
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
+
+        // Insert a directory with empty name in the root directory and expect a 403
+        ElementAttributes directoryWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", DIRECTORY, null, "user1");
+        insertExpectFail(rootDirUuid, directoryWithoutNameAttributes);
+
+     // Insert a public root directory user1 with empty name and expect 403
+        webTestClient.post()
+                .uri("/v1/root-directories")
+                .header("userId", "user1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RootDirectoryAttributes("", new AccessRightsAttributes(false), "userId", null))
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    public void testCreateElementWithEmptyName() {
+     // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
+
+        // Insert a study with empty name in the root directory and expect a 403
+        ElementAttributes studyWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", STUDY, null, "user1");
+        insertExpectFail(rootDirUuid, studyWithoutNameAttributes);
+
+     // Insert a filter with empty name in the root directory and expect a 403
+        ElementAttributes filterWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", FILTER, null, "user1");
+        insertExpectFail(rootDirUuid, filterWithoutNameAttributes);
     }
 
     private List<ElementAttributes> getPath(UUID elementUuid, String userId) {
@@ -1149,6 +1230,20 @@ public class DirectoryTest {
         } else {
             fail("unexpected case");
         }
+    }
+
+    private void checkRootDirectoryExists(String rootDirectoryName) {
+        webTestClient.head()
+            .uri("/v1/root-directories?directoryName=" + rootDirectoryName)
+            .exchange()
+            .expectStatus().isOk();
+    }
+
+    private void checkRootDirectoryNotExists(String rootDirectoryName) {
+        webTestClient.head()
+            .uri("/v1/root-directories?directoryName=" + rootDirectoryName)
+            .exchange()
+            .expectStatus().isNotFound();
     }
 
     @After
