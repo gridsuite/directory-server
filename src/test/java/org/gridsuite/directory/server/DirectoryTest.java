@@ -1246,7 +1246,7 @@ public class DirectoryTest {
             .expectStatus().isNotFound();
     }
 
-    private String candidateName(String directoryUUid, String originalName, String type) {
+    private String candidateName(UUID directoryUUid, String originalName, String type) {
         return webTestClient.get().uri("/v1/directories/" + directoryUUid + "/"
             + originalName + "/newNameCandidate?type=" + type)
             .header("userId", "userId")
@@ -1256,7 +1256,8 @@ public class DirectoryTest {
     @SneakyThrows
     @Test
     public void testNameCandidate() {
-        var directoryId = insertAndCheckRootDirectory("newDir", true, "userId", null);
+
+        var directoryId = insertAndCheckRootDirectory("newDir", true, "userId");
 
         webTestClient.get().uri("/v1/directories/" + directoryId + "/"
                 + "pouet" + "/newNameCandidate?type=" + STUDY)
@@ -1265,10 +1266,13 @@ public class DirectoryTest {
         var name = "newStudy";
         // check when no elements is corresponding (empty folder
         assertEquals("newStudy", candidateName(directoryId, name, STUDY));
-        insertAndCheckSubElement(UUID.randomUUID(), directoryId, name, STUDY, false, "userId", true, "descr study");
+        var element = toElementAttributes(UUID.randomUUID(), name, STUDY, null, "userId");
+        insertAndCheckSubElement(directoryId, true, element);
         var newCandidateName = candidateName(directoryId, name, STUDY);
         assertEquals("newStudy(1)", newCandidateName);
-        insertAndCheckSubElement(UUID.randomUUID(), directoryId, newCandidateName, STUDY, false, "userId", true, "descr study");
+        element.setElementName(newCandidateName);
+        element.setElementUuid(UUID.randomUUID());
+        insertAndCheckSubElement(directoryId, true, element);
         assertEquals("newStudy(2)", candidateName(directoryId, name, STUDY));
         assertEquals("newStudy", candidateName(directoryId, name, CONTINGENCY_LIST));
     }

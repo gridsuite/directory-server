@@ -159,16 +159,8 @@ public class DirectoryController {
         return ResponseEntity.ok().body(Mono.fromRunnable(() -> service.updateElementDirectory(elementUuid, newDirectory, userId)));
     }
 
-    @PostMapping(value = "/elements/{elementUuid}/notification")
-    @Operation(summary = "Create change element notification")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The notification has been sent"),
-        @ApiResponse(responseCode = "404", description = "The element was not found"),
-        @ApiResponse(responseCode = "400", description = "The notification type is unknown")
-    })
-
     @GetMapping(value = "/directories/{directoryUuid}/{elementName}/newNameCandidate")
-    @Operation(summary = "Check if the element exists")
+    @Operation(summary = "Get a free name in directory based on the one given and it's type")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the element exists or not")})
     public ResponseEntity<Mono<String>> elementNameCandidate(@PathVariable("directoryUuid") UUID directoryUuid,
                                                              @PathVariable("elementName") String elementName,
@@ -177,6 +169,13 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type, userId));
     }
 
+    @PostMapping(value = "/elements/{elementUuid}/notification")
+    @Operation(summary = "Create change element notification")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The notification has been sent"),
+        @ApiResponse(responseCode = "404", description = "The element was not found"),
+        @ApiResponse(responseCode = "400", description = "The notification type is unknown")
+    })
     public ResponseEntity<Mono<Void>> notify(@PathVariable("elementUuid") UUID elementUuid,
                                              @RequestParam("type") String notificationType,
                                              @RequestHeader("userId") String userId) {
