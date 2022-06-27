@@ -166,6 +166,17 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element was not found"),
         @ApiResponse(responseCode = "400", description = "The notification type is unknown")
     })
+
+    @GetMapping(value = "/directories/{directoryUuid}/{elementName}/newNameCandidate")
+    @Operation(summary = "Check if the element exists")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the element exists or not")})
+    public ResponseEntity<Mono<String>> elementNameCandidate(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                             @PathVariable("elementName") String elementName,
+                                                             @RequestParam("type") String type,
+                                                             @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type, userId));
+    }
+
     public ResponseEntity<Mono<Void>> notify(@PathVariable("elementUuid") UUID elementUuid,
                                              @RequestParam("type") String notificationType,
                                              @RequestHeader("userId") String userId) {

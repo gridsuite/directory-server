@@ -29,6 +29,15 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND d.name=:name")
     List<DirectoryElementEntity> findRootDirectoriesByName(String name);
 
+    @Query("SELECT name FROM DirectoryElementEntity WHERE parentId=:parentId AND type=:type AND name like :name%")
+    List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
+
+    boolean existsByIdAndOwnerOrIsPrivateAndId(UUID id, String owner, boolean isPrivate, UUID id2);
+
+    default boolean canRead(UUID id, String userId) {
+        return existsByIdAndOwnerOrIsPrivateAndId(id, userId, false, id);
+    }
+
     interface SubDirectoryCount {
         UUID getId();
 
