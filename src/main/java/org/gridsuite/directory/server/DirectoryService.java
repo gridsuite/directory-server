@@ -498,4 +498,25 @@ public class DirectoryService {
             .flatMap(e -> e.isAllowed(userId) ? Mono.empty() : Mono.error(new DirectoryException(NOT_ALLOWED)))
             .then();
     }
+
+    private String nameCandidate(String elementName, int n) {
+        return elementName + '(' + n + ')';
+    }
+
+    public Mono<String> getDuplicateNameCandidate(UUID directoryUuid, String elementName, String elementType, String userId) {
+        return Mono.fromCallable(() -> {
+            if (!directoryElementRepository.canRead(directoryUuid, userId)) {
+                throw new DirectoryException(NOT_ALLOWED);
+            }
+            var idLikes = new HashSet<>(directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(elementType, directoryUuid, elementName));
+            if (!idLikes.contains(elementName)) {
+                return elementName;
+            }
+            int i = 1;
+            while (idLikes.contains(nameCandidate(elementName, i))) {
+                ++i;
+            }
+            return nameCandidate(elementName, i);
+        });
+    }
 }

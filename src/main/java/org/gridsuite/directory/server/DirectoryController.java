@@ -159,6 +159,16 @@ public class DirectoryController {
         return ResponseEntity.ok().body(Mono.fromRunnable(() -> service.updateElementDirectory(elementUuid, newDirectory, userId)));
     }
 
+    @GetMapping(value = "/directories/{directoryUuid}/{elementName}/newNameCandidate")
+    @Operation(summary = "Get a free name in directory based on the one given and it's type")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the element exists or not")})
+    public ResponseEntity<Mono<String>> elementNameCandidate(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                             @PathVariable("elementName") String elementName,
+                                                             @RequestParam("type") String type,
+                                                             @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type, userId));
+    }
+
     @PostMapping(value = "/elements/{elementUuid}/notification")
     @Operation(summary = "Create change element notification")
     @ApiResponses(value = {

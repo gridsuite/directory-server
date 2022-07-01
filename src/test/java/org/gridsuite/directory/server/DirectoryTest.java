@@ -1246,6 +1246,37 @@ public class DirectoryTest {
             .expectStatus().isNotFound();
     }
 
+    private String candidateName(UUID directoryUUid, String originalName, String type) {
+        return webTestClient.get().uri("/v1/directories/" + directoryUUid + "/"
+            + originalName + "/newNameCandidate?type=" + type)
+            .header("userId", "userId")
+            .exchange().returnResult(String.class).getResponseBody().blockFirst();
+    }
+
+    @SneakyThrows
+    @Test
+    public void testNameCandidate() {
+
+        var directoryId = insertAndCheckRootDirectory("newDir", true, "userId");
+
+        webTestClient.get().uri("/v1/directories/" + directoryId + "/"
+                + "pouet" + "/newNameCandidate?type=" + STUDY)
+            .header("userId", "youplaboum").exchange().expectStatus().isForbidden();
+
+        var name = "newStudy";
+        // check when no elements is corresponding (empty folder
+        assertEquals("newStudy", candidateName(directoryId, name, STUDY));
+        var element = toElementAttributes(UUID.randomUUID(), name, STUDY, null, "userId");
+        insertAndCheckSubElement(directoryId, true, element);
+        var newCandidateName = candidateName(directoryId, name, STUDY);
+        assertEquals("newStudy(1)", newCandidateName);
+        element.setElementName(newCandidateName);
+        element.setElementUuid(UUID.randomUUID());
+        insertAndCheckSubElement(directoryId, true, element);
+        assertEquals("newStudy(2)", candidateName(directoryId, name, STUDY));
+        assertEquals("newStudy", candidateName(directoryId, name, CONTINGENCY_LIST));
+    }
+
     @After
     public void tearDown() {
         assertNull("Should not be any messages", output.receive(1000));
