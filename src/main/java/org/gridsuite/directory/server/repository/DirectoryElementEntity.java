@@ -34,7 +34,7 @@ public class DirectoryElementEntity {
     @Column(name = "parentId")
     private UUID parentId;
 
-    @Column(name = "name", columnDefinition = "TEXT")
+    @Column(name = "name", columnDefinition = "CLOB")
     private String name;
 
     @Column(name = "type", length = 30, nullable = false)
