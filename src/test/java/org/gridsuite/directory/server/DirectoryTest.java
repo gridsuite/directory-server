@@ -478,6 +478,44 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testMoveStudy() {
+        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
+
+        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
+
+        UUID study21UUID = UUID.randomUUID();
+        ElementAttributes study21Attributes = toElementAttributes(study21UUID, "Study21", STUDY, null, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, false, study21Attributes);
+
+        webTestClient.put()
+                .uri("/v1/elements/" + study21UUID + "?newDirectory=" + rootDir10Uuid)
+                .header("userId", "Doe")
+                .exchange()
+                .expectStatus().isOk();
+
+        // assert that the broker message has been sent a update notification on directory
+        Message<byte[]> message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(rootDir10Uuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(1000);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
+        assertEquals(rootDir20Uuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+    }
+
+    @Test
     public void testMoveRootDirectory() {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
 
