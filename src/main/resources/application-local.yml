@@ -4,3 +4,7 @@ server :
 spring:
   rabbitmq:
     addresses: localhost
+
+backing-services:
+  study-server:
+    base-uri: http://localhost:5001

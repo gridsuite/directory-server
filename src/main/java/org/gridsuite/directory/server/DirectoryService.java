@@ -7,10 +7,12 @@
 package org.gridsuite.directory.server;
 
 import lombok.NonNull;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
@@ -63,12 +65,17 @@ public class DirectoryService {
     private final DirectoryElementRepository directoryElementRepository;
     private final StreamBridge studyUpdatePublisher;
 
+    private StudyService studyService;
+
     public DirectoryService(
         DirectoryElementRepository directoryElementRepository,
-        StreamBridge studyUpdatePublisher) {
+        StreamBridge studyUpdatePublisher,
+        StudyService studyService) {
         this.directoryElementRepository = directoryElementRepository;
 
         this.studyUpdatePublisher = studyUpdatePublisher;
+
+        this.studyService = studyService;
     }
 
     /* notifications */
@@ -228,15 +235,21 @@ public class DirectoryService {
             .switchIfEmpty(Mono.error(new DirectoryException(NOT_ALLOWED)))
             .map(e -> e.update(newElementAttributes))
             .map(directoryElementRepository::save)
-            .doOnSuccess(elementEntity -> emitDirectoryChanged(
-                            elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
-                            elementEntity.getName(),
-                            userId,
-                            // second parameter should be always false when we change the access mode of a folder because we should notify all clients
-                            isPrivateForNotification(elementEntity.getParentId(), false),
-                            elementEntity.getParentId() == null,
-                            NotificationType.UPDATE_DIRECTORY
-                    )
+            .doOnSuccess(elementEntity -> {
+                        emitDirectoryChanged(
+                                elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
+                                elementEntity.getName(),
+                                userId,
+                                // second parameter should be always false when we change the access mode of a folder because we should notify all clients
+                                isPrivateForNotification(elementEntity.getParentId(), false),
+                                elementEntity.getParentId() == null,
+                                NotificationType.UPDATE_DIRECTORY
+                        );
+                        //true if we updated a study name
+                        if (elementEntity.getType().equals(STUDY) && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
+                            studyService.notifyStudyUpdate(elementUuid, userId).subscribe();
+                        }
+                    }
             )
             .then();
     }
@@ -294,6 +307,10 @@ public class DirectoryService {
             isRootDirectory(element.getId()),
             NotificationType.UPDATE_DIRECTORY
         );
+
+        if (element.getType().equals(STUDY)) {
+            studyService.notifyStudyUpdate(elementUuid, userId).subscribe();
+        }
     }
 
     private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String userId, String elementName, String elementType) {
