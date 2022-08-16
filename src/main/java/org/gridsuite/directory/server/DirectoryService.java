@@ -463,14 +463,12 @@ public class DirectoryService {
         );
     }
 
-    public Mono<Void> rootDirectoryExists(String rootDirectoryName) {
-        return isRootDirectoryExist(rootDirectoryName)
-            .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND)));
+    public boolean rootDirectoryExists(String rootDirectoryName) {
+        return !directoryElementRepository.findRootDirectoriesByName(rootDirectoryName).isEmpty();
     }
 
-    public Mono<Void> elementExists(UUID parentDirectoryUuid, String elementName, String type) {
-        return isElementExists(parentDirectoryUuid, elementName, type)
-            .flatMap(exist -> Boolean.TRUE.equals(exist) ? Mono.empty() : Mono.error(new DirectoryException(NOT_FOUND)));
+    public boolean elementExists(UUID parentDirectoryUuid, String elementName, String type) {
+        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
     }
 
     public Flux<ElementAttributes> getElements(List<UUID> ids, boolean strictMode) {
