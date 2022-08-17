@@ -90,9 +90,8 @@ public class DirectoryController {
         @ApiResponse(responseCode = "204", description = "The root directory doesn't exist"),
     })
     public ResponseEntity<Mono<Void>> rootDirectoryExists(@RequestParam("directoryName") String directoryName) {
-        return service.rootDirectoryExists(directoryName) ?
-                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Mono.empty()) :
-                ResponseEntity.status(HttpStatus.NO_CONTENT).contentType(MediaType.APPLICATION_JSON).body(Mono.empty());
+        HttpStatus status = service.rootDirectoryExists(directoryName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(Mono.empty());
     }
 
     @GetMapping(value = "/directories/{directoryUuid}/elements", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -192,8 +191,7 @@ public class DirectoryController {
     public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
                                                     @PathVariable("type") String type) {
-        return service.elementExists(directoryUuid, elementName, type) ?
-                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Mono.empty()) :
-                ResponseEntity.status(HttpStatus.NO_CONTENT).contentType(MediaType.APPLICATION_JSON).body(Mono.empty());
+        HttpStatus status = service.elementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(Mono.empty());
     }
 }
