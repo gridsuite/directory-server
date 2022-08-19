@@ -100,7 +100,7 @@ public class DirectoryTest {
         checkDirectoryContent(uuidNewDirectory, "userId", List.of(subDirAttributes, subEltAttributes));
 
         checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", STUDY, HttpStatus.OK);
-        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", STUDY, HttpStatus.NOT_FOUND);
+        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", STUDY, HttpStatus.NO_CONTENT);
 
         // Delete the sub-directory newSubDir
         deleteElement(subDirAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false);
@@ -1281,7 +1281,7 @@ public class DirectoryTest {
         webTestClient.head()
             .uri("/v1/root-directories?directoryName=" + rootDirectoryName)
             .exchange()
-            .expectStatus().isNotFound();
+            .expectStatus().isNoContent();
     }
 
     private String candidateName(UUID directoryUUid, String originalName, String type) {

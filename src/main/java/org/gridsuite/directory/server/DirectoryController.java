@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -86,10 +87,11 @@ public class DirectoryController {
     @Operation(summary = "Get if a root directory of this name exists")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The root directory exists"),
-        @ApiResponse(responseCode = "404", description = "The root directory doesn't exist"),
+        @ApiResponse(responseCode = "204", description = "The root directory doesn't exist"),
     })
     public ResponseEntity<Mono<Void>> rootDirectoryExists(@RequestParam("directoryName") String directoryName) {
-        return ResponseEntity.ok().body(service.rootDirectoryExists(directoryName));
+        HttpStatus status = service.rootDirectoryExists(directoryName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(Mono.empty());
     }
 
     @GetMapping(value = "/directories/{directoryUuid}/elements", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -185,10 +187,11 @@ public class DirectoryController {
     @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/elements/{elementName}/types/{type}")
     @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
-        @ApiResponse(responseCode = "404", description = "The element doesn't exist")})
+        @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
     public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
                                                     @PathVariable("type") String type) {
-        return ResponseEntity.ok().body(service.elementExists(directoryUuid, elementName, type));
+        HttpStatus status = service.elementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(Mono.empty());
     }
 }
