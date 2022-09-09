@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -202,8 +204,8 @@ public class AccessRightsControlTest {
 
     private UUID insertRootDirectory(String userId, String rootDirectoryName, boolean isPrivate) throws Exception {
         MockHttpServletResponse response = insertRootDirectory(userId, rootDirectoryName, isPrivate,  HttpStatus.OK).getResponse();
-        Assert.assertNotNull(response);
-        Assert.assertEquals(response.getContentType(), APPLICATION_JSON_VALUE);
+        assertNotNull(response);
+        assertEquals(APPLICATION_JSON_VALUE, response.getContentType());
         return objectMapper.readValue(response.getContentAsString(), ElementAttributes.class).getElementUuid();
     }
 
