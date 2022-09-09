@@ -8,14 +8,15 @@ package org.gridsuite.directory.server.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.UUID;
-import java.util.logging.Level;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -23,8 +24,6 @@ import java.util.logging.Level;
 
 @Service
 public class StudyService {
-
-    private static final String ROOT_CATEGORY_REACTOR = "reactor.";
 
     private static final String STUDY_SERVER_API_VERSION = "v1";
 
@@ -34,29 +33,24 @@ public class StudyService {
 
     private static final String DELIMITER = "/";
 
-    private final WebClient webClient;
+    @Autowired
+    private RestTemplate restTemplate;
+
     private final String studyServerBaseUri;
 
     @Autowired
-    public StudyService(@Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri,
-                        WebClient.Builder webClientBuilder) {
+    public StudyService(@Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri) {
         this.studyServerBaseUri = studyServerBaseUri;
-        this.webClient = webClientBuilder.build();
     }
 
-    public Mono<Void> notifyStudyUpdate(UUID studyUuid, String userId) {
+    public ResponseEntity<Void> notifyStudyUpdate(UUID studyUuid, String userId) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_SERVER_API_VERSION +
                 "/studies/{studyUuid}/notification?type={metadata_updated}")
                 .buildAndExpand(studyUuid, NOTIFICATION_TYPE_METADATA_UPDATED)
                 .toUriString();
 
-        return webClient.post()
-                .uri(studyServerBaseUri + path)
-                .header(HEADER_USER_ID, userId)
-                .retrieve()
-                .bodyToMono(Void.class)
-                .publishOn(Schedulers.boundedElastic())
-                .log(ROOT_CATEGORY_REACTOR, Level.FINE);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        return restTemplate.exchange(studyServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), Void.class);
     }
-
 }
