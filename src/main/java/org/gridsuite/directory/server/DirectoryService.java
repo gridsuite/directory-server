@@ -15,23 +15,29 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.util.Pair;
-import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
 import static org.gridsuite.directory.server.DirectoryException.Type.IS_DIRECTORY;
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
@@ -57,23 +63,20 @@ public class DirectoryService {
     static final String HEADER_ERROR = "error";
     static final String HEADER_STUDY_UUID = "studyUuid";
     static final String HEADER_NOTIFICATION_TYPE = "notificationType";
-    static final String HEADER_ELEMENT_NAME = "elementName";
     private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
-    private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
     private final DirectoryElementRepository directoryElementRepository;
-    private final StreamBridge studyUpdatePublisher;
 
     private StudyService studyService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     public DirectoryService(
         DirectoryElementRepository directoryElementRepository,
-        StreamBridge studyUpdatePublisher,
         StudyService studyService) {
         this.directoryElementRepository = directoryElementRepository;
-
-        this.studyUpdatePublisher = studyUpdatePublisher;
 
         this.studyService = studyService;
     }
@@ -94,32 +97,14 @@ public class DirectoryService {
                     deleteElement(studyUuid, userId).subscribe();
                 }
                 boolean isPrivate = isPrivateForNotification(parentUuid, isPrivateDirectory(studyUuid));
-                emitDirectoryChanged(parentUuid, elementName, userId, error, isPrivate, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
+                notificationService.emitDirectoryChanged(parentUuid, elementName, userId, error, isPrivate, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
             }
             return Mono.empty();
         }).doOnError(throwable -> LOGGER.error(throwable.toString(), throwable)).subscribe();
     }
 
-    private void sendUpdateMessage(Message<String> message) {
-        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
-        studyUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
-    }
-
     private void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, Boolean isPrivate, boolean isRoot, NotificationType notificationType) {
-        emitDirectoryChanged(directoryUuid, elementName, userId, null, isPrivate, isRoot, notificationType);
-    }
-
-    private void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, Boolean isPrivate, boolean isRoot, NotificationType notificationType) {
-        MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
-            .setHeader(HEADER_USER_ID, userId)
-            .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
-            .setHeader(HEADER_ELEMENT_NAME, elementName)
-            .setHeader(HEADER_IS_ROOT_DIRECTORY, isRoot)
-            .setHeader(HEADER_IS_PUBLIC_DIRECTORY, isPrivate == null || !isPrivate) // null may only come from borked REST request
-            .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
-            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
-            .setHeader(HEADER_ERROR, error);
-        sendUpdateMessage(messageBuilder.build());
+        notificationService.emitDirectoryChanged(directoryUuid, elementName, userId, null, isPrivate, isRoot, notificationType);
     }
 
     /* methods */
