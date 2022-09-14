@@ -83,10 +83,9 @@ public class DirectoryService {
 
     /* notifications */
     @Bean
-    public Consumer<List<Message<String>>> consumeStudyUpdate() {
+    public Consumer<Message<String>> consumeStudyUpdate() {
         LOGGER.info(CATEGORY_BROKER_INPUT);
-        return messages -> messages.stream()
-                .forEach(message -> {
+        return message -> {
                     try {
                         String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
                         String error = message.getHeaders().get(HEADER_ERROR, String.class);
@@ -105,7 +104,7 @@ public class DirectoryService {
                     } catch (Exception e) {
                         LOGGER.error(e.toString(), e);
                     }
-                });
+                };
     }
 
     private void sendUpdateMessage(Message<String> message) {
@@ -339,7 +338,7 @@ public class DirectoryService {
     }
 
     public void deleteElement(UUID elementUuid, String userId) {
-        ElementAttributes elementAttributes = toElementAttributes(getDirectoryElementEntity(elementUuid));
+        ElementAttributes elementAttributes = getElement(elementUuid);
 
         if (elementAttributes == null || !isElementUpdatable(elementAttributes, userId, true)) {
             throw new DirectoryException(NOT_ALLOWED);
@@ -400,8 +399,7 @@ public class DirectoryService {
     }
 
     public ElementAttributes getElement(UUID elementUuid) {
-        DirectoryElementEntity elementEntity = getElementEntity(elementUuid)
-                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
+        DirectoryElementEntity elementEntity = getDirectoryElementEntity(elementUuid);
         return toElementAttributes(elementEntity);
     }
 
