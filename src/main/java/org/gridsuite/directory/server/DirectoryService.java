@@ -86,25 +86,25 @@ public class DirectoryService {
     public Consumer<Message<String>> consumeStudyUpdate() {
         LOGGER.info(CATEGORY_BROKER_INPUT);
         return message -> {
-                    try {
-                        String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
-                        String error = message.getHeaders().get(HEADER_ERROR, String.class);
-                        String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                        if (studyUuidHeader != null) {
-                            UUID studyUuid = UUID.fromString(studyUuidHeader);
-                            UUID parentUuid = getParentUuid(studyUuid);
-                            Optional<DirectoryElementEntity> elementEntity = getElementEntity(studyUuid);
-                            String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
-                            if (error != null && elementName != null) {
-                                deleteElement(studyUuid, userId);
-                            }
-                            boolean isPrivate = isPrivateForNotification(parentUuid, isPrivateDirectory(studyUuid));
-                            emitDirectoryChanged(parentUuid, elementName, userId, error, isPrivate, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
-                        }
-                    } catch (Exception e) {
-                        LOGGER.error(e.toString(), e);
+            try {
+                String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
+                String error = message.getHeaders().get(HEADER_ERROR, String.class);
+                String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+                if (studyUuidHeader != null) {
+                    UUID studyUuid = UUID.fromString(studyUuidHeader);
+                    UUID parentUuid = getParentUuid(studyUuid);
+                    Optional<DirectoryElementEntity> elementEntity = getElementEntity(studyUuid);
+                    String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
+                    if (error != null && elementName != null) {
+                        deleteElement(studyUuid, userId);
                     }
-                };
+                    boolean isPrivate = isPrivateForNotification(parentUuid, isPrivateDirectory(studyUuid));
+                    emitDirectoryChanged(parentUuid, elementName, userId, error, isPrivate, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
+                }
+            } catch (Exception e) {
+                LOGGER.error(e.toString(), e);
+            }
+        };
     }
 
     private void sendUpdateMessage(Message<String> message) {
