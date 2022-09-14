@@ -399,8 +399,7 @@ public class DirectoryService {
     }
 
     public ElementAttributes getElement(UUID elementUuid) {
-        DirectoryElementEntity elementEntity = getDirectoryElementEntity(elementUuid);
-        return toElementAttributes(elementEntity);
+        return toElementAttributes(getDirectoryElementEntity(elementUuid));
     }
 
     private DirectoryElementEntity getDirectoryElementEntity(UUID elementUuid) {
