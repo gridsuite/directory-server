@@ -17,15 +17,16 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.config.EnableWebFlux;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,23 +35,33 @@ import java.util.stream.Collectors;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient
-@EnableWebFlux
+@AutoConfigureMockMvc
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class AccessRightsControlTest {
 
     @Autowired
-    ObjectMapper objectMapper;
+    private MockMvc mockMvc;
 
     @Autowired
-    private WebTestClient webTestClient;
+    ObjectMapper objectMapper;
 
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
@@ -61,7 +72,7 @@ public class AccessRightsControlTest {
     }
 
     @Test
-    public void testRootDirectories() {
+    public void testRootDirectories() throws Exception {
         checkRootDirectories("user1", List.of());
         checkRootDirectories("user2", List.of());
         checkRootDirectories("user3", List.of());
@@ -96,7 +107,7 @@ public class AccessRightsControlTest {
     }
 
     @Test
-    public void testElements() {
+    public void testElements() throws Exception {
         checkRootDirectories("user1", List.of());
         checkRootDirectories("user2", List.of());
 
@@ -139,7 +150,7 @@ public class AccessRightsControlTest {
     }
 
     @Test
-    public void testExistence() {
+    public void testExistence() throws Exception {
         // Insert root directory with same name not allowed
         UUID rootUuid1 = insertRootDirectory("user1", "root1", false);
         insertRootDirectory("user1", "root1", false, HttpStatus.FORBIDDEN);
@@ -151,73 +162,58 @@ public class AccessRightsControlTest {
         insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, true, "user1"), HttpStatus.FORBIDDEN);
     }
 
-    private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) {
-        return insertSubElement(parentDirectoryUUid, subElementAttributes, HttpStatus.OK)
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBody(ElementAttributes.class)
-            .returnResult()
-            .getResponseBody()
-            .getElementUuid();
+    private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
+        String response = insertSubElement(parentDirectoryUUid, subElementAttributes, HttpStatus.OK)
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readValue(response, ElementAttributes.class).getElementUuid();
     }
 
-    private WebTestClient.ResponseSpec insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes, HttpStatus expectedStatus) {
-        return webTestClient.post()
-            .uri("/v1/directories/" + parentDirectoryUUid + "/elements")
-            .header("userId", subElementAttributes.getOwner())
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(subElementAttributes)
-            .exchange()
-            .expectStatus()
-            .value(new IsEqual<>(expectedStatus.value()));
+    private MvcResult insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes, HttpStatus expectedStatus) throws Exception {
+        return mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
+                .header("userId", subElementAttributes.getOwner())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(subElementAttributes)))
+                .andExpect(status().is(new IsEqual<>(expectedStatus.value())))
+                .andReturn();
     }
 
-    private void deleteSubElement(UUID elementUUid, String userId, HttpStatus expectedStatus) {
-        webTestClient.delete()
-            .uri("/v1/elements/" + elementUUid)
-            .header("userId", userId)
-            .exchange()
-            .expectStatus()
-            .value(new IsEqual<>(expectedStatus.value()));
+    private void deleteSubElement(UUID elementUUid, String userId, HttpStatus expectedStatus) throws Exception {
+        mockMvc.perform(delete("/v1/elements/" + elementUUid).header("userId", userId))
+               .andExpect(status().is(new IsEqual<>(expectedStatus.value())));
     }
 
-    private void controlElementsAccess(String userId, List<UUID> uuids, HttpStatus expectedStatus) {
+    private void controlElementsAccess(String userId, List<UUID> uuids, HttpStatus expectedStatus) throws Exception {
         var ids = uuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        webTestClient.head()
-            .uri("/v1/elements?ids=" + ids)
-            .header("userId", userId)
-            .exchange()
-            .expectStatus()
-            .value(new IsEqual<>(expectedStatus.value()));
+        mockMvc.perform(head("/v1/elements?ids=" + ids).header("userId", userId))
+               .andExpect(status().is(new IsEqual<>(expectedStatus.value())));
     }
 
-    private void checkRootDirectories(String userId, List<ElementAttributes> list) {
-        webTestClient.get()
-            .uri("/v1/root-directories")
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(ElementAttributes.class)
-            .value(new MatcherJson<>(objectMapper, list));
+    private void checkRootDirectories(String userId, List<ElementAttributes> list) throws Exception {
+        String response = mockMvc.perform(get("/v1/root-directories").header("userId", userId)
+                                          .accept(MediaType.APPLICATION_JSON))
+                                 .andExpectAll(status().isOk(), content().contentType(APPLICATION_JSON_VALUE))
+                                 .andReturn()
+                                 .getResponse()
+                                 .getContentAsString();
+
+        List<ElementAttributes> elementAttributes = objectMapper.readerForListOf(ElementAttributes.class).readValue(response);
+        assertTrue(new MatcherJson<>(objectMapper, list).matchesSafely(elementAttributes));
     }
 
-    private UUID insertRootDirectory(String userId, String rootDirectoryName, boolean isPrivate) {
-        return insertRootDirectory(userId, rootDirectoryName, isPrivate,  HttpStatus.OK)
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBody(ElementAttributes.class)
-            .returnResult()
-            .getResponseBody()
-            .getElementUuid();
+    private UUID insertRootDirectory(String userId, String rootDirectoryName, boolean isPrivate) throws Exception {
+        MockHttpServletResponse response = insertRootDirectory(userId, rootDirectoryName, isPrivate,  HttpStatus.OK).getResponse();
+        assertNotNull(response);
+        assertEquals(APPLICATION_JSON_VALUE, response.getContentType());
+        return objectMapper.readValue(response.getContentAsString(), ElementAttributes.class).getElementUuid();
     }
 
-    private WebTestClient.ResponseSpec insertRootDirectory(String userId, String rootDirectoryName, boolean isPrivate, HttpStatus expectedStatus) {
-        return webTestClient.post()
-            .uri("/v1/root-directories")
-            .header("userId", userId)
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null))
-            .exchange()
-            .expectStatus()
-            .value(new IsEqual<>(expectedStatus.value()));
+    private MvcResult insertRootDirectory(String userId, String rootDirectoryName, boolean isPrivate, HttpStatus expectedStatus) throws Exception {
+        return mockMvc.perform(post("/v1/root-directories")
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null))))
+                .andExpect(status().is(new IsEqual<>(expectedStatus.value())))
+                .andReturn();
     }
 }
