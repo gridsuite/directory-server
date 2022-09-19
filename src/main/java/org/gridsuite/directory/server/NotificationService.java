@@ -6,7 +6,6 @@
  */
 package org.gridsuite.directory.server;
 
-import org.gridsuite.directory.server.utils.annotations.PostCompletion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +44,8 @@ public class NotificationService {
         studyUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
-    @PostCompletion
+    // Today we don't send notification inside @Transactional block. If this behavior change, we must make sure
+    // that notification is sent only when all the work inside @Transactional method is done
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, Boolean isPrivate, boolean isRoot, NotificationType notificationType) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
