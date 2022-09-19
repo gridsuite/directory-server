@@ -36,6 +36,9 @@ import static org.gridsuite.directory.server.DirectoryException.Type.IS_DIRECTOR
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
+import static org.gridsuite.directory.server.NotificationService.HEADER_ERROR;
+import static org.gridsuite.directory.server.NotificationService.HEADER_STUDY_UUID;
+import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 
 /**
@@ -50,16 +53,6 @@ public class DirectoryService {
     public static final String FILTER = "FILTER";
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
-    static final String HEADER_USER_ID = "userId";
-    static final String HEADER_UPDATE_TYPE = "updateType";
-    static final String UPDATE_TYPE_DIRECTORIES = "directories";
-    static final String HEADER_DIRECTORY_UUID = "directoryUuid";
-    static final String HEADER_IS_PUBLIC_DIRECTORY = "isPublicDirectory";
-    static final String HEADER_IS_ROOT_DIRECTORY = "isRootDirectory";
-    static final String HEADER_ERROR = "error";
-    static final String HEADER_STUDY_UUID = "studyUuid";
-    static final String HEADER_NOTIFICATION_TYPE = "notificationType";
-    private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
     private final DirectoryElementRepository directoryElementRepository;
