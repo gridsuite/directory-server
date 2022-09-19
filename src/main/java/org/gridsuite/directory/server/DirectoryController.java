@@ -16,8 +16,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.UUID;
@@ -40,7 +38,7 @@ public class DirectoryController {
     @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create root directory")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The created root directory"))
-    public ResponseEntity<Mono<ElementAttributes>> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes,
+    public ResponseEntity<ElementAttributes> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes,
                                                                        @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createRootDirectory(rootDirectoryAttributes, userId));
     }
@@ -49,7 +47,7 @@ public class DirectoryController {
     @Operation(summary = "Create an element in a directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
         @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
-    public ResponseEntity<Mono<ElementAttributes>> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
+    public ResponseEntity<ElementAttributes> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                  @RequestBody ElementAttributes elementAttributes,
                                                                  @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
@@ -60,9 +58,9 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List info of an element and its parents in order to get its path"),
         @ApiResponse(responseCode = "403", description = "Access forbidden for the element"),
         @ApiResponse(responseCode = "404", description = "The searched element was not found")})
-    public ResponseEntity<Mono<List<ElementAttributes>>> getPath(@PathVariable("elementUuid") UUID elementUuid,
+    public ResponseEntity<List<ElementAttributes>> getPath(@PathVariable("elementUuid") UUID elementUuid,
                                                                         @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Mono.fromCallable(() -> service.getPath(elementUuid, userId)));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")
@@ -71,15 +69,16 @@ public class DirectoryController {
         @ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),
     })
-    public ResponseEntity<Mono<Void>> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
+    public ResponseEntity<Void> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.deleteElement(elementUuid, userId));
+        service.deleteElement(elementUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get root directories")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The root directories"))
-    public ResponseEntity<Flux<ElementAttributes>> getRootDirectories(@RequestHeader(name = "userId") String userId) {
+    public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestHeader(name = "userId") String userId) {
         return ResponseEntity.ok().body(service.getRootDirectories(userId));
     }
 
@@ -89,15 +88,15 @@ public class DirectoryController {
         @ApiResponse(responseCode = "200", description = "The root directory exists"),
         @ApiResponse(responseCode = "204", description = "The root directory doesn't exist"),
     })
-    public ResponseEntity<Mono<Void>> rootDirectoryExists(@RequestParam("directoryName") String directoryName) {
+    public ResponseEntity<Void> rootDirectoryExists(@RequestParam("directoryName") String directoryName) {
         HttpStatus status = service.rootDirectoryExists(directoryName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
-        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(Mono.empty());
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
 
     @GetMapping(value = "/directories/{directoryUuid}/elements", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get directory elements")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
-    public ResponseEntity<Flux<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
+    public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                         @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId));
     }
@@ -108,7 +107,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "200", description = "The element information"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),
     })
-    public ResponseEntity<Mono<ElementAttributes>> getElement(@PathVariable("elementUuid") UUID elementUuid) {
+    public ResponseEntity<ElementAttributes> getElement(@PathVariable("elementUuid") UUID elementUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElement(elementUuid));
     }
 
@@ -118,7 +117,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "200", description = "The elements information"),
         @ApiResponse(responseCode = "404", description = "At least one item was not found"),
     })
-    public ResponseEntity<Flux<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
+    public ResponseEntity<List<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
                                                                @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
         return ResponseEntity.ok().body(service.getElements(ids, strictMode));
     }
@@ -130,9 +129,10 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "At least one element was not found"),
         @ApiResponse(responseCode = "403", description = "Access forbidden for at least one element")
     })
-    public ResponseEntity<Mono<Void>> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
+    public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                             @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.areElementsAccessible(userId, elementUuids));
+        service.areElementsAccessible(userId, elementUuids);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -142,10 +142,11 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
     })
-    public ResponseEntity<Mono<Void>> updateElement(@PathVariable("elementUuid") UUID elementUuid,
-                                                    @RequestBody ElementAttributes elementAttributes,
-                                                    @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.updateElement(elementUuid, elementAttributes, userId));
+    public ResponseEntity<Void> updateElement(@PathVariable("elementUuid") UUID elementUuid,
+                                              @RequestBody ElementAttributes elementAttributes,
+                                              @RequestHeader("userId") String userId) {
+        service.updateElement(elementUuid, elementAttributes, userId);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/elements/{elementUuid}", params = "newDirectory")
@@ -155,16 +156,17 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element or the targeted directory was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized execute this update")
     })
-    public ResponseEntity<Mono<Void>> updateElementDirectory(@PathVariable("elementUuid") UUID elementUuid,
+    public ResponseEntity<Void> updateElementDirectory(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestParam UUID newDirectory,
                                                     @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(Mono.fromRunnable(() -> service.updateElementDirectory(elementUuid, newDirectory, userId)));
+        service.updateElementDirectory(elementUuid, newDirectory, userId);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/directories/{directoryUuid}/{elementName}/newNameCandidate")
     @Operation(summary = "Get a free name in directory based on the one given and it's type")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the element exists or not")})
-    public ResponseEntity<Mono<String>> elementNameCandidate(@PathVariable("directoryUuid") UUID directoryUuid,
+    public ResponseEntity<String> elementNameCandidate(@PathVariable("directoryUuid") UUID directoryUuid,
                                                              @PathVariable("elementName") String elementName,
                                                              @RequestParam("type") String type,
                                                              @RequestHeader("userId") String userId) {
@@ -178,20 +180,21 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element was not found"),
         @ApiResponse(responseCode = "400", description = "The notification type is unknown")
     })
-    public ResponseEntity<Mono<Void>> notify(@PathVariable("elementUuid") UUID elementUuid,
+    public ResponseEntity<Void> notify(@PathVariable("elementUuid") UUID elementUuid,
                                              @RequestParam("type") String notificationType,
                                              @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.notify(notificationType, elementUuid, userId));
+        service.notify(notificationType, elementUuid, userId);
+        return ResponseEntity.ok().build();
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/directories/{directoryUuid}/elements/{elementName}/types/{type}")
     @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
         @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
-    public ResponseEntity<Mono<Void>> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
+    public ResponseEntity<Void> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
                                                     @PathVariable("type") String type) {
         HttpStatus status = service.elementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
-        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).body(Mono.empty());
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
 }

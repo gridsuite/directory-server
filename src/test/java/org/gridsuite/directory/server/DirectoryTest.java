@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import lombok.SneakyThrows;
@@ -13,6 +14,7 @@ import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.StudyService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
 import org.junit.After;
@@ -20,8 +22,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpStatus;
@@ -30,16 +33,34 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.config.EnableWebFlux;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
-import static org.gridsuite.directory.server.DirectoryService.*;
+import static org.gridsuite.directory.server.DirectoryService.CONTINGENCY_LIST;
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+import static org.gridsuite.directory.server.DirectoryService.FILTER;
+import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -48,8 +69,7 @@ import static org.junit.Assert.*;
  */
 
 @RunWith(SpringRunner.class)
-@AutoConfigureWebTestClient(timeout = "20000")
-@EnableWebFlux
+@AutoConfigureMockMvc
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class DirectoryTest {
@@ -65,7 +85,10 @@ public class DirectoryTest {
     ObjectMapper objectMapper;
 
     @Autowired
-    private WebTestClient webTestClient;
+    private MockMvc mockMvc;
+
+    @MockBean
+    private StudyService studyService;
 
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
@@ -83,7 +106,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void test() {
+    public void test() throws Exception {
         checkRootDirectoriesList("userId", List.of());
 
         // Insert a root directory
@@ -142,7 +165,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfStudy() {
+    public void testGetPathOfStudy() throws Exception {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -173,7 +196,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfFilter() {
+    public void testGetPathOfFilter() throws Exception {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -204,7 +227,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfNotAllowed() {
+    public void testGetPathOfNotAllowed() throws Exception {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -224,22 +247,18 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory2UUID, true, study1Attributes);
 
         // Trying to get path of forbidden element
-        webTestClient.get()
-            .uri("/v1/elements/" + filter1UUID + "/path")
-            .header("userId", "Unallowed User")
-            .exchange()
-            .expectStatus().isForbidden();
+        mockMvc.perform(get("/v1/elements/" + filter1UUID + "/path")
+                   .header("userId", "Unallowed User"))
+            .andExpect(status().isForbidden());
 
         // Trying to get path of forbidden element
-        webTestClient.get()
-            .uri("/v1/elements/" + directory2UUID + "/path")
-            .header("userId", "Unallowed User")
-            .exchange()
-            .expectStatus().isForbidden();
+        mockMvc.perform(get("/v1/elements/" + directory2UUID + "/path")
+                   .header("userId", "Unallowed User"))
+            .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testGetPathOfRootDir() {
+    public void testGetPathOfRootDir() throws Exception {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -254,20 +273,17 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfNotFound() {
+    public void testGetPathOfNotFound() throws Exception {
         UUID unknownElementUuid = UUID.randomUUID();
 
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
-        webTestClient.get()
-            .uri("/v1/elements/" + unknownElementUuid + "/path")
-            .header("userId", "user1")
-            .exchange()
-            .expectStatus().isNotFound();
+        mockMvc.perform(get("/v1/elements/" + unknownElementUuid + "/path")
+                .header("userId", "user1")).andExpect(status().isNotFound());
     }
 
     @Test
-    public void testTwoUsersTwoPublicDirectories() {
+    public void testTwoUsersTwoPublicDirectories() throws Exception {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
 
@@ -296,7 +312,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveElement() {
+    public void testMoveElement() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
 
         // Insert another public root20 directory
@@ -312,11 +328,9 @@ public class DirectoryTest {
         ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21UUID, false, filterAttributes);
 
-        webTestClient.put()
-            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isOk();
+        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+                .header("userId", "Doe"))
+                .andExpect(status().isOk());
 
         // assert that the broker message has been sent a root directory creation request message
         Message<byte[]> message = output.receive(1000);
@@ -344,7 +358,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveElementFromDifferentAccessRightsFolder() {
+    public void testMoveElementFromDifferentAccessRightsFolder() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
 
         // Insert another public root20 directory
@@ -360,15 +374,13 @@ public class DirectoryTest {
         ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21PrivateUUID, true, filterAttributes);
 
-        webTestClient.put()
-            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+                .header("userId", "Doe"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testMoveUnallowedElement() {
+    public void testMoveUnallowedElement() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", true, "Unallowed User");
 
         // Insert another public root20 directory
@@ -384,15 +396,13 @@ public class DirectoryTest {
         ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21PrivateUUID, true, filterAttributes);
 
-        webTestClient.put()
-            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
-            .header("userId", "Unallowed User")
-            .exchange()
-            .expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+                        .header("userId", "Unallowed User"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testMoveElementNotFound() {
+    public void testMoveElementNotFound() throws Exception {
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
 
         UUID filterUuid = UUID.randomUUID();
@@ -401,21 +411,17 @@ public class DirectoryTest {
 
         UUID unknownUuid = UUID.randomUUID();
 
-        webTestClient.put()
-            .uri("/v1/elements/" + unknownUuid + "?newDirectory=" + rootDir20Uuid)
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isNotFound();
+        mockMvc.perform(put("/v1/elements/" + unknownUuid + "?newDirectory=" + rootDir20Uuid)
+                        .header("userId", "Doe"))
+                .andExpect(status().isNotFound());
 
-        webTestClient.put()
-            .uri("/v1/elements/" + filterUuid + "?newDirectory=" + unknownUuid)
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isNotFound();
+        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + unknownUuid)
+                        .header("userId", "Doe"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    public void testMoveElementWithAlreadyExistingNameAndTypeInDestination() {
+    public void testMoveElementWithAlreadyExistingNameAndTypeInDestination() throws Exception {
         // Insert public root20 directory
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
 
@@ -434,15 +440,13 @@ public class DirectoryTest {
         ElementAttributes filterwithSameNameAndTypeAttributes = toElementAttributes(filterwithSameNameAndTypeUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21UUID, false, filterwithSameNameAndTypeAttributes);
 
-        webTestClient.put()
-            .uri("/v1/elements/" + filterwithSameNameAndTypeUuid + "?newDirectory=" + rootDir20Uuid)
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/elements/" + filterwithSameNameAndTypeUuid + "?newDirectory=" + rootDir20Uuid)
+                        .header("userId", "Doe"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testMoveElementToNotDirectory() {
+    public void testMoveElementToNotDirectory() throws Exception {
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
 
         UUID filter1Uuid = UUID.randomUUID();
@@ -453,15 +457,13 @@ public class DirectoryTest {
         ElementAttributes filter2Attributes = toElementAttributes(filter2Uuid, "filter2", FILTER, null, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, filter2Attributes);
 
-        webTestClient.put()
-            .uri("/v1/elements/" + filter1Uuid + "?newDirectory=" + filter2Uuid)
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/elements/" + filter1Uuid + "?newDirectory=" + filter2Uuid)
+                        .header("userId", "Doe"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testMoveDirectory() {
+    public void testMoveDirectory() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
 
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
@@ -470,15 +472,13 @@ public class DirectoryTest {
         ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
 
-        webTestClient.put()
-            .uri("/v1/elements/" + directory21UUID + "?newDirectory=" + rootDir10Uuid)
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/elements/" + directory21UUID + "?newDirectory=" + rootDir10Uuid)
+                        .header("userId", "Doe"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testMoveStudy() {
+    public void testMoveStudy() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
 
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
@@ -487,11 +487,9 @@ public class DirectoryTest {
         ElementAttributes study21Attributes = toElementAttributes(study21UUID, "Study21", STUDY, null, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, study21Attributes);
 
-        webTestClient.put()
-                .uri("/v1/elements/" + study21UUID + "?newDirectory=" + rootDir10Uuid)
-                .header("userId", "Doe")
-                .exchange()
-                .expectStatus().isOk();
+        mockMvc.perform(put("/v1/elements/" + study21UUID + "?newDirectory=" + rootDir10Uuid)
+                        .header("userId", "Doe"))
+                .andExpect(status().isOk());
 
         // assert that the broker message has been sent a update notification on directory
         Message<byte[]> message = output.receive(1000);
@@ -516,7 +514,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveRootDirectory() {
+    public void testMoveRootDirectory() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
 
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
@@ -525,15 +523,13 @@ public class DirectoryTest {
         ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
 
-        webTestClient.put()
-            .uri("/v1/elements/" + rootDir10Uuid + "?newDirectory=" + rootDir20Uuid)
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isForbidden();
+        mockMvc.perform(put("/v1/elements/" + rootDir10Uuid + "?newDirectory=" + rootDir20Uuid)
+                        .header("userId", "Doe"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testTwoUsersOnePublicOnePrivateDirectories() {
+    public void testTwoUsersOnePublicOnePrivateDirectories() throws Exception {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
         // Insert a root directory user1
@@ -556,7 +552,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoPrivateDirectories() {
+    public void testTwoUsersTwoPrivateDirectories() throws Exception {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
         // Insert a root directory user1
@@ -574,7 +570,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoStudiesInPublicDirectory() {
+    public void testTwoUsersTwoStudiesInPublicDirectory() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -604,7 +600,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersElementsWithSameName() {
+    public void testTwoUsersElementsWithSameName() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -636,7 +632,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoStudies() {
+    public void testTwoUsersTwoStudies() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -667,7 +663,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRecursiveDelete() {
+    public void testRecursiveDelete() throws Exception {
         checkRootDirectoriesList("userId", List.of());
 
         // Insert a private root directory user1
@@ -701,7 +697,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameStudy() {
+    public void testRenameStudy() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -716,7 +712,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameStudyToSameName() {
+    public void testRenameStudyToSameName() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -732,7 +728,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameStudyForbiddenFail() {
+    public void testRenameStudyForbiddenFail() throws Exception {
         checkRootDirectoriesList("user1", List.of());
 
         // Insert a public root directory user1
@@ -748,7 +744,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameElementWithSameNameAndTypeInSameDirectory() {
+    public void testRenameElementWithSameNameAndTypeInSameDirectory() throws Exception {
         // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
@@ -765,7 +761,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameDirectoryNotAllowed() {
+    public void testRenameDirectoryNotAllowed() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -777,7 +773,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testUpdateStudyAccessRight() {
+    public void testUpdateStudyAccessRight() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -793,7 +789,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testUpdateDirectoryAccessRight() {
+    public void testUpdateDirectoryAccessRight() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -823,11 +819,9 @@ public class DirectoryTest {
         ElementAttributes contingencyListAttributes = toElementAttributes(UUID.randomUUID(), "CL1", CONTINGENCY_LIST, null, "Doe");
         insertAndCheckSubElement(rootDirUuid, false, contingencyListAttributes);
 
-        webTestClient.post()
-            .uri(String.format("/v1/elements/%s/notification?type=update_directory", contingencyListAttributes.getElementUuid()))
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isOk();
+        mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=update_directory", contingencyListAttributes.getElementUuid()))
+                        .header("userId", "Doe"))
+                .andExpect(status().isOk());
 
         // assert that the broker message has been sent a root directory creation request message
         Message<byte[]> message = output.receive(1000);
@@ -841,13 +835,10 @@ public class DirectoryTest {
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
 
         // Test unknown type notification
-        webTestClient.post()
-            .uri(String.format("/v1/elements/%s/notification?type=bad_type", contingencyListAttributes.getElementUuid()))
-            .header("userId", "Doe")
-            .exchange()
-            .expectStatus().isBadRequest()
-            .expectBody(String.class)
-            .value(new IsEqual<>(objectMapper.writeValueAsString(UNKNOWN_NOTIFICATION)));
+        mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=bad_type", contingencyListAttributes.getElementUuid()))
+                        .header("userId", "Doe"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(new IsEqual<>(objectMapper.writeValueAsString(UNKNOWN_NOTIFICATION))));
     }
 
     @SneakyThrows
@@ -940,7 +931,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRootDirectoryExists() {
+    public void testRootDirectoryExists() throws Exception {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
 
@@ -955,26 +946,25 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testCreateDirectoryWithEmptyName() {
+    public void testCreateDirectoryWithEmptyName() throws Exception {
         // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
 
         // Insert a directory with empty name in the root directory and expect a 403
         ElementAttributes directoryWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", DIRECTORY, null, "user1");
         insertExpectFail(rootDirUuid, directoryWithoutNameAttributes);
+        String requestBody = objectMapper.writeValueAsString(new RootDirectoryAttributes("", new AccessRightsAttributes(false), "userId", null));
 
-     // Insert a public root directory user1 with empty name and expect 403
-        webTestClient.post()
-                .uri("/v1/root-directories")
-                .header("userId", "user1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(new RootDirectoryAttributes("", new AccessRightsAttributes(false), "userId", null))
-                .exchange()
-                .expectStatus().isForbidden();
+        // Insert a public root directory user1 with empty name and expect 403
+        mockMvc.perform(post(String.format("/v1/root-directories"))
+                        .header("userId", "user1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testCreateElementWithEmptyName() {
+    public void testCreateElementWithEmptyName() throws Exception {
      // Insert a public root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
 
@@ -987,42 +977,41 @@ public class DirectoryTest {
         insertExpectFail(rootDirUuid, filterWithoutNameAttributes);
     }
 
-    private List<ElementAttributes> getPath(UUID elementUuid, String userId) {
-        return webTestClient.get()
-            .uri("/v1/elements/" + elementUuid + "/path")
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(ElementAttributes.class)
-            .returnResult()
-            .getResponseBody();
+    private List<ElementAttributes> getPath(UUID elementUuid, String userId) throws Exception {
+        String response = mockMvc.perform(get("/v1/elements/" + elementUuid + "/path")
+                        .header("userId", userId))
+                .andExpect(status().isOk())
+                .andExpectAll(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return objectMapper.readValue(response, new TypeReference<>() {
+        });
     }
 
-    private void checkRootDirectoriesList(String userId, List<ElementAttributes> list) {
-        webTestClient.get()
-            .uri("/v1/root-directories")
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(ElementAttributes.class)
-            .value(new MatcherJson<>(objectMapper, list));
+    private void checkRootDirectoriesList(String userId, List<ElementAttributes> list) throws Exception {
+        String response = mockMvc.perform(get("/v1/root-directories").header("userId", userId))
+                             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                             .andReturn()
+                            .getResponse()
+                            .getContentAsString();
+
+        List<ElementAttributes> elementAttributes = objectMapper.readValue(response, new TypeReference<>() {
+        });
+        assertTrue(new MatcherJson<>(objectMapper, list).matchesSafely(elementAttributes));
     }
 
-    private UUID insertAndCheckRootDirectory(String rootDirectoryName, boolean isPrivate, String userId) {
-        WebTestClient.BodySpec<ElementAttributes, ?> result = webTestClient.post()
-            .uri("/v1/root-directories")
-            .header("userId", userId)
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null))
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBody(ElementAttributes.class);
+    private UUID insertAndCheckRootDirectory(String rootDirectoryName, boolean isPrivate, String userId) throws Exception {
+        String response = mockMvc.perform(post("/v1/root-directories")
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null))))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
-        UUID uuidNewDirectory = Objects.requireNonNull(result.returnResult().getResponseBody()).getElementUuid();
-        result.value(new MatcherJson<>(objectMapper, toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, isPrivate, userId)));
+        UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getElementUuid();
 
         assertElementIsProperlyInserted(toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, isPrivate, userId));
 
@@ -1040,45 +1029,41 @@ public class DirectoryTest {
         return uuidNewDirectory;
     }
 
-    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, int httpCodeExpected) {
+    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, int httpCodeExpected) throws Exception {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+
         // Insert a sub-element of type DIRECTORY
         if (httpCodeExpected == 200) {
-            return webTestClient.get()
-                .uri("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
-                .header("userId", userId)
-                .exchange()
-                .expectStatus().isOk()
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
-                .expectBodyList(ElementAttributes.class)
-                .returnResult()
-                .getResponseBody();
+            MvcResult result = mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
+                    .header("userId", userId))
+                    .andExpectAll(status().isOk(),
+                            content().contentType(MediaType.APPLICATION_JSON))
+                    .andReturn();
+            return objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<ElementAttributes>>() {
+            });
         } else if (httpCodeExpected == 404) {
-            webTestClient.get()
-                .uri("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
-                .header("userId", userId)
-                .exchange()
-                .expectStatus().isNotFound();
+            mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
+                            .header("userId", userId))
+                    .andExpectAll(status().isNotFound());
         } else {
             fail("unexpected case");
         }
         return Collections.emptyList();
     }
 
-    private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) {
+    private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) throws Exception {
         // Insert a sub-element of type DIRECTORY
-        WebTestClient.BodySpec<ElementAttributes, ?> result = webTestClient.post()
-            .uri("/v1/directories/" + parentDirectoryUUid + "/elements")
-            .header("userId", subElementAttributes.getOwner())
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(subElementAttributes)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBody(ElementAttributes.class);
+        MvcResult response = mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
+                        .header("userId", subElementAttributes.getOwner())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(subElementAttributes)))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
 
-        subElementAttributes.setElementUuid(Objects.requireNonNull(result.returnResult().getResponseBody()).getElementUuid());
-        result.value(new MatcherJson<>(objectMapper, subElementAttributes));
+        UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class)
+                .getElementUuid();
+
+        subElementAttributes.setElementUuid(uuidNewDirectory);
 
         // assert that the broker message has been sent an element creation request message
         Message<byte[]> message = output.receive(1000);
@@ -1094,25 +1079,21 @@ public class DirectoryTest {
         assertElementIsProperlyInserted(subElementAttributes);
     }
 
-    private void insertExpectFail(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) {
+    private void insertExpectFail(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
         // Insert a sub-element of type DIRECTORY and expect 403 forbidden
-        webTestClient.post()
-                .uri("/v1/directories/" + parentDirectoryUUid + "/elements")
+        mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
                 .header("userId", subElementAttributes.getOwner())
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(subElementAttributes)
-                .exchange()
-                .expectStatus().isForbidden();
+                .content(objectMapper.writeValueAsString(subElementAttributes)))
+            .andExpect(status().isForbidden());
     }
 
-    private void renameElement(UUID elementUuidToRename, UUID elementUuidHeader, String userId, String newName, boolean isRoot, boolean isPrivate) {
-        webTestClient.put()
-            .uri(String.format("/v1/elements/%s", elementUuidToRename))
-            .header("userId", userId)
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(ElementAttributes.builder().elementName(newName).build())
-            .exchange()
-            .expectStatus().isOk();
+    private void renameElement(UUID elementUuidToRename, UUID elementUuidHeader, String userId, String newName, boolean isRoot, boolean isPrivate) throws Exception {
+        mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToRename))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(ElementAttributes.builder().elementName(newName).build())))
+            .andExpect(status().isOk());
 
         // assert that the broker message has been sent a notif for rename
         Message<byte[]> message = output.receive(1000);
@@ -1126,36 +1107,30 @@ public class DirectoryTest {
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
     }
 
-    private void renameElementExpectFail(UUID elementUuidToRename, String userId, String newName, int httpCodeExpected) {
+    private void renameElementExpectFail(UUID elementUuidToRename, String userId, String newName, int httpCodeExpected) throws Exception {
         if (httpCodeExpected == 403) {
-            webTestClient.put()
-                .uri(String.format("/v1/elements/%s", elementUuidToRename))
-                .header("userId", userId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(ElementAttributes.builder().elementName(newName).build())
-                .exchange()
-                .expectStatus().isForbidden();
+            mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToRename))
+                    .header("userId", userId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(ElementAttributes.builder().elementName(newName).build())))
+                .andExpect(status().isForbidden());
         } else if (httpCodeExpected == 404) {
-            webTestClient.put()
-                .uri(String.format("/v1/elements/%s", elementUuidToRename))
-                .header("userId", userId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(ElementAttributes.builder().elementName(newName).build())
-                .exchange()
-                .expectStatus().isNotFound();
+            mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToRename))
+                            .header("userId", userId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(ElementAttributes.builder().elementName(newName).build())))
+                    .andExpect(status().isNotFound());
         } else {
             fail("unexpected case");
         }
     }
 
-    private void updateAccessRights(UUID elementUuidToUpdate, UUID elementUuidHeader, String userId, boolean newIsPrivate, boolean isRoot, boolean isPrivate) {
-        webTestClient.put()
-            .uri(String.format("/v1/elements/%s", elementUuidToUpdate))
-            .header("userId", userId)
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())
-            .exchange()
-            .expectStatus().isOk();
+    private void updateAccessRights(UUID elementUuidToUpdate, UUID elementUuidHeader, String userId, boolean newIsPrivate, boolean isRoot, boolean isPrivate) throws Exception {
+        mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToUpdate))
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())))
+                .andExpect(status().isOk());
 
         // assert that the broker message has been sent a notif for rename
         Message<byte[]> message = output.receive(1000);
@@ -1169,82 +1144,71 @@ public class DirectoryTest {
         assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
     }
 
-    private void updateAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) {
+    private void updateAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) throws Exception {
         if (httpCodeExpected == 403) {
-            webTestClient.put()
-                .uri(String.format("/v1/elements/%s", elementUuidToUpdate))
-                .header("userId", userId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())
-                .exchange()
-                .expectStatus().isForbidden();
+            mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToUpdate))
+                            .header("userId", userId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())))
+                    .andExpect(status().isForbidden());
         } else if (httpCodeExpected == 404) {
-            webTestClient.put()
-                .uri(String.format("/v1/elements/%s", elementUuidToUpdate))
-                .header("userId", userId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())
-                .exchange()
-                .expectStatus().isNotFound();
+            mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToUpdate))
+                            .header("userId", userId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(ElementAttributes.builder().accessRights(new AccessRightsAttributes(newIsPrivate)).build())))
+                    .andExpect(status().isNotFound());
         } else {
             fail("unexpected case");
         }
     }
 
-    private void assertDirectoryIsEmpty(UUID uuidDir, String userId) {
-        webTestClient.get()
-            .uri("/v1/directories/" + uuidDir + "/elements")
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(ElementAttributes.class)
-            .value(new MatcherJson<>(objectMapper, List.of()));
+    private void assertDirectoryIsEmpty(UUID uuidDir, String userId) throws Exception {
+        MvcResult result = mockMvc.perform(get("/v1/directories/" + uuidDir + "/elements")
+                                      .header("userId", userId))
+                              .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                              .andReturn();
+        objectMapper.readerForListOf(ElementAttributes.class).readValue(result.getResponse().getContentAsString());
     }
 
-    private void assertElementIsProperlyInserted(ElementAttributes elementAttributes) {
-        webTestClient.get()
-            .uri("/v1/elements/" + elementAttributes.getElementUuid())
-            .header("userId", "userId")
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(ElementAttributes.class)
-            .value(new MatcherJson<>(objectMapper, List.of(elementAttributes)));
+    private void assertElementIsProperlyInserted(ElementAttributes elementAttributes) throws Exception {
+        String response = mockMvc.perform(get("/v1/elements/" + elementAttributes.getElementUuid())
+                        .header("userId", "userId"))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        ElementAttributes result = objectMapper.readValue(response, new TypeReference<>() {
+        });
+        assertTrue(new MatcherJson<>(objectMapper, elementAttributes).matchesSafely(result));
     }
 
-    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementAttributes> list) {
-        webTestClient.get()
-            .uri("/v1/directories/" + parentDirectoryUuid + "/elements")
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
-            .expectBodyList(ElementAttributes.class)
-            .value(new MatcherJson<>(objectMapper, list));
+    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementAttributes> list) throws Exception {
+        String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements")
+                .header("userId", userId))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        List<ElementAttributes> result = objectMapper.readValue(response, new TypeReference<>() {
+        });
+        assertTrue(new MatcherJson<>(objectMapper, list).matchesSafely(result));
     }
 
-    private void checkElementNotFound(UUID elementUuid, String userId) {
-        webTestClient.get()
-            .uri("/v1/elements/" + elementUuid)
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isNotFound();
+    private void checkElementNotFound(UUID elementUuid, String userId) throws Exception {
+        mockMvc.perform(get("/v1/elements/" + elementUuid)
+                .header("userId", userId))
+                        .andExpect(status().isNotFound());
     }
 
-    private void checkElementNameExistInDirectory(UUID parentDirectoryUuid, String elementName, String type, HttpStatus expectedStatus) {
-        webTestClient.head()
-            .uri(String.format("/v1/directories/%s/elements/%s/types/%s", parentDirectoryUuid, elementName, type))
-            .exchange()
-            .expectStatus().isEqualTo(expectedStatus);
+    private void checkElementNameExistInDirectory(UUID parentDirectoryUuid, String elementName, String type, HttpStatus expectedStatus) throws Exception {
+        mockMvc.perform(head(String.format("/v1/directories/%s/elements/%s/types/%s", parentDirectoryUuid, elementName, type)))
+                        .andExpect(status().is(expectedStatus.value()));
     }
 
-    private void deleteElement(UUID elementUuidToBeDeleted, UUID elementUuidHeader, String userId, boolean isRoot, boolean isPrivate) {
-        webTestClient.delete()
-            .uri("/v1/elements/" + elementUuidToBeDeleted)
-            .header("userId", userId)
-            .exchange()
-            .expectStatus().isOk();
+    private void deleteElement(UUID elementUuidToBeDeleted, UUID elementUuidHeader, String userId, boolean isRoot, boolean isPrivate) throws Exception {
+        mockMvc.perform(delete("/v1/elements/" + elementUuidToBeDeleted)
+                .header("userId", userId))
+                        .andExpect(status().isOk());
 
         // assert that the broker message has been sent a delete
         Message<byte[]> message = output.receive(1000);
@@ -1258,37 +1222,30 @@ public class DirectoryTest {
         assertEquals(isRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
     }
 
-    private void deleteElementFail(UUID elementUuidToBeDeleted, String userId, int httpCodeExpected) {
+    private void deleteElementFail(UUID elementUuidToBeDeleted, String userId, int httpCodeExpected) throws Exception {
         if (httpCodeExpected == 403) {
-            webTestClient.delete()
-                .uri("/v1/elements/" + elementUuidToBeDeleted)
-                .header("userId", userId)
-                .exchange()
-                .expectStatus().isForbidden();
+            mockMvc.perform(delete("/v1/elements/" + elementUuidToBeDeleted)
+                    .header("userId", userId))
+                            .andExpect(status().isForbidden());
         } else {
             fail("unexpected case");
         }
     }
 
-    private void checkRootDirectoryExists(String rootDirectoryName) {
-        webTestClient.head()
-            .uri("/v1/root-directories?directoryName=" + rootDirectoryName)
-            .exchange()
-            .expectStatus().isOk();
+    private void checkRootDirectoryExists(String rootDirectoryName) throws Exception {
+        mockMvc.perform(head("/v1/root-directories?directoryName=" + rootDirectoryName))
+                        .andExpect(status().isOk());
     }
 
-    private void checkRootDirectoryNotExists(String rootDirectoryName) {
-        webTestClient.head()
-            .uri("/v1/root-directories?directoryName=" + rootDirectoryName)
-            .exchange()
-            .expectStatus().isNoContent();
+    private void checkRootDirectoryNotExists(String rootDirectoryName) throws Exception {
+        mockMvc.perform(head("/v1/root-directories?directoryName=" + rootDirectoryName))
+                        .andExpect(status().isNoContent());
     }
 
-    private String candidateName(UUID directoryUUid, String originalName, String type) {
-        return webTestClient.get().uri("/v1/directories/" + directoryUUid + "/"
-            + originalName + "/newNameCandidate?type=" + type)
-            .header("userId", "userId")
-            .exchange().returnResult(String.class).getResponseBody().blockFirst();
+    private String candidateName(UUID directoryUUid, String originalName, String type) throws Exception {
+        return mockMvc.perform(get("/v1/directories/" + directoryUUid + "/" + originalName + "/newNameCandidate?type=" + type)
+                               .header("userId", "userId"))
+                      .andReturn().getResponse().getContentAsString();
     }
 
     @SneakyThrows
@@ -1297,9 +1254,9 @@ public class DirectoryTest {
 
         var directoryId = insertAndCheckRootDirectory("newDir", true, "userId");
 
-        webTestClient.get().uri("/v1/directories/" + directoryId + "/"
-                + "pouet" + "/newNameCandidate?type=" + STUDY)
-            .header("userId", "youplaboum").exchange().expectStatus().isForbidden();
+        mockMvc.perform(get("/v1/directories/" + directoryId + "/" + "pouet" + "/newNameCandidate?type=" + STUDY)
+                .header("userId", "youplaboum"))
+            .andExpect(status().isForbidden());
 
         var name = "newStudy";
         // check when no elements is corresponding (empty folder
