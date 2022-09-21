@@ -96,10 +96,6 @@ public class DirectoryService {
         };
     }
 
-    private void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, Boolean isPrivate, boolean isRoot, NotificationType notificationType) {
-        notificationService.emitDirectoryChanged(directoryUuid, elementName, userId, null, isPrivate, isRoot, notificationType);
-    }
-
     /* methods */
     public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
         if (elementAttributes.getElementName().isBlank()) {
@@ -110,12 +106,17 @@ public class DirectoryService {
         assertAccessibleDirectory(parentDirectoryUuid, userId);
         ElementAttributes result = insertElement(elementAttributes, parentDirectoryUuid);
         var isCurrentElementPrivate = elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null;
-        emitDirectoryChanged(parentDirectoryUuid,
-                             elementAttributes.getElementName(),
-                             userId,
-                             isPrivateForNotification(parentDirectoryUuid, isCurrentElementPrivate),
-                            false,
-                             NotificationType.UPDATE_DIRECTORY);
+
+        notificationService.emitDirectoryChanged(
+                parentDirectoryUuid,
+                elementAttributes.getElementName(),
+                userId,
+                null,
+                isPrivateForNotification(parentDirectoryUuid, isCurrentElementPrivate),
+                false,
+                NotificationType.UPDATE_DIRECTORY
+        );
+
         return result;
     }
 
@@ -159,7 +160,17 @@ public class DirectoryService {
 
         assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName());
         ElementAttributes elementAttributes = insertElement(toElementAttributes(rootDirectoryAttributes), null);
-        emitDirectoryChanged(elementAttributes.getElementUuid(), elementAttributes.getElementName(), userId, elementAttributes.getAccessRights().isPrivate(), true, NotificationType.ADD_DIRECTORY);
+
+        notificationService.emitDirectoryChanged(
+                elementAttributes.getElementUuid(),
+                elementAttributes.getElementName(),
+                userId,
+                null,
+                elementAttributes.getAccessRights().isPrivate(),
+                true,
+                NotificationType.ADD_DIRECTORY
+        );
+
         return elementAttributes;
     }
 
@@ -214,15 +225,17 @@ public class DirectoryService {
         }
 
         DirectoryElementEntity elementEntity = directoryElementRepository.save(directoryElement.update(newElementAttributes));
-        emitDirectoryChanged(
+
+        notificationService.emitDirectoryChanged(
                 elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
                 elementEntity.getName(),
                 userId,
-                // second parameter should be always false when we change the access mode of a folder because we should notify all clients
+                null,
                 isPrivateForNotification(elementEntity.getParentId(), false),
                 elementEntity.getParentId() == null,
                 NotificationType.UPDATE_DIRECTORY
         );
+
         //true if we updated a study name
         if (elementEntity.getType().equals(STUDY) && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
             studyService.notifyStudyUpdate(elementUuid, userId);
@@ -265,22 +278,24 @@ public class DirectoryService {
         element.setParentId(newDirectoryUuid);
         directoryElementRepository.save(element);
 
-        emitDirectoryChanged(
-            element.getParentId(),
-            element.getName(),
-            userId,
-            isPrivateForNotification(element.getParentId(), false),
-            isRootDirectory(element.getId()),
-            NotificationType.UPDATE_DIRECTORY
+        notificationService.emitDirectoryChanged(
+                element.getParentId(),
+                element.getName(),
+                userId,
+                null,
+                isPrivateForNotification(element.getParentId(), false),
+                isRootDirectory(element.getId()),
+                NotificationType.UPDATE_DIRECTORY
         );
 
-        emitDirectoryChanged(
-            oldDirectory.getId(),
-            element.getName(),
-            userId,
-            isPrivateForNotification(oldDirectory.getId(), false),
-            isRootDirectory(element.getId()),
-            NotificationType.UPDATE_DIRECTORY
+        notificationService.emitDirectoryChanged(
+                oldDirectory.getId(),
+                element.getName(),
+                userId,
+                null,
+                isPrivateForNotification(oldDirectory.getId(), false),
+                isRootDirectory(element.getId()),
+                NotificationType.UPDATE_DIRECTORY
         );
 
         if (element.getType().equals(STUDY)) {
@@ -318,8 +333,16 @@ public class DirectoryService {
         deleteObject(elementAttributes);
         var isCurrentElementPrivate = elementAttributes.getAccessRights() != null ? elementAttributes.getAccessRights().isPrivate() : null;
         boolean isPrivate = isPrivateForNotification(parentUuid, isCurrentElementPrivate);
-        emitDirectoryChanged(parentUuid == null ? elementUuid : parentUuid, elementAttributes.getElementName(), userId, isPrivate, parentUuid == null,
-                parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY);
+
+        notificationService.emitDirectoryChanged(
+                parentUuid == null ? elementUuid : parentUuid,
+                elementAttributes.getElementName(),
+                userId,
+                null,
+                isPrivate,
+                parentUuid == null,
+                parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY
+        );
     }
 
     private void deleteObject(ElementAttributes elementAttributes) {
@@ -462,9 +485,25 @@ public class DirectoryService {
         UUID parentUuid = getParentUuid(elementUuid);
         if (elementAttributes.getAccessRights().isPrivate() == null) {
             ElementAttributes parentDirectory = getElement(parentUuid);
-            emitDirectoryChanged(parentUuid, elementAttributes.getElementName(), userId, parentDirectory.getAccessRights().isPrivate(), parentUuid == null, NotificationType.UPDATE_DIRECTORY);
+            notificationService.emitDirectoryChanged(
+                    parentUuid,
+                    elementAttributes.getElementName(),
+                    userId,
+                    null,
+                    parentDirectory.getAccessRights().isPrivate(),
+                    parentUuid == null,
+                    NotificationType.UPDATE_DIRECTORY
+            );
         } else {
-            emitDirectoryChanged(parentUuid, elementAttributes.getElementName(), userId, elementAttributes.getAccessRights().isPrivate(), parentUuid == null, NotificationType.UPDATE_DIRECTORY);
+            notificationService.emitDirectoryChanged(
+                    parentUuid,
+                    elementAttributes.getElementName(),
+                    userId,
+                    null,
+                    elementAttributes.getAccessRights().isPrivate(),
+                    parentUuid == null,
+                    NotificationType.UPDATE_DIRECTORY
+            );
         }
     }
 

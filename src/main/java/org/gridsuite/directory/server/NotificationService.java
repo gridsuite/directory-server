@@ -21,6 +21,8 @@ import java.util.UUID;
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 
+// Today we don't send notification inside @Transactional block. If this behavior change, we must make sure
+// that notification is sent only when all the work inside @Transactional method is done
 @Service
 public class NotificationService {
     public static final String HEADER_USER_ID = "userId";
@@ -44,8 +46,6 @@ public class NotificationService {
         studyUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
-    // Today we don't send notification inside @Transactional block. If this behavior change, we must make sure
-    // that notification is sent only when all the work inside @Transactional method is done
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, Boolean isPrivate, boolean isRoot, NotificationType notificationType) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
