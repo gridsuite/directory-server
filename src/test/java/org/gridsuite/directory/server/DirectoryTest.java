@@ -49,6 +49,13 @@ import static org.gridsuite.directory.server.DirectoryService.CONTINGENCY_LIST;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.FILTER;
 import static org.gridsuite.directory.server.DirectoryService.STUDY;
+import static org.gridsuite.directory.server.NotificationService.HEADER_DIRECTORY_UUID;
+import static org.gridsuite.directory.server.NotificationService.HEADER_IS_PUBLIC_DIRECTORY;
+import static org.gridsuite.directory.server.NotificationService.HEADER_IS_ROOT_DIRECTORY;
+import static org.gridsuite.directory.server.NotificationService.HEADER_NOTIFICATION_TYPE;
+import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
+import static org.gridsuite.directory.server.NotificationService.UPDATE_TYPE_DIRECTORIES;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -336,23 +343,23 @@ public class DirectoryTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(rootDir10Uuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a root directory creation request message
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(directory21UUID, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(directory21UUID, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         checkElementNameExistInDirectory(rootDir10Uuid, "filter", FILTER, HttpStatus.OK);
     }
@@ -495,22 +502,22 @@ public class DirectoryTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(rootDir10Uuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
-        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(rootDir20Uuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(rootDir20Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
 
     @Test
@@ -827,12 +834,12 @@ public class DirectoryTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals("Doe", headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(rootDirUuid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(rootDirUuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         // Test unknown type notification
         mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=bad_type", contingencyListAttributes.getElementUuid()))
@@ -1019,12 +1026,12 @@ public class DirectoryTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(uuidNewDirectory, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(true, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.ADD_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(uuidNewDirectory, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.ADD_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         return uuidNewDirectory;
     }
@@ -1069,12 +1076,12 @@ public class DirectoryTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(subElementAttributes.getOwner(), headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(parentDirectoryUUid, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(false, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(!isParentPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals(subElementAttributes.getOwner(), headers.get(HEADER_USER_ID));
+        assertEquals(parentDirectoryUUid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isParentPrivate, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         assertElementIsProperlyInserted(subElementAttributes);
     }
@@ -1099,12 +1106,12 @@ public class DirectoryTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(elementUuidHeader, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(elementUuidHeader, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(isRoot, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
 
     private void renameElementExpectFail(UUID elementUuidToRename, String userId, String newName, int httpCodeExpected) throws Exception {
@@ -1136,12 +1143,12 @@ public class DirectoryTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(elementUuidHeader, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(elementUuidHeader, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(isRoot, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
 
     private void updateAccessRightFail(UUID elementUuidToUpdate, String userId, boolean newIsPrivate, int httpCodeExpected) throws Exception {
@@ -1214,12 +1221,12 @@ public class DirectoryTest {
         Message<byte[]> message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(DirectoryService.HEADER_USER_ID));
-        assertEquals(elementUuidHeader, headers.get(DirectoryService.HEADER_DIRECTORY_UUID));
-        assertEquals(isRoot, headers.get(DirectoryService.HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(!isPrivate, headers.get(DirectoryService.HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(DirectoryService.UPDATE_TYPE_DIRECTORIES, headers.get(DirectoryService.HEADER_UPDATE_TYPE));
-        assertEquals(isRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(DirectoryService.HEADER_NOTIFICATION_TYPE));
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(elementUuidHeader, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(isRoot, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(!isPrivate, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(isRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
     }
 
     private void deleteElementFail(UUID elementUuidToBeDeleted, String userId, int httpCodeExpected) throws Exception {
