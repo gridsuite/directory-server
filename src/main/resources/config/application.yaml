@@ -14,4 +14,6 @@ spring:
           group: directoryStudyUpdateGroup
       source: publishDirectoryUpdate
 
-dbName: directory
+powsybl-ws:
+  database:
+    name: directory

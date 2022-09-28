@@ -5,6 +5,10 @@ spring:
   rabbitmq:
     addresses: localhost
 
+powsybl-ws:
+  database:
+    host: localhost
+
 backing-services:
   study-server:
     base-uri: http://localhost:5001
