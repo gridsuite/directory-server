@@ -23,7 +23,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findAllByParentId(UUID parentId);
 
-    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND (d.isPrivate='false' or d.owner=:owner)")
+    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND (d.isPrivate=false or d.owner=:owner)")
     List<DirectoryElementEntity> findRootDirectoriesByUserId(String owner);
 
     @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND d.name=:name")
