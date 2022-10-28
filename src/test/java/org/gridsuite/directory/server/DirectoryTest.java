@@ -49,13 +49,7 @@ import static org.gridsuite.directory.server.DirectoryService.CONTINGENCY_LIST;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.FILTER;
 import static org.gridsuite.directory.server.DirectoryService.STUDY;
-import static org.gridsuite.directory.server.NotificationService.HEADER_DIRECTORY_UUID;
-import static org.gridsuite.directory.server.NotificationService.HEADER_IS_PUBLIC_DIRECTORY;
-import static org.gridsuite.directory.server.NotificationService.HEADER_IS_ROOT_DIRECTORY;
-import static org.gridsuite.directory.server.NotificationService.HEADER_NOTIFICATION_TYPE;
-import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
-import static org.gridsuite.directory.server.NotificationService.UPDATE_TYPE_DIRECTORIES;
+import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -133,11 +127,11 @@ public class DirectoryTest {
         checkElementNameExistInDirectory(uuidNewDirectory, "tutu", STUDY, HttpStatus.NO_CONTENT);
 
         // Delete the sub-directory newSubDir
-        deleteElement(subDirAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false);
+        deleteElement(subDirAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false, false, 0);
         checkDirectoryContent(uuidNewDirectory, "userId", List.of(subEltAttributes));
 
         // Delete the sub-element newStudy
-        deleteElement(subEltAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false);
+        deleteElement(subEltAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false, true, 0);
         assertDirectoryIsEmpty(uuidNewDirectory, "userId");
 
         // Rename the root directory
@@ -164,7 +158,7 @@ public class DirectoryTest {
         // Test children number of root directory
         checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, null)));
 
-        deleteElement(uuidNewDirectory, uuidNewDirectory, "userId", true, true);
+        deleteElement(uuidNewDirectory, uuidNewDirectory, "userId", true, true, false, 0);
         checkRootDirectoriesList("userId", List.of());
 
         checkElementNotFound(newSubDirAttributes.getElementUuid(), "userId");
@@ -314,8 +308,8 @@ public class DirectoryTest {
         );
 
         //Cleaning Test
-        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, false);
-        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, false);
+        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, false, false, 0);
+        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, false, false, 0);
     }
 
     @Test
@@ -554,8 +548,8 @@ public class DirectoryTest {
         checkRootDirectoriesList("user2", List.of(toElementAttributes(rootDir2Uuid, "rootDir2", DIRECTORY, false, "user2")));
 
         //Cleaning Test
-        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true);
-        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, false);
+        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true, false, 0);
+        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, false, false, 0);
     }
 
     @Test
@@ -572,8 +566,8 @@ public class DirectoryTest {
         checkRootDirectoriesList("user2", List.of(toElementAttributes(rootDir2Uuid, "rootDir2", DIRECTORY, true, "user2")));
 
         //Cleaning Test
-        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true);
-        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, true);
+        deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true, false, 0);
+        deleteElement(rootDir2Uuid, rootDir2Uuid, "user2", true, true, false, 0);
     }
 
     @Test
@@ -596,13 +590,13 @@ public class DirectoryTest {
 
         // check user2 visible studies
         checkDirectoryContent(rootDirUuid, "user2", List.of(study1Attributes, study2Attributes));
-        deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, false);
+        deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, false, true, 0);
         checkElementNotFound(study1Attributes.getElementUuid(), "user1");
 
-        deleteElement(study2Attributes.getElementUuid(), rootDirUuid, "user2", false, false);
+        deleteElement(study2Attributes.getElementUuid(), rootDirUuid, "user2", false, false, true, 0);
         checkElementNotFound(study2Attributes.getElementUuid(), "user2");
 
-        deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
+        deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false, false, 0);
         checkElementNotFound(rootDirUuid, "Doe");
     }
 
@@ -659,13 +653,13 @@ public class DirectoryTest {
         // check user2 visible studies
         checkDirectoryContent(rootDirUuid, "user2", List.of(study1Attributes, study2Attributes));
 
-        deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, false);
+        deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, false, true, 0);
         checkElementNotFound(study1Attributes.getElementUuid(), "user1");
 
-        deleteElement(study2Attributes.getElementUuid(), rootDirUuid, "user2", false, false);
+        deleteElement(study2Attributes.getElementUuid(), rootDirUuid, "user2", false, false, true, 0);
         checkElementNotFound(study2Attributes.getElementUuid(), "user2");
 
-        deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false);
+        deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false, false, 0);
         checkElementNotFound(rootDirUuid, "Doe");
     }
 
@@ -682,7 +676,6 @@ public class DirectoryTest {
 
         // Insert a public study in the root directory by the userId;
         ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, null, "userId");
-
         insertAndCheckSubElement(rootDirUuid, true, study2Attributes);
 
         // Insert a subDirectory
@@ -694,7 +687,7 @@ public class DirectoryTest {
 
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), true, subDirStudyAttributes);
 
-        deleteElement(rootDirUuid, rootDirUuid, "userId", true, true);
+        deleteElement(rootDirUuid, rootDirUuid, "userId", true, true, false, 3);
 
         checkElementNotFound(rootDirUuid, "userId");
         checkElementNotFound(study1Attributes.getElementUuid(), "userId");
@@ -1212,15 +1205,33 @@ public class DirectoryTest {
                         .andExpect(status().is(expectedStatus.value()));
     }
 
-    private void deleteElement(UUID elementUuidToBeDeleted, UUID elementUuidHeader, String userId, boolean isRoot, boolean isPrivate) throws Exception {
+    private void deleteElement(UUID elementUuidToBeDeleted, UUID elementUuidHeader, String userId, boolean isRoot, boolean isPrivate, boolean isStudy, int numberOfChildStudies) throws Exception {
         mockMvc.perform(delete("/v1/elements/" + elementUuidToBeDeleted)
                 .header("userId", userId))
                         .andExpect(status().isOk());
 
+        Message<byte[]> message;
+        MessageHeaders headers;
+        // assert that the broker message has been sent a delete study
+        if (isStudy) {
+            message = output.receive(1000);
+            assertEquals("", new String(message.getPayload()));
+            headers = message.getHeaders();
+            assertEquals(userId, headers.get(HEADER_USER_ID));
+            assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+            assertEquals(elementUuidToBeDeleted, headers.get(HEADER_STUDY_UUID));
+        } else {
+            //empty the queue of all delete study notif
+            for (int i = 0; i < numberOfChildStudies; i++) {
+                message = output.receive(1000);
+                headers = message.getHeaders();
+                assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+            }
+        }
         // assert that the broker message has been sent a delete
-        Message<byte[]> message = output.receive(1000);
+        message = output.receive(1000);
         assertEquals("", new String(message.getPayload()));
-        MessageHeaders headers = message.getHeaders();
+        headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(elementUuidHeader, headers.get(HEADER_DIRECTORY_UUID));
         assertEquals(isRoot, headers.get(HEADER_IS_ROOT_DIRECTORY));
