@@ -330,7 +330,7 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
         UUID parentUuid = getParentUuid(elementUuid);
-        deleteObject(elementAttributes);
+        deleteObject(elementAttributes, userId);
         var isCurrentElementPrivate = elementAttributes.getAccessRights() != null ? elementAttributes.getAccessRights().isPrivate() : null;
         boolean isPrivate = isPrivateForNotification(parentUuid, isCurrentElementPrivate);
 
@@ -345,15 +345,18 @@ public class DirectoryService {
         );
     }
 
-    private void deleteObject(ElementAttributes elementAttributes) {
+    private void deleteObject(ElementAttributes elementAttributes, String userId) {
         if (elementAttributes.getType().equals(DIRECTORY)) {
-            deleteSubElements(elementAttributes.getElementUuid());
+            deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
         directoryElementRepository.deleteById(elementAttributes.getElementUuid());
+        if (STUDY.equals(elementAttributes.getType())) {
+            notificationService.emitDeletedStudy(elementAttributes.getElementUuid(), userId);
+        }
     }
 
-    private void deleteSubElements(UUID elementUuid) {
-        getAllDirectoryElementsStream(elementUuid).forEach(this::deleteObject);
+    private void deleteSubElements(UUID elementUuid, String userId) {
+        getAllDirectoryElementsStream(elementUuid).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
     }
 
     /***

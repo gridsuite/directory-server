@@ -12,7 +12,7 @@ spring:
         consumeStudyUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
           group: directoryStudyUpdateGroup
-      source: publishDirectoryUpdate
+      output-bindings: publishDirectoryUpdate
 
 powsybl-ws:
   database:
