@@ -1226,6 +1226,7 @@ public class DirectoryTest {
                 message = output.receive(1000);
                 headers = message.getHeaders();
                 assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+                assertEquals(userId, headers.get(HEADER_USER_ID));
             }
         }
         // assert that the broker message has been sent a delete
