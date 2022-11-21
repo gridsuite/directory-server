@@ -12,6 +12,8 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
@@ -43,6 +45,8 @@ public class ElementAttributes {
 
     private String description;
 
+    private ZonedDateTime creationDate;
+
     public boolean isAllowed(@NonNull String userId) {
         if (!type.equals(DIRECTORY)) {
             throw new DirectoryException(NOT_DIRECTORY);
@@ -55,27 +59,32 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription());
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription(), ZonedDateTime.ofInstant(entity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
-        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null);
+        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate());
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, Boolean isPrivate, @NonNull String userId) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, null);
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, null, null);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         Boolean isPrivate, @NonNull String userId, @NonNull String elementDescription) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription);
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, null);
+    }
+
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+                                                        Boolean isPrivate, @NonNull String userId, String elementDescription, ZonedDateTime creationDate) {
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, creationDate);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull AccessRightsAttributes accessRights, @NonNull String userId,
-                                                        long subdirectoriesCount, String elementDescription) {
+                                                        long subdirectoriesCount, String elementDescription, ZonedDateTime creationDate) {
         return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
-            .type(elementType).accessRights(accessRights).owner(userId)
+            .type(elementType).accessRights(accessRights).owner(userId).creationDate(creationDate)
             .subdirectoriesCount(subdirectoriesCount).description(elementDescription)
             .build();
     }
