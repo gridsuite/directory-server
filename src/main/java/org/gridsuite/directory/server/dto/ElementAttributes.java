@@ -47,6 +47,10 @@ public class ElementAttributes {
 
     private ZonedDateTime creationDate;
 
+    private ZonedDateTime lastModificationDate;
+
+    private String lastModifiedBy;
+
     public boolean isAllowed(@NonNull String userId) {
         if (!type.equals(DIRECTORY)) {
             throw new DirectoryException(NOT_DIRECTORY);
@@ -59,33 +63,34 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription(), ZonedDateTime.ofInstant(entity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription(), ZonedDateTime.ofInstant(entity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), ZonedDateTime.ofInstant(entity.getLastModificationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), entity.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
-        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate());
+        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(), rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, Boolean isPrivate, @NonNull String userId) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, null, null);
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, null, null, null, null);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         Boolean isPrivate, @NonNull String userId, @NonNull String elementDescription) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, null);
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, null, null, null);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        Boolean isPrivate, @NonNull String userId, String elementDescription, ZonedDateTime creationDate) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, creationDate);
+                                                        Boolean isPrivate, @NonNull String userId, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
+        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull AccessRightsAttributes accessRights, @NonNull String userId,
-                                                        long subdirectoriesCount, String elementDescription, ZonedDateTime creationDate) {
+                                                        long subdirectoriesCount, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
         return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
             .type(elementType).accessRights(accessRights).owner(userId).creationDate(creationDate)
             .subdirectoriesCount(subdirectoriesCount).description(elementDescription)
+            .lastModificationDate(lastModificationDate).lastModifiedBy(lastModifiedBy)
             .build();
     }
 }

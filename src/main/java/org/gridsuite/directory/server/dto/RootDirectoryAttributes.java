@@ -28,4 +28,8 @@ public class RootDirectoryAttributes {
     private String description;
 
     private ZonedDateTime creationDate;
+
+    private ZonedDateTime lastModificationDate;
+
+    private String lastModifiedBy;
 }

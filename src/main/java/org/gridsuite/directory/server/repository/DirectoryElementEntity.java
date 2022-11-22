@@ -53,6 +53,12 @@ public class DirectoryElementEntity {
     @Column(name = "creationDate")
     private LocalDateTime creationDate;
 
+    @Column(name = "lastModificationDate")
+    private LocalDateTime lastModificationDate;
+
+    @Column(name = "lastModifiedBy")
+    private String lastModifiedBy;
+
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         if (StringUtils.isNotBlank(newElementAttributes.getElementName())) {
             this.name = newElementAttributes.getElementName();
@@ -76,7 +82,9 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getOwner()) &&
             Objects.isNull(newElementAttributes.getSubdirectoriesCount()) &&
             Objects.isNull(newElementAttributes.getDescription()) &&
-            Objects.isNull(newElementAttributes.getCreationDate());
+            Objects.isNull(newElementAttributes.getCreationDate()) &&
+            Objects.isNull(newElementAttributes.getLastModificationDate()) &&
+            Objects.isNull(newElementAttributes.getLastModifiedBy());
 
     }
 }

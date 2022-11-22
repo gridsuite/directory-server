@@ -142,6 +142,7 @@ public class DirectoryService {
 
     /* methods */
     private ElementAttributes insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         return toElementAttributes(directoryElementRepository.save(
                 new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
                                            parentDirectoryUuid,
@@ -150,8 +151,11 @@ public class DirectoryService {
                                            elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
                                            elementAttributes.getOwner(),
                                            elementAttributes.getDescription(),
-                                           LocalDateTime.now(ZoneOffset.UTC))
+                                           now,
+                                           now,
+                                           elementAttributes.getOwner()
                 )
+            )
         );
     }
 
