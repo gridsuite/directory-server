@@ -5,13 +5,16 @@ spring:
   cloud:
     stream:
       function:
-        definition: consumeStudyUpdate
+        definition: consumeStudyUpdate;consumeElementUpdate
       bindings:
         publishDirectoryUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}directory.update
         consumeStudyUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
           group: directoryStudyUpdateGroup
+        consumeElementUpdate-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.update
+          group: directoryElementUpdateGroup
       output-bindings: publishDirectoryUpdate
 
 powsybl-ws:

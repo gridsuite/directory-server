@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -246,6 +247,13 @@ public class DirectoryService {
         if (elementEntity.getType().equals(STUDY) && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
             studyService.notifyStudyUpdate(elementUuid, userId);
         }
+    }
+
+    @Transactional
+    public void updateElementLastModifiedAttributes(UUID elementUuid, LocalDateTime lastModificationDate, String lastModifiedBy) {
+        DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
+        elementToUpdate.setLastModificationDate(lastModificationDate);
+        elementToUpdate.setLastModifiedBy(lastModifiedBy);
     }
 
     public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {

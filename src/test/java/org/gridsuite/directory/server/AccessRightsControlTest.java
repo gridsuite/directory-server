@@ -212,7 +212,7 @@ public class AccessRightsControlTest {
         return mockMvc.perform(post("/v1/root-directories")
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null, null))))
+                .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null, null, null, null))))
                 .andExpect(status().is(new IsEqual<>(expectedStatus.value())))
                 .andReturn();
     }
