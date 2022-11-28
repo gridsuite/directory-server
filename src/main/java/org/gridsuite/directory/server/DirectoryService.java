@@ -20,6 +20,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -147,8 +149,8 @@ public class DirectoryService {
                                            elementAttributes.getType(),
                                            elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
                                            elementAttributes.getOwner(),
-                                           elementAttributes.getDescription()
-                        )
+                                           elementAttributes.getDescription(),
+                                           LocalDateTime.now(ZoneOffset.UTC))
                 )
         );
     }

@@ -11,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -49,6 +50,9 @@ public class DirectoryElementEntity {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "creationDate")
+    private LocalDateTime creationDate;
+
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         if (StringUtils.isNotBlank(newElementAttributes.getElementName())) {
             this.name = newElementAttributes.getElementName();
@@ -71,6 +75,8 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getType()) &&
             Objects.isNull(newElementAttributes.getOwner()) &&
             Objects.isNull(newElementAttributes.getSubdirectoriesCount()) &&
-            Objects.isNull(newElementAttributes.getDescription());
+            Objects.isNull(newElementAttributes.getDescription()) &&
+            Objects.isNull(newElementAttributes.getCreationDate());
+
     }
 }
