@@ -55,7 +55,6 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
-
         return toElementAttributes(entity, 0L);
     }
 
