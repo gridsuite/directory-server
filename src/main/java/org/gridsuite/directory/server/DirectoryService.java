@@ -468,12 +468,12 @@ public class DirectoryService {
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
             throw new DirectoryException(NOT_FOUND);
         }
-        if (types != null && types.size() > 0) {
+        if (types != null && types.isEmpty()) {
             return elementEntities.stream()
                     .map(attribute -> toElementAttributes(attribute,
                             directoryElementRepository.findAllByParentId(attribute.getId())
                                     .stream()
-                                    .filter(element -> types.contains(element.getType()) || "DIRECTORY".equals(element.getType()))
+                                    .filter(element -> types.contains(element.getType()) || DIRECTORY.equals(element.getType()))
                                     .count()))
                     .collect(Collectors.toList());
         } else {
