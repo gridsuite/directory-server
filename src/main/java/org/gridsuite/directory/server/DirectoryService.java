@@ -468,7 +468,7 @@ public class DirectoryService {
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
             throw new DirectoryException(NOT_FOUND);
         }
-        if (types != null && types.isEmpty()) {
+        if (types != null && !types.isEmpty()) {
             return elementEntities.stream()
                     .map(attribute -> toElementAttributes(attribute,
                             directoryElementRepository.findAllByParentId(attribute.getId())
