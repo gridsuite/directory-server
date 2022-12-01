@@ -151,7 +151,6 @@ public class DirectoryService {
                                            elementAttributes.getType(),
                                            elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
                                            elementAttributes.getOwner(),
-                                           elementAttributes.getDescription(),
                                            now,
                                            now,
                                            elementAttributes.getOwner()

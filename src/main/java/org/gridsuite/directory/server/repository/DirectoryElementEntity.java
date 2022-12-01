@@ -85,6 +85,5 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getCreationDate()) &&
             Objects.isNull(newElementAttributes.getLastModificationDate()) &&
             Objects.isNull(newElementAttributes.getLastModifiedBy());
-
     }
 }
