@@ -25,17 +25,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collections;
@@ -83,6 +89,13 @@ public class DirectoryTest {
     private static final UUID FILTER_UUID = UUID.randomUUID();
     private static final UUID CONTINGENCY_LIST_UUID = UUID.randomUUID();
 
+    public static final String HEADER_MODIFIED_BY = "modifiedBy";
+    public static final String HEADER_MODIFICATION_DATE = "modificationDate";
+    public static final String HEADER_ELEMENT_UUID = "elementUuid";
+
+    private String elementUpdateDestination = "element.update";
+    private String studyUpdateDestination = "study.update";
+
     @Autowired
     ObjectMapper objectMapper;
 
@@ -97,6 +110,9 @@ public class DirectoryTest {
 
     @Autowired
     private OutputDestination output;
+
+    @Autowired
+    InputDestination input;
 
     private void cleanDB() {
         directoryElementRepository.deleteAll();
@@ -987,6 +1003,38 @@ public class DirectoryTest {
      // Insert a filter with empty name in the root directory and expect a 403
         ElementAttributes filterWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", FILTER, null, "user1");
         insertExpectFail(rootDirUuid, filterWithoutNameAttributes);
+    }
+
+    @Test
+    public void testElementUpdateNotification() throws Exception {
+        // Insert a root directory
+        ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", false, "userId");
+        UUID uuidNewDirectory = newDirectory.getElementUuid();
+
+        // Insert a  sub-element of type STUDY
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, null, "userId", "descr study");
+        insertAndCheckSubElement(uuidNewDirectory, false, subEltAttributes);
+
+        LocalDateTime newModificationDate = LocalDateTime.now();
+
+
+        String userMakingModification = "newUser";
+
+        input.send(MessageBuilder.withPayload("")
+            .setHeader(HEADER_MODIFIED_BY, userMakingModification)
+            .setHeader(HEADER_MODIFICATION_DATE, newModificationDate.toString())
+            .setHeader(HEADER_ELEMENT_UUID, subEltAttributes.getElementUuid().toString())
+            .build(), elementUpdateDestination);
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/" + subEltAttributes.getElementUuid()))
+            .andExpectAll(status().isOk(),
+                    content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+
+        ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
+
+        assertEquals(newModificationDate, updatedElement.getLastModificationDate().toLocalDateTime());
+        assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
     }
 
     private List<ElementAttributes> getPath(UUID elementUuid, String userId) throws Exception {
