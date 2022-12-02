@@ -1014,7 +1014,6 @@ public class DirectoryTest {
 
         LocalDateTime newModificationDate = LocalDateTime.now();
 
-
         String userMakingModification = "newUser";
 
         input.send(MessageBuilder.withPayload("")
