@@ -917,6 +917,7 @@ public class DirectoryTest {
         ElementAttributes directory = retrieveInsertAndCheckRootDirectory("testDir", false, "user1");
         List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(FILTER), 200);
         assertEquals(2, result.size());
+        res.sort(Comparator.comparing(ElementAttributes::getElementName));
         org.hamcrest.MatcherAssert.assertThat(result, new MatcherJson<>(objectMapper,
                 List.of(
                         toElementAttributes(FILTER_UUID, "newFilter", FILTER, new AccessRightsAttributes(null), "user1", 0, null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
