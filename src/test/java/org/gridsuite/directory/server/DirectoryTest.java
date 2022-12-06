@@ -1126,7 +1126,7 @@ public class DirectoryTest {
         return Collections.emptyList();
     }
 
-    private UUID insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) throws Exception {
+    private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) throws Exception {
         // Insert a sub-element of type DIRECTORY
         MvcResult response = mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
                         .header("userId", subElementAttributes.getOwner())
@@ -1154,7 +1154,6 @@ public class DirectoryTest {
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         assertElementIsProperlyInserted(subElementAttributes);
-        return uuidNewDirectory;
     }
 
     private void insertExpectFail(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
