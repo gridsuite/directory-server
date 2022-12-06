@@ -44,8 +44,8 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
         Long getCount();
     }
 
-    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND d.type = 'DIRECTORY' GROUP BY d.parentId")
-    List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories);
+    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) GROUP BY d.parentId")
+    List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes);
 
     @Transactional
     void deleteById(UUID id);

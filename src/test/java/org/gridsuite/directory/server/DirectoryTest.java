@@ -35,6 +35,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.util.CollectionUtils;
 
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -892,13 +893,11 @@ public class DirectoryTest {
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
+        ElementAttributes newContingency = toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, null, "user1", null, contingencyAttributes.getCreationDate());
+        ElementAttributes newFilter = toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, null, "user1", null, filterAttributes.getCreationDate());
+        ElementAttributes newScript = toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1", null, scriptAttributes.getCreationDate());
         org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
-            List.of(
-                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, null, "user1", null, contingencyAttributes.getCreationDate()),
-                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, null, "user1", null, filterAttributes.getCreationDate()),
-                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1", null, scriptAttributes.getCreationDate())
-            ))
-        );
+            List.of(newContingency, newFilter, newScript)));
 
         ElementAttributes directory = retrieveInsertAndCheckRootDirectory("testDir", false, "user1");
         List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(FILTER), 200);
@@ -908,6 +907,13 @@ public class DirectoryTest {
                         toElementAttributes(FILTER_UUID, "newFilter", FILTER, new AccessRightsAttributes(null), "user1", 0, null, filterAttributes.getCreationDate()),
                         directory
                 )));
+
+        ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, true, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, subDirAttributes);
+        insertAndCheckSubElement(subDirAttributes.getElementUuid(), true, toElementAttributes(null, "subDirContingency", CONTINGENCY_LIST, null, "user1"));
+        checkDirectoryContent(rootDirUuid, "user1", List.of(newContingency, newFilter, newScript, subDirAttributes));
+        subDirAttributes.setSubdirectoriesCount(1L);
+        checkDirectoryContent(rootDirUuid, "user1", List.of(CONTINGENCY_LIST), List.of(newContingency, newFilter, newScript, subDirAttributes));
     }
 
     @SneakyThrows
@@ -1242,7 +1248,12 @@ public class DirectoryTest {
     }
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementAttributes> list) throws Exception {
-        String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements")
+        checkDirectoryContent(parentDirectoryUuid, userId, List.of(), list);
+    }
+
+    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, List<ElementAttributes> list) throws Exception {
+        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + types.stream().collect(Collectors.joining(",")) : "";
+        String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + elementTypes)
                 .header("userId", userId))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn()

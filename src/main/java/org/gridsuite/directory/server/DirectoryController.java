@@ -97,8 +97,9 @@ public class DirectoryController {
     @Operation(summary = "Get directory elements")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
     public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
-                                                                        @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId));
+                                                                        @RequestHeader("userId") String userId,
+                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, types));
     }
 
     @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -118,7 +119,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "At least one item was not found"),
     })
     public ResponseEntity<List<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
-                                                               @RequestParam(value = "elementTypes", required = false) List<String> types,
+                                                               @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
                                                                @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
         return ResponseEntity.ok().body(service.getElements(ids, strictMode, types));
     }
