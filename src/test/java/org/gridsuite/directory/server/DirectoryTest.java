@@ -79,6 +79,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class DirectoryTest {
 
+    private static final long TIMEOUT = 1000;
     private static final UUID STUDY_RENAME_UUID = UUID.randomUUID();
     private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
@@ -91,7 +92,7 @@ public class DirectoryTest {
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
 
     private String elementUpdateDestination = "element.update";
-    private String studyUpdateDestination = "study.update";
+    private String directoryUpdateDestination = "directory.update";
 
     @Autowired
     ObjectMapper objectMapper;
@@ -350,7 +351,7 @@ public class DirectoryTest {
                 .andExpect(status().isOk());
 
         // assert that the broker message has been sent a root directory creation request message
-        Message<byte[]> message = output.receive(1000);
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
@@ -361,7 +362,7 @@ public class DirectoryTest {
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a root directory creation request message
-        message = output.receive(1000);
+        message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
@@ -509,7 +510,7 @@ public class DirectoryTest {
                 .andExpect(status().isOk());
 
         // assert that the broker message has been sent a update notification on directory
-        Message<byte[]> message = output.receive(1000);
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
@@ -519,7 +520,7 @@ public class DirectoryTest {
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
-        message = output.receive(1000);
+        message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
@@ -849,7 +850,7 @@ public class DirectoryTest {
                 .andExpect(status().isOk());
 
         // assert that the broker message has been sent a root directory creation request message
-        Message<byte[]> message = output.receive(1000);
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
@@ -1074,7 +1075,7 @@ public class DirectoryTest {
         assertElementIsProperlyInserted(newDirectoryAttributes);
 
         // assert that the broker message has been sent a root directory creation request message
-        Message<byte[]> message = output.receive(1000);
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1103,7 +1104,7 @@ public class DirectoryTest {
         assertElementIsProperlyInserted(toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, isPrivate, userId, null, creationDateNewDirectory, creationDateNewDirectory, userId));
 
         // assert that the broker message has been sent a root directory creation request message
-        Message<byte[]> message = output.receive(1000);
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1158,7 +1159,7 @@ public class DirectoryTest {
         subElementAttributes.setLastModifiedBy(lastModifiedBy);
 
         // assert that the broker message has been sent an element creation request message
-        Message<byte[]> message = output.receive(1000);
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(subElementAttributes.getOwner(), headers.get(HEADER_USER_ID));
@@ -1188,7 +1189,7 @@ public class DirectoryTest {
             .andExpect(status().isOk());
 
         // assert that the broker message has been sent a notif for rename
-        Message<byte[]> message = output.receive(1000);
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1225,7 +1226,7 @@ public class DirectoryTest {
                 .andExpect(status().isOk());
 
         // assert that the broker message has been sent a notif for rename
-        Message<byte[]> message = output.receive(1000);
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1306,7 +1307,7 @@ public class DirectoryTest {
         MessageHeaders headers;
         // assert that the broker message has been sent a delete study
         if (isStudy) {
-            message = output.receive(1000);
+            message = output.receive(TIMEOUT, directoryUpdateDestination);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
             assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1315,14 +1316,14 @@ public class DirectoryTest {
         } else {
             //empty the queue of all delete study notif
             for (int i = 0; i < numberOfChildStudies; i++) {
-                message = output.receive(1000);
+                message = output.receive(TIMEOUT, directoryUpdateDestination);
                 headers = message.getHeaders();
                 assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
                 assertEquals(userId, headers.get(HEADER_USER_ID));
             }
         }
         // assert that the broker message has been sent a delete
-        message = output.receive(1000);
+        message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -1385,6 +1386,17 @@ public class DirectoryTest {
 
     @After
     public void tearDown() {
-        assertNull("Should not be any messages", output.receive(1000));
+        List<String> destinations = List.of(elementUpdateDestination, directoryUpdateDestination);
+        assertQueuesEmptyThenClear(destinations);
+    }
+
+    private void assertQueuesEmptyThenClear(List<String> destinations) {
+        try {
+            destinations.forEach(destination -> assertNull("Should not be any messages in queue " + destination + " : ", output.receive(100, destination)));
+        } catch (NullPointerException e) {
+            // Ignoring
+        } finally {
+            output.clear(); // purge in order to not fail the other tests
+        }
     }
 }
