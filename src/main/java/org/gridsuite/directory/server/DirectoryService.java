@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -474,12 +475,26 @@ public class DirectoryService {
         return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
     }
 
-    public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode) {
+    public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types) {
         List<DirectoryElementEntity> elementEntities = directoryElementRepository.findAllById(ids);
+
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
             throw new DirectoryException(NOT_FOUND);
         }
-        return elementEntities.stream().map(ElementAttributes::toElementAttributes).collect(Collectors.toList());
+        if (!CollectionUtils.isEmpty(types)) {
+            return elementEntities.stream()
+                    .map(attribute -> toElementAttributes(attribute,
+                            directoryElementRepository.findAllByParentId(attribute.getId())
+                                    .stream()
+                                    .filter(element -> types.contains(element.getType()) || DIRECTORY.equals(element.getType()))
+                                    .count()))
+                    .collect(Collectors.toList());
+        } else {
+            return elementEntities.stream()
+                    .map(attribute -> toElementAttributes(attribute,
+                            directoryElementRepository.findAllByParentId(attribute.getId()).size()))
+                    .collect(Collectors.toList());
+        }
     }
 
     public void notify(@NonNull String notificationName, @NonNull UUID elementUuid, @NonNull String userId) {
@@ -525,7 +540,7 @@ public class DirectoryService {
     }
 
     public void areElementsAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
-        getElements(elementUuids, true).stream()
+        getElements(elementUuids, true, List.of()).stream()
                 .map(e -> e.getType().equals(DIRECTORY) ? e : getParentElement(e.getElementUuid()))
                 .forEach(e -> {
                     if (!e.isAllowed(userId)) {

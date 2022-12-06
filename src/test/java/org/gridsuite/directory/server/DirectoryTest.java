@@ -913,6 +913,15 @@ public class DirectoryTest {
                 toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1")
             ))
         );
+
+        ElementAttributes directory = retrieveInsertAndCheckRootDirectory("testDir", false, "user1");
+        List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(FILTER), 200);
+        assertEquals(2, result.size());
+        org.hamcrest.MatcherAssert.assertThat(result, new MatcherJson<>(objectMapper,
+                List.of(
+                        toElementAttributes(FILTER_UUID, "newFilter", FILTER, new AccessRightsAttributes(null), "user1", 0, null, filterAttributes.getCreationDate()),
+                        directory
+                )));
     }
 
     @SneakyThrows
@@ -1118,11 +1127,16 @@ public class DirectoryTest {
     }
 
     private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, int httpCodeExpected) throws Exception {
+        return getElements(elementUuids, userId, strictMode, null, httpCodeExpected);
+    }
+
+    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, List<String> elementTypes, int httpCodeExpected) throws Exception {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+        var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
 
         // Insert a sub-element of type DIRECTORY
         if (httpCodeExpected == 200) {
-            MvcResult result = mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
+            MvcResult result = mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids + typesPath)
                     .header("userId", userId))
                     .andExpectAll(status().isOk(),
                             content().contentType(MediaType.APPLICATION_JSON))
@@ -1130,7 +1144,7 @@ public class DirectoryTest {
             return objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<ElementAttributes>>() {
             });
         } else if (httpCodeExpected == 404) {
-            mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids)
+            mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids + typesPath)
                             .header("userId", userId))
                     .andExpectAll(status().isNotFound());
         } else {

@@ -118,8 +118,9 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "At least one item was not found"),
     })
     public ResponseEntity<List<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
+                                                               @RequestParam(value = "elementTypes", required = false) List<String> types,
                                                                @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
-        return ResponseEntity.ok().body(service.getElements(ids, strictMode));
+        return ResponseEntity.ok().body(service.getElements(ids, strictMode, types));
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
