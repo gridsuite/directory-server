@@ -919,7 +919,7 @@ public class DirectoryTest {
         assertEquals(2, result.size());
         org.hamcrest.MatcherAssert.assertThat(result, new MatcherJson<>(objectMapper,
                 List.of(
-                        toElementAttributes(FILTER_UUID, "newFilter", FILTER, new AccessRightsAttributes(null), "user1", 0, null, filterAttributes.getCreationDate()),
+                        toElementAttributes(FILTER_UUID, "newFilter", FILTER, new AccessRightsAttributes(null), "user1", 0, null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
                         directory
                 )));
     }
