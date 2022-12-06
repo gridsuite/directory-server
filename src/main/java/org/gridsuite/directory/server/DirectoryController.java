@@ -78,8 +78,9 @@ public class DirectoryController {
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get root directories")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The root directories"))
-    public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestHeader(name = "userId") String userId) {
-        return ResponseEntity.ok().body(service.getRootDirectories(userId));
+    public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestHeader(name = "userId") String userId,
+                                                                      @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
+        return ResponseEntity.ok().body(service.getRootDirectories(userId, types));
     }
 
     @RequestMapping(value = "/root-directories", method = RequestMethod.HEAD)

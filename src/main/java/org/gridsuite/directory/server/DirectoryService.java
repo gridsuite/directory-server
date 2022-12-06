@@ -209,9 +209,9 @@ public class DirectoryService {
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
-    public List<ElementAttributes> getRootDirectories(String userId) {
+    public List<ElementAttributes> getRootDirectories(String userId, List<String> types) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findRootDirectoriesByUserId(userId);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), List.of());
+        Map<UUID, Long> subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types);
         return directoryElements.stream()
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
                 .collect(Collectors.toList());
