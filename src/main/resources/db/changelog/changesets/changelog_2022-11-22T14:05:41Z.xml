@@ -4,10 +4,16 @@
         <addColumn tableName="element">
             <column name="last_modification_date" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
         </addColumn>
+        <update tableName="element">
+            <column name="last_modification_date" valueComputed="creation_date" />
+        </update>
     </changeSet>
     <changeSet author="lesaulnierkev (generated)" id="1669125949758-2">
         <addColumn tableName="element">
             <column name="last_modified_by" type="varchar(255)"/>
         </addColumn>
+        <update tableName="element">
+            <column name="last_modified_by" valueComputed="owner" />
+        </update>
     </changeSet>
 </databaseChangeLog>
