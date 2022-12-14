@@ -111,7 +111,7 @@ public class DirectoryTest {
     private OutputDestination output;
 
     @Autowired
-    InputDestination input;
+    private InputDestination input;
 
     private void cleanDB() {
         directoryElementRepository.deleteAll();
