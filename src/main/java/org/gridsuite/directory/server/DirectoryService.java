@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -142,6 +143,7 @@ public class DirectoryService {
 
     /* methods */
     private ElementAttributes insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         return toElementAttributes(directoryElementRepository.save(
                 new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
                                            parentDirectoryUuid,
@@ -150,8 +152,11 @@ public class DirectoryService {
                                            elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
                                            elementAttributes.getOwner(),
                                            elementAttributes.getDescription(),
-                                           LocalDateTime.now(ZoneOffset.UTC))
+                                           now,
+                                           now,
+                                           elementAttributes.getOwner()
                 )
+            )
         );
     }
 
@@ -242,6 +247,13 @@ public class DirectoryService {
         if (elementEntity.getType().equals(STUDY) && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
             studyService.notifyStudyUpdate(elementUuid, userId);
         }
+    }
+
+    @Transactional
+    public void updateElementLastModifiedAttributes(UUID elementUuid, LocalDateTime lastModificationDate, String lastModifiedBy) {
+        DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
+        elementToUpdate.setLastModificationDate(lastModificationDate);
+        elementToUpdate.setLastModifiedBy(lastModifiedBy);
     }
 
     public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
