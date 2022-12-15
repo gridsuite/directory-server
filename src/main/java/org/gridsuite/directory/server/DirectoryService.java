@@ -82,12 +82,12 @@ public class DirectoryService {
                 String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
                 String error = message.getHeaders().get(HEADER_ERROR, String.class);
                 String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                if (studyUuidHeader != null) {
+                if (error != null && studyUuidHeader != null) {
                     UUID studyUuid = UUID.fromString(studyUuidHeader);
                     UUID parentUuid = getParentUuid(studyUuid);
                     Optional<DirectoryElementEntity> elementEntity = getElementEntity(studyUuid);
                     String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
-                    if (error != null && elementName != null) {
+                    if (elementName != null) {
                         deleteElement(studyUuid, userId);
                     }
                     boolean isPrivate = isPrivateForNotification(parentUuid, isPrivateDirectory(studyUuid));
