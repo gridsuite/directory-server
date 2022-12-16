@@ -56,6 +56,8 @@ public class DirectoryService {
     public static final String FILTER = "FILTER";
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
+    public static final String HEADER_UPDATE_TYPE = "updateType";
+    public static final String UPDATE_TYPE_STUDIES = "studies";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
     private final DirectoryElementRepository directoryElementRepository;
@@ -82,12 +84,15 @@ public class DirectoryService {
                 String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
                 String error = message.getHeaders().get(HEADER_ERROR, String.class);
                 String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                if (error != null && studyUuidHeader != null) {
+                String updateType = message.getHeaders().get(HEADER_UPDATE_TYPE, String.class);
+                // UPDATE_TYPE_STUDIES is the update type used when inserting or duplicating studies, and when a study import fails
+                if (UPDATE_TYPE_STUDIES.equals(updateType) && studyUuidHeader != null) {
                     UUID studyUuid = UUID.fromString(studyUuidHeader);
+
                     UUID parentUuid = getParentUuid(studyUuid);
                     Optional<DirectoryElementEntity> elementEntity = getElementEntity(studyUuid);
                     String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
-                    if (elementName != null) {
+                    if (error != null && elementName != null) {
                         deleteElement(studyUuid, userId);
                     }
                     boolean isPrivate = isPrivateForNotification(parentUuid, isPrivateDirectory(studyUuid));
