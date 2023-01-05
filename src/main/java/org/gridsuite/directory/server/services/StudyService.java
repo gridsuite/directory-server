@@ -39,7 +39,7 @@ public class StudyService {
     private final String studyServerBaseUri;
 
     @Autowired
-    public StudyService(@Value("${backing-services.study-server.base-uri:http://study-server/}") String studyServerBaseUri) {
+    public StudyService(@Value("${gridsuite.services.study-server.base-uri:http://study-server/}") String studyServerBaseUri) {
         this.studyServerBaseUri = studyServerBaseUri;
     }
 
