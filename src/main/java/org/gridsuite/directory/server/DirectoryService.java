@@ -216,6 +216,7 @@ public class DirectoryService {
         Map<UUID, Long> subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types);
         return directoryElements
                 .stream()
+                .filter(e -> e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
