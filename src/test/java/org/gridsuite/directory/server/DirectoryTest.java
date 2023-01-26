@@ -928,7 +928,7 @@ public class DirectoryTest {
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), true, toElementAttributes(null, "subDirContingency", CONTINGENCY_LIST, null, "user1"));
         checkDirectoryContent(rootDirUuid, "user1", List.of(newContingency, newFilter, newScript, subDirAttributes));
         subDirAttributes.setSubdirectoriesCount(1L);
-        checkDirectoryContent(rootDirUuid, "user1", List.of(CONTINGENCY_LIST), List.of(newContingency, newFilter, newScript, subDirAttributes));
+        checkDirectoryContent(rootDirUuid, "user1", List.of(CONTINGENCY_LIST), List.of(newContingency, subDirAttributes));
 
         ElementAttributes rootDirectory = getElements(List.of(rootDirUuid), "user1", false, 200).get(0);
 
