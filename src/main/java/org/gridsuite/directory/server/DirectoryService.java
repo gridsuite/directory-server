@@ -511,28 +511,19 @@ public class DirectoryService {
     public void emitDirectoryChangedNotification(UUID elementUuid, String userId) {
         ElementAttributes elementAttributes = getElement(elementUuid);
         UUID parentUuid = getParentUuid(elementUuid);
-        if (elementAttributes.getAccessRights().isPrivate() == null) {
-            ElementAttributes parentDirectory = getElement(parentUuid);
-            notificationService.emitDirectoryChanged(
-                    parentUuid,
-                    elementAttributes.getElementName(),
-                    userId,
-                    null,
-                    parentDirectory.getAccessRights().isPrivate(),
-                    parentUuid == null,
-                    NotificationType.UPDATE_DIRECTORY
-            );
-        } else {
-            notificationService.emitDirectoryChanged(
-                    parentUuid,
-                    elementAttributes.getElementName(),
-                    userId,
-                    null,
-                    elementAttributes.getAccessRights().isPrivate(),
-                    parentUuid == null,
-                    NotificationType.UPDATE_DIRECTORY
-            );
+        Boolean isPrivate = elementAttributes.getAccessRights().isPrivate();
+        if (isPrivate == null) { // Then take accessRights from the parent element
+            isPrivate = getElement(parentUuid).getAccessRights().isPrivate();
         }
+        notificationService.emitDirectoryChanged(
+                parentUuid,
+                elementAttributes.getElementName(),
+                userId,
+                null,
+                isPrivate,
+                parentUuid == null,
+                NotificationType.UPDATE_DIRECTORY
+        );
     }
 
     public void areElementsAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
