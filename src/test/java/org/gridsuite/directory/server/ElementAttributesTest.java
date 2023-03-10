@@ -124,7 +124,6 @@ public class ElementAttributesTest {
     @Test
     public void testJsonString() {
         ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy - HH:mm:ss Z");
 
         assertEquals(
             "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"isPrivate\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + creationDate + "\",\"lastModificationDate\":\"" + creationDate + "\",\"lastModifiedBy\":\"userId\"}",
@@ -161,6 +160,13 @@ public class ElementAttributesTest {
     }
 
     private String toJsonString(String key, Object value) {
-        return value == null ? (String) value : String.format(value instanceof String || value instanceof UUID || value instanceof ZonedDateTime ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
+        if (value == null) {
+            return (String) value;
+        }
+        if (value instanceof ZonedDateTime) {
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+            return String.format("\"%s\":\"%s\"", key, ((ZonedDateTime) value).format(formatter));
+        }
+        return String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
     }
 }
