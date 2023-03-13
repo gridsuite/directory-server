@@ -159,6 +159,13 @@ public class ElementAttributesTest {
     }
 
     private String toJsonString(String key, Object value) {
-        return value == null ? (String) value : String.format(value instanceof String || value instanceof UUID || value instanceof ZonedDateTime ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
+        if (value == null) {
+            return (String) value;
+        }
+        if (value instanceof ZonedDateTime) {
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+            return String.format("\"%s\":\"%s\"", key, ((ZonedDateTime) value).format(formatter));
+        }
+        return String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
     }
 }
