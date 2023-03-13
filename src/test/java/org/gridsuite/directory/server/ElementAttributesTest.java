@@ -124,9 +124,11 @@ public class ElementAttributesTest {
     @Test
     public void testJsonString() {
         ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+        String formattedCreationDate = creationDate.format(formatter);
 
         assertEquals(
-            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"isPrivate\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + creationDate + "\",\"lastModificationDate\":\"" + creationDate + "\",\"lastModifiedBy\":\"userId\"}",
+            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"isPrivate\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + formattedCreationDate + "\",\"lastModificationDate\":\"" + formattedCreationDate + "\",\"lastModifiedBy\":\"userId\"}",
             toJsonString(toElementAttributes(UUID.fromString("21297976-7445-44f1-9ccf-910cbb2f84f8"), "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", creationDate, creationDate, "userId"))
         );
     }
