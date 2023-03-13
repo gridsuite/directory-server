@@ -265,7 +265,6 @@ public class DirectoryService {
     public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
         Optional<DirectoryElementEntity> optElement = getElementEntity(elementUuid);
         Optional<DirectoryElementEntity> optNewDirectory = getElementEntity(newDirectoryUuid);
-        DirectoryElementEntity oldDirectory;
         DirectoryElementEntity element;
         DirectoryElementEntity newDirectory;
         if (optElement.isEmpty()) {
@@ -290,7 +289,13 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
-        oldDirectory = getElementEntity(element.getParentId()).get();
+        Optional<DirectoryElementEntity> optOldDirectory = getElementEntity(element.getParentId());
+        DirectoryElementEntity oldDirectory;
+        if (optOldDirectory.isEmpty()) {
+            throw DirectoryException.createElementNotFound(DIRECTORY, element.getParentId());
+        }
+        oldDirectory = optOldDirectory.get();
+
         if (!newDirectory.getIsPrivate().equals(oldDirectory.getIsPrivate())) {
             throw DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid);
         }
@@ -396,7 +401,12 @@ public class DirectoryService {
         if (currentElement.getType().equals(DIRECTORY)) {
             allowed = toElementAttributes(currentElement).isAllowed(userId);
         } else {
-            allowed = toElementAttributes(getElementEntity(currentElement.getParentId()).get()).isAllowed(userId);
+            Optional<DirectoryElementEntity> optParentDirectory = getElementEntity(currentElement.getParentId());
+            if (optParentDirectory.isEmpty()) {
+                throw DirectoryException.createElementNotFound(DIRECTORY, currentElement.getParentId());
+            }
+            DirectoryElementEntity parentDirectory = optParentDirectory.get();
+            allowed = toElementAttributes(parentDirectory).isAllowed(userId);
         }
 
         if (!allowed) {
@@ -406,7 +416,11 @@ public class DirectoryService {
         path.add(toElementAttributes(currentElement));
 
         while (currentElement.getParentId() != null) {
-            currentElement = getElementEntity(currentElement.getParentId()).get();
+            Optional<DirectoryElementEntity> optParentDirectory = getElementEntity(currentElement.getParentId());
+            if (optParentDirectory.isEmpty()) {
+                throw DirectoryException.createElementNotFound(DIRECTORY, currentElement.getParentId());
+            }
+            currentElement = optParentDirectory.get();
             ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
             path.add(currentElementAttributes);
         }
