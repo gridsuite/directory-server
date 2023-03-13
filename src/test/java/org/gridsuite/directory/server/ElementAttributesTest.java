@@ -124,7 +124,6 @@ public class ElementAttributesTest {
     @Test
     public void testJsonString() {
         ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy - HH:mm:ss Z");
 
         assertEquals(
             "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"accessRights\":{\"isPrivate\":true},\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + creationDate + "\",\"lastModificationDate\":\"" + creationDate + "\",\"lastModifiedBy\":\"userId\"}",
