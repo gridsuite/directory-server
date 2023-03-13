@@ -289,12 +289,7 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
-        Optional<DirectoryElementEntity> optOldDirectory = getElementEntity(element.getParentId());
-        DirectoryElementEntity oldDirectory;
-        if (optOldDirectory.isEmpty()) {
-            throw DirectoryException.createElementNotFound(DIRECTORY, element.getParentId());
-        }
-        oldDirectory = optOldDirectory.get();
+        DirectoryElementEntity oldDirectory = getElementEntity(element.getParentId()).orElseThrow(() -> DirectoryException.createElementUnexpectedException(element.getParentId()));
 
         if (!newDirectory.getIsPrivate().equals(oldDirectory.getIsPrivate())) {
             throw DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid);
@@ -401,11 +396,8 @@ public class DirectoryService {
         if (currentElement.getType().equals(DIRECTORY)) {
             allowed = toElementAttributes(currentElement).isAllowed(userId);
         } else {
-            Optional<DirectoryElementEntity> optParentDirectory = getElementEntity(currentElement.getParentId());
-            if (optParentDirectory.isEmpty()) {
-                throw DirectoryException.createElementNotFound(DIRECTORY, currentElement.getParentId());
-            }
-            DirectoryElementEntity parentDirectory = optParentDirectory.get();
+            UUID parentID = currentElement.getParentId();
+            DirectoryElementEntity parentDirectory = getElementEntity(parentID).orElseThrow(() -> DirectoryException.createElementUnexpectedException(parentID));
             allowed = toElementAttributes(parentDirectory).isAllowed(userId);
         }
 
@@ -416,11 +408,8 @@ public class DirectoryService {
         path.add(toElementAttributes(currentElement));
 
         while (currentElement.getParentId() != null) {
-            Optional<DirectoryElementEntity> optParentDirectory = getElementEntity(currentElement.getParentId());
-            if (optParentDirectory.isEmpty()) {
-                throw DirectoryException.createElementNotFound(DIRECTORY, currentElement.getParentId());
-            }
-            currentElement = optParentDirectory.get();
+            UUID parentID = currentElement.getParentId();
+            currentElement = getElementEntity(parentID).orElseThrow(() -> DirectoryException.createElementUnexpectedException(parentID));
             ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
             path.add(currentElementAttributes);
         }
