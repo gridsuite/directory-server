@@ -42,8 +42,6 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND);
             case UNKNOWN_NOTIFICATION:
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION);
-            case UNEXPECTED: // this shouldn't exist. Not to be confused with a 404 error
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(UNEXPECTED);
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

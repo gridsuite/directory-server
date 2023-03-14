@@ -40,10 +40,6 @@ public class DirectoryException extends RuntimeException {
         return new DirectoryException(Type.DIFFERENT_ACCESS_RIGHT, String.format("Element's parent with uuid %s have different access rights from directory with uuid %s !", elementUuid, directoryUuid));
     }
 
-    public static DirectoryException createElementUnexpectedException(@NonNull UUID elementUuid) {
-        return new DirectoryException(Type.UNEXPECTED, String.format("An unexpected error occored for the following Element with uuid %s!", elementUuid));
-    }
-
     Type getType() {
         return type;
     }
@@ -54,7 +50,6 @@ public class DirectoryException extends RuntimeException {
         NOT_DIRECTORY,
         IS_DIRECTORY,
         UNKNOWN_NOTIFICATION,
-        DIFFERENT_ACCESS_RIGHT,
-        UNEXPECTED
+        DIFFERENT_ACCESS_RIGHT
     }
 }
