@@ -290,7 +290,8 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
-        oldDirectory = getElementEntity(element.getParentId()).get();
+        oldDirectory = getElementEntity(element.getParentId()).orElseThrow();
+
         if (!newDirectory.getIsPrivate().equals(oldDirectory.getIsPrivate())) {
             throw DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid);
         }
@@ -396,7 +397,7 @@ public class DirectoryService {
         if (currentElement.getType().equals(DIRECTORY)) {
             allowed = toElementAttributes(currentElement).isAllowed(userId);
         } else {
-            allowed = toElementAttributes(getElementEntity(currentElement.getParentId()).get()).isAllowed(userId);
+            allowed = toElementAttributes(getElementEntity(currentElement.getParentId()).orElseThrow()).isAllowed(userId);
         }
 
         if (!allowed) {
@@ -406,7 +407,7 @@ public class DirectoryService {
         path.add(toElementAttributes(currentElement));
 
         while (currentElement.getParentId() != null) {
-            currentElement = getElementEntity(currentElement.getParentId()).get();
+            currentElement = getElementEntity(currentElement.getParentId()).orElseThrow();
             ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
             path.add(currentElementAttributes);
         }
