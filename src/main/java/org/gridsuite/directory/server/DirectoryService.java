@@ -265,6 +265,7 @@ public class DirectoryService {
     public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
         Optional<DirectoryElementEntity> optElement = getElementEntity(elementUuid);
         Optional<DirectoryElementEntity> optNewDirectory = getElementEntity(newDirectoryUuid);
+        DirectoryElementEntity oldDirectory;
         DirectoryElementEntity element;
         DirectoryElementEntity newDirectory;
         if (optElement.isEmpty()) {
@@ -289,7 +290,7 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
-        DirectoryElementEntity oldDirectory = getElementEntity(element.getParentId()).orElseThrow();
+        oldDirectory = getElementEntity(element.getParentId()).orElseThrow();
 
         if (!newDirectory.getIsPrivate().equals(oldDirectory.getIsPrivate())) {
             throw DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid);
