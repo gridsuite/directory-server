@@ -396,9 +396,7 @@ public class DirectoryService {
         if (currentElement.getType().equals(DIRECTORY)) {
             allowed = toElementAttributes(currentElement).isAllowed(userId);
         } else {
-            UUID parentID = currentElement.getParentId();
-            DirectoryElementEntity parentDirectory = getElementEntity(parentID).orElseThrow();
-            allowed = toElementAttributes(parentDirectory).isAllowed(userId);
+            allowed = toElementAttributes(getElementEntity(currentElement.getParentId()).orElseThrow()).isAllowed(userId);
         }
 
         if (!allowed) {
@@ -408,8 +406,7 @@ public class DirectoryService {
         path.add(toElementAttributes(currentElement));
 
         while (currentElement.getParentId() != null) {
-            UUID parentID = currentElement.getParentId();
-            currentElement = getElementEntity(parentID).orElseThrow();
+            currentElement = getElementEntity(currentElement.getParentId()).orElseThrow();
             ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
             path.add(currentElementAttributes);
         }
