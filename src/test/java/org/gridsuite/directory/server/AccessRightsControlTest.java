@@ -202,7 +202,7 @@ public class AccessRightsControlTest {
     }
 
     private UUID insertRootDirectory(String userId, String rootDirectoryName, boolean isPrivate) throws Exception {
-        MockHttpServletResponse response = insertRootDirectory(userId, rootDirectoryName, isPrivate,  HttpStatus.OK).getResponse();
+        MockHttpServletResponse response = insertRootDirectory(userId, rootDirectoryName, isPrivate, HttpStatus.OK).getResponse();
         assertNotNull(response);
         assertEquals(APPLICATION_JSON_VALUE, response.getContentType());
         return objectMapper.readValue(response.getContentAsString(), ElementAttributes.class).getElementUuid();
