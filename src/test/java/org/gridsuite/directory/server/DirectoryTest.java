@@ -41,6 +41,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1036,7 +1037,7 @@ public class DirectoryTest {
         ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, null, "userId", "descr study");
         insertAndCheckSubElement(uuidNewDirectory, false, subEltAttributes);
 
-        LocalDateTime newModificationDate = LocalDateTime.now();
+        LocalDateTime newModificationDate = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
 
         String userMakingModification = "newUser";
 

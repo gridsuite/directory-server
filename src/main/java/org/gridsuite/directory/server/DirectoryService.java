@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -148,7 +149,8 @@ public class DirectoryService {
 
     /* methods */
     private ElementAttributes insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        //We need to limit the precision to avoid database precision storage limit issue (postgres has a precision of 6 digits while h2 can go to 9)
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         return toElementAttributes(directoryElementRepository.save(
                 new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
                                            parentDirectoryUuid,
@@ -232,8 +234,8 @@ public class DirectoryService {
         DirectoryElementEntity directoryElement = getDirectoryElementEntity(elementUuid);
         if (!isElementUpdatable(toElementAttributes(directoryElement), userId, false) ||
             !directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
-            (!directoryElement.getName().equals(newElementAttributes.getElementName()) &&
-             directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType()))) {
+            !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
+             directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType())) {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
