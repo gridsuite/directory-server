@@ -43,7 +43,7 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>23</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>25</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.directory.server</liquibase-hibernate-package>
         <to-string-verifier-version>1.4.8</to-string-verifier-version>
     </properties>
