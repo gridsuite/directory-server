@@ -15,7 +15,7 @@ public class SupervisionService {
     }
 
     public List<ElementAttributes> getAllElementsByType(String type) {
-        if(type != null) {
+        if (type != null) {
             return directoryElementRepository.findAllByType(type).stream().map(ElementAttributes::toElementAttributes).toList();
         } else {
             return directoryElementRepository.findAll().stream().map(ElementAttributes::toElementAttributes).toList();

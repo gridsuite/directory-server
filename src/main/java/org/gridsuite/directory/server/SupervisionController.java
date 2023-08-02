@@ -17,14 +17,14 @@ import java.util.List;
 @Tag(name = "Supervision directory-server")
 public class SupervisionController {
 
-    private SupervisionService supervisionService;
+    private final SupervisionService supervisionService;
 
-    public SupervisionController (SupervisionService supervisionService) {
+    public SupervisionController(SupervisionService supervisionService) {
         this.supervisionService = supervisionService;
     }
 
     @GetMapping("/elements")
-    public ResponseEntity<List<ElementAttributes>> getAllElements (
+    public ResponseEntity<List<ElementAttributes>> getAllElements(
         @RequestParam(value = "elementType", required = false) String elementType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getAllElementsByType(elementType));
     }
