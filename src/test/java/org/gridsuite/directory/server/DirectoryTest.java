@@ -93,8 +93,8 @@ public class DirectoryTest {
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
 
-    private String elementUpdateDestination = "element.update";
-    private String directoryUpdateDestination = "directory.update";
+    private final String elementUpdateDestination = "element.update";
+    private final String directoryUpdateDestination = "directory.update";
 
     @Autowired
     ObjectMapper objectMapper;
