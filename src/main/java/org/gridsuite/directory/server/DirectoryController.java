@@ -56,7 +56,7 @@ public class DirectoryController {
     @PostMapping(value = "/directories/paths/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element inside the given directory described by the path, if one of more directory of the path are missing we create them.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The root directory exists"),
+            @ApiResponse(responseCode = "200", description = "The element is imported"),
     })
     public ResponseEntity<Void> createElementInDirectoryPath(@RequestParam("directoryPath") String directoryPath, @RequestBody ElementAttributes elementAttributes,
                                               @RequestHeader("userId") String userId) {
