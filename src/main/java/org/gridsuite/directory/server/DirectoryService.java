@@ -8,6 +8,7 @@ package org.gridsuite.directory.server;
 
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -23,15 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -186,6 +181,43 @@ public class DirectoryService {
         );
 
         return elementAttributes;
+    }
+
+    public void createElementInDirectoryPath(String directoryPath, ElementAttributes elementAttributes, String userId) {
+        String[] directoryPathSplit = directoryPath.split("/");
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        UUID currentDirectoryUuid;
+        UUID parentDirectoryUuid = null;
+
+        for (String s : directoryPathSplit) {
+            currentDirectoryUuid = getDirectoryUuid(s, parentDirectoryUuid);
+            //create the directory if it doesn't exist
+            if (currentDirectoryUuid == null) {
+                //we create the root directory if it doesn't exist
+                if (parentDirectoryUuid == null) {
+                    parentDirectoryUuid = createRootDirectory(
+                            new RootDirectoryAttributes(
+                                    s,
+                                    new AccessRightsAttributes(false),
+                                    userId,
+                                    null,
+                                    now,
+                                    now,
+                                    userId),
+                            userId).getElementUuid();
+                } else {
+                    //and then we create the rest of the path
+                    parentDirectoryUuid = createElement(
+                            toElementAttributes(UUID.randomUUID(), s, DIRECTORY,
+                                    false, userId, null, now, now, userId),
+                            parentDirectoryUuid,
+                            userId).getElementUuid();
+                }
+            } else {
+                parentDirectoryUuid = currentDirectoryUuid;
+            }
+        }
+        insertElement(elementAttributes, parentDirectoryUuid);
     }
 
     private Map<UUID, Long> getSubElementsCount(List<UUID> subDirectories, List<String> types) {
@@ -474,8 +506,18 @@ public class DirectoryService {
         return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
     }
 
-    public boolean rootDirectoryExists(String rootDirectoryName) {
-        return !directoryElementRepository.findRootDirectoriesByName(rootDirectoryName).isEmpty();
+    public UUID getDirectoryUuid(String directoryName, UUID parentDirectoryUuid) {
+        List<DirectoryElementEntity> directories;
+        //If parentDirectoryUuid is null we search for a rootDirectory
+        if (parentDirectoryUuid == null) {
+            directories = directoryElementRepository.findRootDirectoriesByName(directoryName);
+        } else {
+            directories = directoryElementRepository.findDirectoriesByNameAndParentId(directoryName, parentDirectoryUuid);
+        }
+        if (!directories.isEmpty()) {
+            return directories.get(0).getId();
+        }
+        return null;
     }
 
     public boolean elementExists(UUID parentDirectoryUuid, String elementName, String type) {
