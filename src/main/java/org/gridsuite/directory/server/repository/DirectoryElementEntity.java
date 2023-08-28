@@ -8,6 +8,7 @@ package org.gridsuite.directory.server.repository;
 
 import lombok.*;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.directory.server.ElementType;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 
 import javax.persistence.*;
@@ -15,7 +16,6 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -75,7 +75,7 @@ public class DirectoryElementEntity {
         return (// Updatable attributes
             StringUtils.isNotBlank(newElementAttributes.getElementName()) ||
                     //Only the owner can update the accessRights of a directory (to avoid user locking themselves out of a directory they don't own
-                    (type.equals(DIRECTORY) && Objects.nonNull(newElementAttributes.getAccessRights()) && userId.equals(owner)))
+                    type.equals(ElementType.DIRECTORY.name()) && Objects.nonNull(newElementAttributes.getAccessRights()) && userId.equals(owner))
             && // Non updatable attributes
             Objects.isNull(newElementAttributes.getElementUuid()) &&
             Objects.isNull(newElementAttributes.getType()) &&

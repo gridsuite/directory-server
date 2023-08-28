@@ -55,8 +55,7 @@ public class DirectoryController {
 
     @PostMapping(value = "/directories/paths/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element inside the given directory described by the path, if one of more directory of the path are missing we create them.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The element is imported"),
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element is imported"),
     })
     public ResponseEntity<Void> createElementInDirectoryPath(@RequestParam("directoryPath") String directoryPath, @RequestBody ElementAttributes elementAttributes,
                                               @RequestHeader("userId") String userId) {
@@ -90,8 +89,8 @@ public class DirectoryController {
     @Operation(summary = "Get root directories")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The root directories"))
     public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestHeader(name = "userId") String userId,
-                                                                      @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
-        return ResponseEntity.ok().body(service.getRootDirectories(userId, types));
+                                                                      @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<ElementType> types) {
+        return ResponseEntity.ok().body(service.getRootDirectories(userId, ElementType.names(types)));
     }
 
     @RequestMapping(value = "/root-directories", method = RequestMethod.HEAD)
@@ -110,8 +109,8 @@ public class DirectoryController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
     public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                         @RequestHeader("userId") String userId,
-                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, types));
+                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<ElementType> types) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, ElementType.names(types)));
     }
 
     @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -131,9 +130,9 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "At least one item was not found"),
     })
     public ResponseEntity<List<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
-                                                               @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
+                                                               @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<ElementType> types,
                                                                @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
-        return ResponseEntity.ok().body(service.getElements(ids, strictMode, types));
+        return ResponseEntity.ok().body(service.getElements(ids, strictMode, ElementType.names(types)));
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
@@ -182,9 +181,9 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the element exists or not")})
     public ResponseEntity<String> elementNameCandidate(@PathVariable("directoryUuid") UUID directoryUuid,
                                                              @PathVariable("elementName") String elementName,
-                                                             @RequestParam("type") String type,
+                                                             @RequestParam("type") ElementType type,
                                                              @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type.name(), userId));
     }
 
     @PostMapping(value = "/elements/{elementUuid}/notification")
@@ -207,8 +206,8 @@ public class DirectoryController {
         @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
     public ResponseEntity<Void> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
-                                                    @PathVariable("type") String type) {
-        HttpStatus status = service.elementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+                                                    @PathVariable("type") ElementType type) {
+        HttpStatus status = service.elementExists(directoryUuid, elementName, type.name()) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
 }

@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -113,13 +111,13 @@ public class AccessRightsControlTest {
 
         // Create directory tree for user1 : root1(public) -> dir1(public) -> study1
         UUID rootUuid1 = insertRootDirectory("user1", "root1", false);
-        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, false, "user1"));
-        UUID eltUuid1 = insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, true, "user1"));
+        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", ElementType.DIRECTORY.name(), false, "user1"));
+        UUID eltUuid1 = insertSubElement(dirUuid1, toElementAttributes(null, "study1", ElementType.STUDY.name(), true, "user1"));
 
         // Create directory tree for user2 : root2(public) -> dir2(private) -> study2
         UUID rootUuid2 = insertRootDirectory("user2", "root2", false);
-        UUID dirUuid2 = insertSubElement(rootUuid2, toElementAttributes(null, "dir2", DIRECTORY, true, "user2"));
-        UUID eltUuid2 = insertSubElement(dirUuid2, toElementAttributes(null, "study2", STUDY, true, "user2"));
+        UUID dirUuid2 = insertSubElement(rootUuid2, toElementAttributes(null, "dir2", ElementType.DIRECTORY.name(), true, "user2"));
+        UUID eltUuid2 = insertSubElement(dirUuid2, toElementAttributes(null, "study2", ElementType.STUDY.name(), true, "user2"));
 
         // Dir2 is private directory and only accessible by user2
         controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1), HttpStatus.OK);
@@ -128,8 +126,8 @@ public class AccessRightsControlTest {
         controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2), HttpStatus.OK);
 
         // Dir2 is private and only sub elements creation for user2
-        insertSubElement(dirUuid2, toElementAttributes(null, "dir", DIRECTORY, true, "user1"), HttpStatus.FORBIDDEN);
-        insertSubElement(dirUuid2, toElementAttributes(null, "study", STUDY, true, "user1"), HttpStatus.FORBIDDEN);
+        insertSubElement(dirUuid2, toElementAttributes(null, "dir", ElementType.DIRECTORY.name(), true, "user1"), HttpStatus.FORBIDDEN);
+        insertSubElement(dirUuid2, toElementAttributes(null, "study", ElementType.STUDY.name(), true, "user1"), HttpStatus.FORBIDDEN);
 
         // Study2 is in a private directory and only accessible by user2
         controlElementsAccess("user1", List.of(eltUuid1), HttpStatus.OK);
@@ -156,10 +154,10 @@ public class AccessRightsControlTest {
         insertRootDirectory("user1", "root1", false, HttpStatus.FORBIDDEN);
 
         // Insert elements with same name in a directory not allowed
-        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, false, "user1"));
-        insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, false, "user1"), HttpStatus.FORBIDDEN);
-        insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, true, "user1"));
-        insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, true, "user1"), HttpStatus.FORBIDDEN);
+        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", ElementType.DIRECTORY.name(), false, "user1"));
+        insertSubElement(rootUuid1, toElementAttributes(null, "dir1", ElementType.DIRECTORY.name(), false, "user1"), HttpStatus.FORBIDDEN);
+        insertSubElement(dirUuid1, toElementAttributes(null, "study1", ElementType.STUDY.name(), true, "user1"));
+        insertSubElement(dirUuid1, toElementAttributes(null, "study1", ElementType.STUDY.name(), true, "user1"), HttpStatus.FORBIDDEN);
     }
 
     private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
