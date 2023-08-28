@@ -47,10 +47,6 @@ import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttr
  */
 @Service
 public class DirectoryService {
-//    public static final String STUDY = "STUDY";
-//    public static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
-//    public static final String FILTER = "FILTER";
-//    public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String UPDATE_TYPE_STUDIES = "studies";
