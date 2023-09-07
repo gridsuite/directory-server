@@ -13,6 +13,7 @@ import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.StudyService;
 import org.gridsuite.directory.server.utils.MatcherJson;
@@ -40,6 +41,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -1421,6 +1423,45 @@ public class DirectoryTest {
         insertAndCheckSubElement(directoryId, true, element);
         assertEquals("newStudy(2)", candidateName(directoryId, name, STUDY));
         assertEquals("newStudy", candidateName(directoryId, name, CONTINGENCY_LIST));
+    }
+
+    @Test
+    @SneakyThrows
+    public void testCreateElementInDirectory() {
+        String userId = "user";
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "caseName", "CASE",
+                false, "user", null, now, now, userId);
+        String requestBody = objectMapper.writeValueAsString(caseElement);
+        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        checkRootDirectoryExists("dir1");
+        List<DirectoryElementEntity> directoryElementList = directoryElementRepository.findAll();
+        //there should be 3 elements, the 2 directories created and the one element inside
+        assertEquals(3, directoryElementList.size());
+        DirectoryElementEntity dir1 = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getName().equals("dir1")).findFirst().orElseThrow();
+        assertEquals(DIRECTORY, dir1.getType());
+        //because it should be a root directory
+        assertNull(dir1.getParentId());
+        UUID dir1Uuid = dir1.getId();
+
+        DirectoryElementEntity dir2 = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getName().equals("dir2")).findFirst().orElseThrow();
+        assertEquals(DIRECTORY, dir2.getType());
+        //dir2 is a child of dir1
+        assertEquals(dir1Uuid, dir2.getParentId());
+        UUID dir2Uuid = dir2.getId();
+
+        DirectoryElementEntity insertedCaseElement = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getName().equals("caseName")).findFirst().orElseThrow();
+        assertEquals("CASE", insertedCaseElement.getType());
+        //the element is in dir2
+        assertEquals(dir2Uuid, insertedCaseElement.getParentId());
+
+        //we don't care about message
+        output.clear();
     }
 
     @After

@@ -53,6 +53,17 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
     }
 
+    @PostMapping(value = "/directories/paths/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Create an element inside the given directory described by the path, if one of more directory of the path are missing we create them.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The element is imported"),
+    })
+    public ResponseEntity<Void> createElementInDirectoryPath(@RequestParam("directoryPath") String directoryPath, @RequestBody ElementAttributes elementAttributes,
+                                              @RequestHeader("userId") String userId) {
+        service.createElementInDirectoryPath(directoryPath, elementAttributes, userId);
+        return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).build();
+    }
+
     @GetMapping(value = "/elements/{elementUuid}/path", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get path of element")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List info of an element and its parents in order to get its path"),
@@ -90,7 +101,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "204", description = "The root directory doesn't exist"),
     })
     public ResponseEntity<Void> rootDirectoryExists(@RequestParam("directoryName") String directoryName) {
-        HttpStatus status = service.rootDirectoryExists(directoryName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        HttpStatus status = service.getDirectoryUuid(directoryName, null) != null ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
 
