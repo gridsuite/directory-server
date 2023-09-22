@@ -3,9 +3,9 @@ spring:
     name: directory-server
 
   cloud:
+    function:
+      definition: consumeStudyUpdate;consumeElementUpdate
     stream:
-      function:
-        definition: consumeStudyUpdate;consumeElementUpdate
       bindings:
         publishDirectoryUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}directory.update
@@ -15,7 +15,7 @@ spring:
         consumeElementUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.update
           group: directoryElementUpdateGroup
-      output-bindings: publishDirectoryUpdate
+      output-bindings: publishDirectoryUpdate-out-0
 
 powsybl-ws:
   database:

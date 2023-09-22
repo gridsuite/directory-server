@@ -266,8 +266,8 @@ public class DirectoryService {
         DirectoryElementEntity directoryElement = getDirectoryElementEntity(elementUuid);
         if (!isElementUpdatable(toElementAttributes(directoryElement), userId, false) ||
             !directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
-            (!directoryElement.getName().equals(newElementAttributes.getElementName()) &&
-             directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType()))) {
+            !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
+             directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType())) {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
