@@ -396,9 +396,38 @@ public class DirectoryTest {
         ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21PrivateUUID, true, filterAttributes);
 
+        // Move from public folder to private folder is forbidden if the issuer of the operation isn't the element's owner
+        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+                .header("userId", "Roger"))
+            .andExpect(status().isForbidden());
+
+        // Move from public folder to private folder is allowed if the issuer of the operation is the element's owner
         mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
                 .header("userId", "Doe"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
+
+        // assert that the broker message has been sent a root directory creation request message
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(directory21PrivateUUID, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(false, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+
+        checkElementNameExistInDirectory(rootDir10Uuid, "filter", FILTER, HttpStatus.OK);
     }
 
     @Test
