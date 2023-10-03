@@ -36,10 +36,6 @@ public class DirectoryException extends RuntimeException {
         return new DirectoryException(Type.NOT_FOUND, String.format("%s '%s' not found !", type, uuid));
     }
 
-    public static DirectoryException createDirectoryWithDifferentAccessRights(@NonNull UUID elementUuid, @NonNull UUID directoryUuid) {
-        return new DirectoryException(Type.DIFFERENT_ACCESS_RIGHT, String.format("Element's parent with uuid %s have different access rights from directory with uuid %s !", elementUuid, directoryUuid));
-    }
-
     Type getType() {
         return type;
     }
@@ -49,7 +45,6 @@ public class DirectoryException extends RuntimeException {
         NOT_FOUND,
         NOT_DIRECTORY,
         IS_DIRECTORY,
-        UNKNOWN_NOTIFICATION,
-        DIFFERENT_ACCESS_RIGHT
+        UNKNOWN_NOTIFICATION
     }
 }
