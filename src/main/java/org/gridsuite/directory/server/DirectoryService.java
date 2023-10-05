@@ -380,8 +380,8 @@ public class DirectoryService {
         }
         UUID parentUuid = getParentUuid(elementUuid);
         deleteObject(elementAttributes, userId);
-        Boolean isCurrentElementPrivate = elementAttributes.getAccessRights() != null ? elementAttributes.getAccessRights().isPrivate() : null;
-        Boolean isPrivate = isPrivateForNotification(parentUuid, isCurrentElementPrivate);
+        var isCurrentElementPrivate = elementAttributes.getAccessRights() != null ? elementAttributes.getAccessRights().isPrivate() : null;
+        boolean isPrivate = isPrivateForNotification(parentUuid, isCurrentElementPrivate);
 
         notificationService.emitDirectoryChanged(
                 parentUuid == null ? elementUuid : parentUuid,
@@ -486,7 +486,7 @@ public class DirectoryService {
     }
 
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
-        if (parentDirectoryUuid == null) {
+        if (parentDirectoryUuid == null && isCurrentElementPrivate != null) {
             return isCurrentElementPrivate != null && isCurrentElementPrivate; // null may only come from borked REST request
         } else {
             return isPrivateDirectory(parentDirectoryUuid);
