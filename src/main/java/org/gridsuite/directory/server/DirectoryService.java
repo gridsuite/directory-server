@@ -381,7 +381,7 @@ public class DirectoryService {
         UUID parentUuid = getParentUuid(elementUuid);
         deleteObject(elementAttributes, userId);
         var isCurrentElementPrivate = elementAttributes.getAccessRights() != null ? elementAttributes.getAccessRights().isPrivate() : null;
-        boolean isPrivate = isPrivateForNotification(parentUuid, isCurrentElementPrivate);
+        Boolean isPrivate = isPrivateForNotification(parentUuid, isCurrentElementPrivate);
 
         notificationService.emitDirectoryChanged(
                 parentUuid == null ? elementUuid : parentUuid,
