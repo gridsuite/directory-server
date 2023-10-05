@@ -333,7 +333,7 @@ public class DirectoryService {
                 element.getName(),
                 userId,
                 null,
-                true,
+                isPrivateForNotification(element.getParentId(), false),
                 isRootDirectory(element.getId()),
                 NotificationType.UPDATE_DIRECTORY
         );
@@ -343,7 +343,7 @@ public class DirectoryService {
                 element.getName(),
                 userId,
                 null,
-                true,
+                isPrivateForNotification(oldDirectory.getId(), false),
                 isRootDirectory(element.getId()),
                 NotificationType.UPDATE_DIRECTORY
         );
