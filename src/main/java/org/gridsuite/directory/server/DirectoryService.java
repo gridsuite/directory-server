@@ -487,7 +487,7 @@ public class DirectoryService {
 
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
         if (parentDirectoryUuid == null && isCurrentElementPrivate != null) {
-            return isCurrentElementPrivate != null && isCurrentElementPrivate; // null may only come from borked REST request
+            return isCurrentElementPrivate; // null may only come from borked REST request
         } else {
             return isPrivateDirectory(parentDirectoryUuid);
         }
