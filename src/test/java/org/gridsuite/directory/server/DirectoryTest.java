@@ -413,7 +413,7 @@ public class DirectoryTest {
         assertEquals("Doe", headers.get(HEADER_USER_ID));
         assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
         assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(false, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
