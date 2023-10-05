@@ -398,11 +398,11 @@ public class DirectoryTest {
 
         // Move from public folder to private folder is forbidden if the issuer of the operation isn't the element's owner
         mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
-                .header("userId", "Doe"))
+                .header("userId", "Roger"))
             .andExpect(status().isForbidden());
 
         // Move from public folder to private folder is allowed if the issuer of the operation is the element's owner
-        /*mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
+        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
                 .header("userId", "Doe"))
                 .andExpect(status().isOk());
 
@@ -427,7 +427,7 @@ public class DirectoryTest {
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
-        checkElementNameExistInDirectory(rootDir10Uuid, "filter", FILTER, HttpStatus.OK);*/
+        checkElementNameExistInDirectory(rootDir10Uuid, "filter", FILTER, HttpStatus.OK);
     }
 
     @Test

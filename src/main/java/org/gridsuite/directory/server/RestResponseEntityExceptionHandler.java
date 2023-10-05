@@ -34,8 +34,6 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case IS_DIRECTORY:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(IS_DIRECTORY);
-            case DIFFERENT_ACCESS_RIGHT:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(DIFFERENT_ACCESS_RIGHT);
             case NOT_DIRECTORY:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_DIRECTORY);
             case NOT_FOUND:
