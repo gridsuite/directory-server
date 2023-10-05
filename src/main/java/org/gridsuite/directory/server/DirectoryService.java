@@ -325,11 +325,6 @@ public class DirectoryService {
         }
 
         oldDirectory = getElementEntity(element.getParentId()).orElseThrow();
-
-        if (!newDirectory.getIsPrivate().equals(oldDirectory.getIsPrivate())) {
-            throw DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid);
-        }
-
         element.setParentId(newDirectoryUuid);
         directoryElementRepository.save(element);
 
@@ -492,7 +487,7 @@ public class DirectoryService {
 
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
         if (parentDirectoryUuid == null) {
-            return isCurrentElementPrivate != null && isCurrentElementPrivate; // null may only come from borked REST request
+            return Boolean.TRUE.equals(isCurrentElementPrivate); // null may only come from borked REST request
         } else {
             return isPrivateDirectory(parentDirectoryUuid);
         }
