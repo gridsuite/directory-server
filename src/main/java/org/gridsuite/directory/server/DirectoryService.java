@@ -325,6 +325,9 @@ public class DirectoryService {
         }
 
         oldDirectory = getElementEntity(element.getParentId()).orElseThrow();
+        if (!newDirectory.getIsPrivate().equals(oldDirectory.getIsPrivate())) {
+            throw DirectoryException.createDirectoryWithDifferentAccessRights(elementUuid, newDirectoryUuid);
+        }
         element.setParentId(newDirectoryUuid);
         directoryElementRepository.save(element);
 
