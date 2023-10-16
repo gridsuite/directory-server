@@ -11,3 +11,6 @@ target/
 /.idea
 *.iml
 .toDelete
+
+# https://github.com/liquibase/liquibase/issues/2196
+/derby.log
