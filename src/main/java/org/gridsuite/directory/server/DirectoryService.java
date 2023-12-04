@@ -227,6 +227,13 @@ public class DirectoryService {
         return subdirectoriesCountsMap;
     }
 
+    private Map<UUID, Long> getSubElementsCount(List<UUID> subDirectories, List<String> types, String userId) {
+        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = directoryElementRepository.getSubdirectoriesCounts(subDirectories, types, userId);
+        Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
+        subdirectoriesCountsList.forEach(e -> subdirectoriesCountsMap.put(e.getId(), e.getCount()));
+        return subdirectoriesCountsMap;
+    }
+
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<String> types) {
         ElementAttributes elementAttributes = getElement(directoryUuid);
         if (elementAttributes == null) {
@@ -256,7 +263,7 @@ public class DirectoryService {
 
     public List<ElementAttributes> getRootDirectories(String userId, List<String> types) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findRootDirectoriesByUserId(userId);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types, userId);
         return directoryElements.stream()
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
                 .collect(Collectors.toList());
