@@ -68,11 +68,16 @@ public class DirectoryElementEntity {
             this.isPrivate = newElementAttributes.getAccessRights().isPrivate();
         }
 
+        if (Objects.nonNull(newElementAttributes.getDescription())) {
+            this.description = newElementAttributes.getDescription();
+        }
+
         return this;
     }
 
     public boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes, String userId) {
         return (// Updatable attributes
+            StringUtils.isNotBlank(newElementAttributes.getDescription()) ||
             StringUtils.isNotBlank(newElementAttributes.getElementName()) ||
                     //Only the owner can update the accessRights of a directory (to avoid user locking themselves out of a directory they don't own
                     type.equals(DIRECTORY) && Objects.nonNull(newElementAttributes.getAccessRights()) && userId.equals(owner))
@@ -81,7 +86,6 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getType()) &&
             Objects.isNull(newElementAttributes.getOwner()) &&
             Objects.isNull(newElementAttributes.getSubdirectoriesCount()) &&
-            Objects.isNull(newElementAttributes.getDescription()) &&
             Objects.isNull(newElementAttributes.getCreationDate()) &&
             Objects.isNull(newElementAttributes.getLastModificationDate()) &&
             Objects.isNull(newElementAttributes.getLastModifiedBy());
