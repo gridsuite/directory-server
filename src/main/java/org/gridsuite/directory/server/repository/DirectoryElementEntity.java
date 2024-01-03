@@ -68,7 +68,7 @@ public class DirectoryElementEntity {
             this.isPrivate = newElementAttributes.getAccessRights().isPrivate();
         }
 
-        if (Objects.nonNull(newElementAttributes.getDescription())) {
+        if (StringUtils.isNotBlank(newElementAttributes.getDescription())) {
             this.description = newElementAttributes.getDescription();
         }
 
