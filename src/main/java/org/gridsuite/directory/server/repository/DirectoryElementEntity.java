@@ -77,7 +77,7 @@ public class DirectoryElementEntity {
 
     public boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes, String userId) {
         return (// Updatable attributes
-            StringUtils.isNotBlank(newElementAttributes.getDescription()) ||
+            Objects.nonNull(newElementAttributes.getDescription()) ||
             StringUtils.isNotBlank(newElementAttributes.getElementName()) ||
                     //Only the owner can update the accessRights of a directory (to avoid user locking themselves out of a directory they don't own
                     type.equals(DIRECTORY) && Objects.nonNull(newElementAttributes.getAccessRights()) && userId.equals(owner))
