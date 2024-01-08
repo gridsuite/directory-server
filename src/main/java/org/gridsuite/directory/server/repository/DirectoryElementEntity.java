@@ -47,7 +47,7 @@ public class DirectoryElementEntity {
     @Column(name = "owner", length = 80, nullable = false)
     private String owner;
 
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "CLOB")
     private String description;
 
     @Column(name = "creationDate")
