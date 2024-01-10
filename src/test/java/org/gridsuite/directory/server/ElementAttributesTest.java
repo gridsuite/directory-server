@@ -62,13 +62,13 @@ public class ElementAttributesTest {
 
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), "userId"));
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId"));
+        assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build(), "userId"));
 
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId2"));
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build(), "userId"));
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build(), "userId"));
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build(), "userId"));
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build(), "userId"));
-        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().description("newDescription").build(), "userId"));
 
         assertFalse(elementEntity2.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId"));
 
