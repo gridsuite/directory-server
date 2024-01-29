@@ -252,13 +252,19 @@ public class DirectoryService {
     }
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types) {
-        return getAllDirectoryElementsStream(directoryUuid, types)
+        return getAllDirectoryElementsStream(directoryUuid, types, userId)
                 .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) || elementAttributes.isAllowed(userId));
     }
 
-    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types) {
+    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentId(directoryUuid);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types);
+        Map<UUID, Long> subdirectoriesCountsMap;
+        if (!types.isEmpty()) {
+            subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types);
+        } else {
+            subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types, userId);
+        }
+
         return directoryElements
                 .stream()
                 .filter(e -> e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
@@ -421,7 +427,7 @@ public class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
     }
 
     /***
