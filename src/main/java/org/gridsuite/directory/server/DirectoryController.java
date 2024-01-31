@@ -7,6 +7,7 @@
 package org.gridsuite.directory.server;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -72,6 +73,20 @@ public class DirectoryController {
     public ResponseEntity<List<ElementAttributes>> getPath(@PathVariable("elementUuid") UUID elementUuid,
                                                                         @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
+    }
+
+    @PutMapping(value = "/elements/stash")
+    @Operation(summary = "Stash network modifications for a node")
+        @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were stashed / restored ")})
+    public ResponseEntity<Void> stashElements(@Parameter(description = "elements UUIDs") @RequestParam("uuids") List<UUID> elementsUuid,
+                                              @Parameter(description = "Stashed elements") @RequestParam(name = "stashed", required = true) Boolean stashed,
+                                              @RequestHeader("userId") String userId) {
+        if (stashed) {
+            service.stashElements(elementsUuid, userId);
+        } else {
+            service.restoreElements(elementsUuid, userId);
+        }
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")

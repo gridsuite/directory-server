@@ -156,7 +156,9 @@ public class DirectoryService {
                                            elementAttributes.getDescription(),
                                            now,
                                            now,
-                                           elementAttributes.getOwner()
+                                           elementAttributes.getOwner(),
+                                    false,
+                                  null
                 )
             )
         );
@@ -605,5 +607,11 @@ public class DirectoryService {
             ++i;
         }
         return nameCandidate(elementName, i);
+    }
+
+    public void stashElements(List<UUID> elementsUuid, String userId) {
+    }
+
+    public void restoreElements(List<UUID> elementsUuid, String userId) {
     }
 }
