@@ -6,17 +6,31 @@
  */
 package org.gridsuite.directory.server;
 
+import org.springframework.aot.hint.RuntimeHints;
+import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ImportRuntimeHints;
+
+import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @SpringBootApplication
+@ImportRuntimeHints(DirectoryApplication.NativeRuntimeHints.class)
 public class DirectoryApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(DirectoryApplication.class, args);
+    }
+
+    static class NativeRuntimeHints implements RuntimeHintsRegistrar {
+        @Override
+        public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
+            // Register serialization
+            hints.serialization().registerType(UUID[].class);
+        }
     }
 }

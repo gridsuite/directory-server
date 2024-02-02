@@ -44,7 +44,71 @@
         <powsybl-ws-dependencies.version>2.7.0</powsybl-ws-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.directory.server</liquibase-hibernate-package>
         <to-string-verifier-version>1.4.8</to-string-verifier-version>
+        <native-buildtools.version>0.9.28</native-buildtools.version>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <image>
+                                <builder>paketobuildpacks/builder:tiny</builder>
+                                <env>
+                                    <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
+                                    <!-- Enable internet access -->
+                                    <HTTP_PROXY>${env.HTTP_PROXY}</HTTP_PROXY>
+                                    <HTTPS_PROXY>${env.HTTPS_PROXY}</HTTPS_PROXY>
+                                    <NO_PROXY>${env.NO_PROXY}</NO_PROXY>
+                                    <!--
+                                    SPRING_PROFILES_ACTIVE: remove extra profiles. This is used for example to remove the "local" profile
+                                    which allows running apps in an IDE and have it connect to localhost for its dependencies
+
+                                    SPRING_CONFIG_LOCATION: change the working dir from spring config location to /config. The working dir
+                                    is RW in /home, while the config is RO in /config. Keep the other spring default locations.
+                                    -->
+                                    <BPE_SPRING_PROFILES_ACTIVE>default</BPE_SPRING_PROFILES_ACTIVE>
+                                    <BPE_SPRING_CONFIG_LOCATION>optional:classpath:/;optional:classpath:/config/;optional:file:/config/;optional:file:/config/*/</BPE_SPRING_CONFIG_LOCATION>
+                                </env>
+                            </image>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>process-aot</id>
+                                <goals>
+                                    <goal>process-aot</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>${native-buildtools.version}</version>
+                        <configuration>
+                            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+                            <metadataRepository>
+                                <enabled>true</enabled>
+                            </metadataRepository>
+                            <requiredVersion>22.3</requiredVersion>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>add-reachability-metadata</id>
+                                <goals>
+                                    <goal>add-reachability-metadata</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <build>
         <pluginManagement>
