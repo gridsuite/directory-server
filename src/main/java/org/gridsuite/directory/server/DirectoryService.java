@@ -9,8 +9,10 @@ package org.gridsuite.directory.server;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
+import org.gridsuite.directory.server.dto.DirectoryElementInfos;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosService;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.StudyService;
@@ -58,6 +60,8 @@ public class DirectoryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
     private final DirectoryElementRepository directoryElementRepository;
 
+    private final DirectoryElementInfosService directoryElementInfosService;
+
     private StudyService studyService;
 
     @Autowired
@@ -65,9 +69,10 @@ public class DirectoryService {
 
     public DirectoryService(
         DirectoryElementRepository directoryElementRepository,
+        DirectoryElementInfosService directoryElementInfosService,
         StudyService studyService) {
         this.directoryElementRepository = directoryElementRepository;
-
+        this.directoryElementInfosService = directoryElementInfosService;
         this.studyService = studyService;
     }
 
@@ -109,6 +114,7 @@ public class DirectoryService {
         assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
         assertAccessibleDirectory(parentDirectoryUuid, userId);
         ElementAttributes result = insertElement(elementAttributes, parentDirectoryUuid);
+        directoryElementInfosService.addDirectoryElementsInfos(new DirectoryElementInfos(result.getElementUuid().toString(), result.getElementName(), result.getLastModificationDate().toLocalDateTime()));
         var isCurrentElementPrivate = elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null;
 
         notificationService.emitDirectoryChanged(

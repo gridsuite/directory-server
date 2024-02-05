@@ -2,8 +2,19 @@ server :
   port : 5026
 
 spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
   rabbitmq:
     addresses: localhost
+  data:
+    elasticsearch:
+      host: localhost
+      ## to fill if authentication is needed
+      # user:
+      # password:
 
 powsybl-ws:
   database:
