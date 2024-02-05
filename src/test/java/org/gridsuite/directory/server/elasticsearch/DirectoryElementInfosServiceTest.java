@@ -1,13 +1,16 @@
+/*
+  Copyright (c) 2024, RTE (http://www.rte-france.com)
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.directory.server.elasticsearch;
 
-import org.gridsuite.directory.server.dto.DirectoryElementInfos;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -16,18 +19,15 @@ import java.time.ZoneOffset;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.FILTER;
-import static org.gridsuite.directory.server.DirectoryService.STUDY;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class DirectoryElementInfosServiceTest {
 
     private static final UUID ELEMENT_UUID = UUID.randomUUID();
-
-    @Autowired
-    private DirectoryElementInfosService directoryElementInfosService;
 
     @BeforeEach
     void setUp() {

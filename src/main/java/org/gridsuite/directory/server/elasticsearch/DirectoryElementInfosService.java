@@ -1,11 +1,14 @@
+/*
+  Copyright (c) 2024, RTE (http://www.rte-france.com)
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.directory.server.elasticsearch;
 
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.DirectoryElementInfos;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -13,25 +16,13 @@ import java.util.List;
 @Service
 public class DirectoryElementInfosService {
 
-    public enum FieldSelector {
-        NAME, ID
-    }
-
     private final DirectoryElementInfosRepository directoryElementInfosRepository;
 
-    private final ElasticsearchOperations elasticsearchOperations;
-
-    public DirectoryElementInfosService(DirectoryElementInfosRepository directoryElementInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+    public DirectoryElementInfosService(DirectoryElementInfosRepository directoryElementInfosRepository) {
         this.directoryElementInfosRepository = directoryElementInfosRepository;
-        this.elasticsearchOperations = elasticsearchOperations;
     }
 
     public DirectoryElementInfos addDirectoryElementsInfos(@NonNull DirectoryElementInfos directoryElementInfos) {
-        return  directoryElementInfosRepository.save(directoryElementInfos);
+        return directoryElementInfosRepository.save(directoryElementInfos);
     }
-
-    public List<DirectoryElementInfos> findAllDirectoryElementInfos(@NonNull String name) {
-        return directoryElementInfosRepository.findAllByName(name);
-    }
-
 }
