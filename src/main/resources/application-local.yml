@@ -2,11 +2,6 @@ server :
   port : 5026
 
 spring:
-  jpa:
-    properties:
-      hibernate:
-        format_sql: true
-    show-sql: true
   rabbitmq:
     addresses: localhost
   data:

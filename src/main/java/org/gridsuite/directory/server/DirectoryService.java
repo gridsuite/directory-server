@@ -8,10 +8,8 @@ package org.gridsuite.directory.server;
 
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.directory.server.dto.AccessRightsAttributes;
-import org.gridsuite.directory.server.dto.DirectoryElementInfos;
-import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosService;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -114,7 +112,21 @@ public class DirectoryService {
         assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
         assertAccessibleDirectory(parentDirectoryUuid, userId);
         ElementAttributes result = insertElement(elementAttributes, parentDirectoryUuid);
-        directoryElementInfosService.addDirectoryElementsInfos(new DirectoryElementInfos(result.getElementUuid().toString(), result.getElementName(), result.getLastModificationDate().toLocalDateTime()));
+        UUID elementUuid = result.getElementUuid();
+        LocalDateTime lastModificationDate = result.getLastModificationDate().toLocalDateTime();
+        AccessRightsAttributes accessRights = result.getAccessRights();
+        UUID parentElementUuid = getParentElement(parentDirectoryUuid).getElementUuid();
+        directoryElementInfosService.addDirectoryElementInfos(
+                new DirectoryElementInfos()
+                        .setId(elementUuid.toString())
+                        .setName(result.getElementName())
+                        .setType(result.getType())
+                        .setParentId((parentElementUuid != null) ? parentElementUuid.toString() : null)
+                        .setOwner(result.getOwner())
+                        .setSubdirectoriesCount(result.getSubdirectoriesCount())
+                        .setLastModificationDate(lastModificationDate)
+                        .setIsPrivate(accessRights != null && accessRights.isPrivate())
+        );
         var isCurrentElementPrivate = elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null;
 
         notificationService.emitDirectoryChanged(
@@ -290,7 +302,17 @@ public class DirectoryService {
         }
 
         DirectoryElementEntity elementEntity = directoryElementRepository.save(directoryElement.update(newElementAttributes));
-
+        directoryElementInfosService.updateElementsInfos(
+                new DirectoryElementInfos()
+                        .setId(elementEntity.getId().toString())
+                        .setName(elementEntity.getName())
+                        .setType(elementEntity.getType())
+                        .setParentId(elementEntity.getParentId().toString())
+                        .setOwner(elementEntity.getOwner())
+                        .setSubdirectoriesCount(newElementAttributes.getSubdirectoriesCount())
+                        .setLastModificationDate(elementEntity.getLastModificationDate())
+                        .setIsPrivate(elementEntity.getIsPrivate())
+        );
         notificationService.emitDirectoryChanged(
                 elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
                 elementEntity.getName(),
@@ -417,6 +439,7 @@ public class DirectoryService {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
         directoryElementRepository.deleteById(elementAttributes.getElementUuid());
+        directoryElementInfosService.deleteElementsInfos(elementAttributes.getElementUuid().toString());
         if (STUDY.equals(elementAttributes.getType())) {
             notificationService.emitDeletedStudy(elementAttributes.getElementUuid(), userId);
         }
@@ -611,5 +634,21 @@ public class DirectoryService {
             ++i;
         }
         return nameCandidate(elementName, i);
+    }
+
+    @Transactional
+    public void reindexAllElements() {
+        List<DirectoryElementEntity> allElements = directoryElementRepository.findAll();
+        if (!allElements.isEmpty()) {
+            List<DirectoryElementInfos> elementsInfos = allElements.stream()
+                    .map(ElementAttributes::toDirectoryElementInfos)
+                    .toList();
+            if (!elementsInfos.isEmpty()) {
+                directoryElementInfosService.deleteAllElements(elementsInfos);
+                directoryElementInfosService.addAllElementsInfos(elementsInfos);
+            }
+        } else {
+            LOGGER.info("No elements to reindex.");
+        }
     }
 }

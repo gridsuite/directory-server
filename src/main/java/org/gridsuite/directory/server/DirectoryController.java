@@ -211,4 +211,12 @@ public class DirectoryController {
         HttpStatus status = service.elementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
+
+    @PostMapping(value = "/elements/reindex-all")
+    @Operation(summary = "reindex the element")
+    @ApiResponse(responseCode = "200", description = "Elements reindexed")
+    public ResponseEntity<Void> reindexAllElements() {
+        service.reindexAllElements();
+        return ResponseEntity.ok().build();
+    }
 }
