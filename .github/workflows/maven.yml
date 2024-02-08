@@ -14,12 +14,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
+      - name: Set up JDK 17
+        uses: actions/setup-java@v1
         with:
-          java-version: '17'
-          distribution: 'graalvm'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          java-version: 17
 
       - name: Checkout sources
         uses: actions/checkout@v1
@@ -40,20 +38,20 @@ jobs:
       - name: Build Docker image - Main
         if: github.ref == 'refs/heads/main'
         run: >
-          mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
-          -Ddocker.publishRegistry.username=gridsuiteci \
-          -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }} \
-          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server
-          -Dspring-boot.build-image.publish=true
+          mvn --batch-mode deploy -DskipTests -Dmaven.install.skip -Dmaven.deploy.skip -Dpowsybl.docker.deploy
+          -Djib.httpTimeout=60000
+          -Djib.to.image=docker.io/gridsuite/directory-server
+          -Djib.to.auth.username=gridsuiteci
+          -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image - Tag
         if: startsWith(github.ref, 'refs/tags/')
         run: >
-          mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
-          -Ddocker.publishRegistry.username=gridsuiteci \
-          -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }} \
-          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server:${GITHUB_REF_NAME#v}
-          -Dspring-boot.build-image.publish=true
+          mvn --batch-mode deploy -DskipTests -Dmaven.install.skip -Dmaven.deploy.skip -Dpowsybl.docker.deploy
+          -Djib.httpTimeout=60000
+          -Djib.to.image=docker.io/gridsuite/directory-server:${GITHUB_REF_NAME#v}
+          -Djib.to.auth.username=gridsuiteci
+          -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Broadcast update event
         if: github.ref == 'refs/heads/main'
@@ -61,3 +59,35 @@ jobs:
         with:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           event-type: directory_server_updated
+
+  build-native-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '17'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Build Docker Native image - Main
+        if: github.ref == 'refs/heads/main'
+        run: >
+          mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
+          -Ddocker.publishRegistry.username=gridsuiteci \
+          -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }} \
+          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native
+          -Dspring-boot.build-image.publish=true
+
+      - name: Build Docker Native image - Tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: >
+          mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
+          -Ddocker.publishRegistry.username=gridsuiteci \
+          -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }} \
+          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native:${GITHUB_REF_NAME#v}
+          -Dspring-boot.build-image.publish=true
