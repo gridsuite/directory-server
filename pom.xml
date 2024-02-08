@@ -44,7 +44,7 @@
         <powsybl-ws-dependencies.version>2.7.0</powsybl-ws-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.directory.server</liquibase-hibernate-package>
         <to-string-verifier-version>1.4.8</to-string-verifier-version>
-        <native-buildtools.version>0.9.28</native-buildtools.version>
+        <native-buildtools.version>0.10.0</native-buildtools.version>
     </properties>
 
     <profiles>
@@ -56,10 +56,23 @@
                         <groupId>org.springframework.boot</groupId>
                         <artifactId>spring-boot-maven-plugin</artifactId>
                         <configuration>
+                            <docker>
+                                <publishRegistry>
+                                    <username>${docker.publishRegistry.username}</username>
+                                    <password>${docker.publishRegistry.password}</password>
+                                </publishRegistry>
+                            </docker>
                             <image>
                                 <builder>paketobuildpacks/builder:tiny</builder>
                                 <env>
                                     <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
+                                    <!--
+                                    Without compatibility the image built on GitHub can't be run on our platforms.
+                                    The error message is: "The current machine does not support all the following CPU
+                                    features that are required by the image: [CX8, CMOV, FXSR, MMX, SSE, SSE2, SSE3,
+                                    SSSE3, SSE4_1, SSE4_2, POPCNT, LZCNT, AVX, AVX2, BMI1, BMI2, FMA]."
+                                     -->
+                                    <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-march=compatibility</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
                                     <!-- Enable internet access -->
                                     <HTTP_PROXY>${env.HTTP_PROXY}</HTTP_PROXY>
                                     <HTTPS_PROXY>${env.HTTPS_PROXY}</HTTPS_PROXY>
@@ -91,9 +104,6 @@
                         <version>${native-buildtools.version}</version>
                         <configuration>
                             <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-                            <metadataRepository>
-                                <enabled>true</enabled>
-                            </metadataRepository>
                             <requiredVersion>22.3</requiredVersion>
                         </configuration>
                         <executions>
