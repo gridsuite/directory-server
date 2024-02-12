@@ -7,27 +7,33 @@
 package org.gridsuite.directory.server.elasticsearch;
 
 import com.google.common.collect.Iterables;
-import org.gridsuite.directory.server.DirectoryService;
+import org.gridsuite.directory.server.DirectoryApplication;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Iterator;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@AutoConfigureMockMvc
+@SpringBootTest
+@ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 class DirectoryElementInfosServiceTest {
 
     @Autowired
@@ -37,13 +43,13 @@ class DirectoryElementInfosServiceTest {
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
     @Autowired
-    DirectoryService service;
+    private MockMvc mockMvc;
 
     private void cleanDB() {
         directoryElementInfosRepository.deleteAll();
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         cleanDB();
     }
@@ -79,24 +85,21 @@ class DirectoryElementInfosServiceTest {
 
         // THEN
         assertNoElementsInRepository();
-
-        cleanDB();
     }
 
     @Test
-    void testReindexAllElementsEndpoint() {
+    void testReindexAllElementsEndpoint() throws Exception {
         // GIVEN
         DirectoryElementInfos studyInfos = createAndSaveDirectoryElement("id1", "Study 1", "STUDY", "root");
         DirectoryElementInfos filterInfos = createAndSaveDirectoryElement("id2", "Filter 1", "FILTER", "root");
 
         // WHEN
-        service.reindexAllElements();
+        mockMvc.perform(post("/v1/elements/reindex-all"))
+                .andExpect(status().isOk());
 
         // THEN
         assertReindexedElement("id1", "Study 1");
         assertReindexedElement("id2", "Filter 1");
-
-        cleanDB();
     }
 
     // Helper methods
