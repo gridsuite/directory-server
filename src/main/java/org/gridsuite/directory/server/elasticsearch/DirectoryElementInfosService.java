@@ -29,34 +29,9 @@ public class DirectoryElementInfosService {
         this.directoryElementInfosRepository = directoryElementInfosRepository;
     }
 
-    public DirectoryElementInfos addDirectoryElementInfos(@NonNull DirectoryElementInfos elementInfos) {
-        return directoryElementInfosRepository.save(elementInfos);
-    }
-
-    public void addAllElementsInfos(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
+    public void addAll(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
         Lists.partition(directoryElementInfos, partitionSize)
                 .parallelStream()
                 .forEach(directoryElementInfosRepository::saveAll);
-    }
-
-    public void updateElementsInfos(@NonNull DirectoryElementInfos directoryElementInfos) {
-        directoryElementInfosRepository.deleteById(directoryElementInfos.getId());
-        directoryElementInfosRepository.save(directoryElementInfos);
-    }
-
-    public Iterable<DirectoryElementInfos> findAllElementInfos() {
-        return directoryElementInfosRepository.findAll();
-    }
-
-    public void deleteAllElements(List<DirectoryElementInfos> elementsInfos) {
-        directoryElementInfosRepository.deleteAll(elementsInfos);
-    }
-
-    public void deleteElementsInfos(@NonNull String id) {
-        directoryElementInfosRepository.deleteById(id);
-    }
-
-    public void deleteAll() {
-        directoryElementInfosRepository.deleteAll();
     }
 }

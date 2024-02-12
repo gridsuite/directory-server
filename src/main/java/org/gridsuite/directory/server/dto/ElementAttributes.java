@@ -99,7 +99,7 @@ public class ElementAttributes {
         return DirectoryElementInfos.builder()
                 .id(entity.getId().toString())
                 .name(entity.getName())
-                .parentId(entity.getParentId().toString())
+                .parentId(entity.getParentId() == null ? entity.getId().toString() : entity.getParentId().toString())
                 .type(entity.getType())
                 .lastModificationDate(entity.getLastModificationDate())
                 .build();
