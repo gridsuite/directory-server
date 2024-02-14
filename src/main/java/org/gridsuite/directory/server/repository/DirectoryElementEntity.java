@@ -97,11 +97,8 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getLastModifiedBy());
     }
 
-    public DirectoryElementEntity stashElement(boolean stashed) {
-        if (stashed) {
-            this.stashDate = LocalDateTime.now();
-        }
-
+    public DirectoryElementEntity stashElement(boolean stashed, LocalDateTime stashDate) {
+        this.stashDate = stashDate;
         this.stashed = stashed;
         return this;
     }

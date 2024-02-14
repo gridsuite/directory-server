@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -75,18 +76,31 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
     }
 
-    @PutMapping(value = "/elements/stash")
+    @PostMapping(value = "/elements/stash")
     @Operation(summary = "Stash network modifications for a node")
-        @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were stashed / restored ")})
-    public ResponseEntity<Void> stashElements(@Parameter(description = "elements UUIDs") @RequestParam("uuids") List<UUID> elementsUuid,
-                                              @Parameter(description = "Stashed elements") @RequestParam(name = "stashed", required = true) Boolean stashed,
+        @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were stashed")})
+    public ResponseEntity<Void> stashElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
                                               @RequestHeader("userId") String userId) {
-        if (stashed) {
-            service.stashElements(elementsUuid, userId);
-        } else {
-            service.restoreElements(elementsUuid, userId);
-        }
+        service.stashElements(elementsUuid, userId);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/elements/{parentUuid}/restore")
+    @Operation(summary = "Stash network modifications for a node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were restored ")})
+    public ResponseEntity<Void> restoreElements(@RequestBody List<UUID> elementsUuid,
+                                                @PathVariable("parentUuid") UUID parentUuid,
+                                                @RequestHeader("userId") String userId) {
+        service.restoreElements(elementsUuid, parentUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/elements/stash")
+    @Operation(summary = "Get the list of elements in the trash")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
+    public ResponseEntity<List<Pair<ElementAttributes, Long>>> getStashedElements(@RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.getStashedElements(userId));
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")
@@ -98,6 +112,15 @@ public class DirectoryController {
     public ResponseEntity<Void> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestHeader("userId") String userId) {
         service.deleteElement(elementUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/elements")
+    @Operation(summary = "Remove directories/elements")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"))
+    public ResponseEntity<Void> deleteElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
+                                               @RequestHeader("userId") String userId) {
+        service.deleteElements(elementsUuid, userId);
         return ResponseEntity.ok().build();
     }
 
