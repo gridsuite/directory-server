@@ -51,6 +51,7 @@ public class DirectoryService {
     public static final String STUDY = "STUDY";
     public static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
     public static final String FILTER = "FILTER";
+    public static final String MODIFICATION = "MODIFICATION";
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
     public static final String HEADER_UPDATE_TYPE = "updateType";
@@ -102,11 +103,14 @@ public class DirectoryService {
     }
 
     /* methods */
-    public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
+    public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, Boolean allowNewName) {
         if (elementAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
-
+        if (Boolean.TRUE.equals(allowNewName)) {
+            // use another available name if necessary
+            elementAttributes.setElementName(getDuplicateNameCandidate(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType(), userId));
+        }
         assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
         assertAccessibleDirectory(parentDirectoryUuid, userId);
         ElementAttributes result = insertElement(elementAttributes, parentDirectoryUuid);
@@ -214,7 +218,7 @@ public class DirectoryService {
                             toElementAttributes(UUID.randomUUID(), s, DIRECTORY,
                                     false, userId, null, now, now, userId),
                             parentDirectoryUuid,
-                            userId).getElementUuid();
+                            userId, false).getElementUuid();
                 }
             } else {
                 parentDirectoryUuid = currentDirectoryUuid;

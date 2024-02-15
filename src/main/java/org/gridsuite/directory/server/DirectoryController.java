@@ -50,9 +50,10 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
         @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<ElementAttributes> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
-                                                                 @RequestBody ElementAttributes elementAttributes,
-                                                                 @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
+                                             @Parameter(description = "if element already exists a new incremental name is provided") @RequestParam(value = "allowNewName", required = false, defaultValue = "false") Boolean allowNewName,
+                                             @RequestBody ElementAttributes elementAttributes,
+                                             @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId, allowNewName));
     }
 
     @PostMapping(value = "/directories/paths/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
