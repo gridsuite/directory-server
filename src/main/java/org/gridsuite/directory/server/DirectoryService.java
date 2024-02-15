@@ -619,9 +619,12 @@ public class DirectoryService {
     public void restoreElements(List<UUID> elementsUuid, UUID parentUuid, String userId) {
         // Get all updatable entities
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
-        List<DirectoryElementEntity> updatableEntities = getUpdatableEntities(directoryElementRepository.findAllById(elementsUuid), notUpdatableEntities, userId, false);
-        // Get all updatable entities
-        List<DirectoryElementEntity> entities = directoryElementRepository.findAllStashedElements(elementsUuid, true, userId)
+        List<DirectoryElementEntity> updatableEntities = getUpdatableEntities(directoryElementRepository.findAllStashedElements(elementsUuid, true, userId),
+                notUpdatableEntities,
+                userId,
+                false);
+
+        List<DirectoryElementEntity> entities = updatableEntities
                 .stream()
                 .flatMap(entity -> {
                     entity.setParentId(parentUuid);
@@ -639,6 +642,16 @@ public class DirectoryService {
                 })
                 .toList();
 
+        var parent = getElement(parentUuid);
+        notificationService.emitDirectoryChanged(
+                parentUuid,
+                parent.getElementName(),
+                userId,
+                null,
+                parent.getAccessRights().isPrivate(),
+                parentUuid == null,
+                NotificationType.UPDATE_DIRECTORY
+        );
         directoryElementRepository.saveAll(entities);
         emitDirectoryChangedNotification(parentUuid, userId);
     }
@@ -668,9 +681,16 @@ public class DirectoryService {
                 .toList());
 
         updatableEntities.forEach(entity -> {
-            if (Objects.equals(entity.getType(), DIRECTORY)) {
-                emitDirectoryChangedNotification(entity.getId(), userId);
-            }
+            UUID parentUuid = getParentUuid(entity.getId());
+            notificationService.emitDirectoryChanged(
+                    parentUuid == null ? entity.getId() : parentUuid,
+                    entity.getName(),
+                    userId,
+                    null,
+                    entity.getIsPrivate(),
+                    parentUuid == null,
+                    parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY
+            );
         });
 
         if (!notUpdatableEntities.isEmpty()) {

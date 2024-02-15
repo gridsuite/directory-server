@@ -77,7 +77,7 @@ public class DirectoryController {
     }
 
     @PostMapping(value = "/elements/stash")
-    @Operation(summary = "Stash network modifications for a node")
+    @Operation(summary = "Stash elements")
         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were stashed")})
     public ResponseEntity<Void> stashElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
                                               @RequestHeader("userId") String userId) {
@@ -86,7 +86,7 @@ public class DirectoryController {
     }
 
     @PostMapping(value = "/elements/{parentUuid}/restore")
-    @Operation(summary = "Stash network modifications for a node")
+    @Operation(summary = "Restore elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were restored ")})
     public ResponseEntity<Void> restoreElements(@RequestBody List<UUID> elementsUuid,
                                                 @PathVariable("parentUuid") UUID parentUuid,
