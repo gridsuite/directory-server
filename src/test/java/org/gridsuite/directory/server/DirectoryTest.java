@@ -61,7 +61,10 @@ import static org.gridsuite.directory.server.DirectoryService.MODIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
@@ -1130,12 +1133,12 @@ public class DirectoryTest {
         mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid4)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isForbidden());
+                .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid1)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isOk());
+                .andExpect(status().isOk());
         output.clear();
 
         subDirAttributes1.setSubdirectoriesCount(0L);
@@ -1152,7 +1155,7 @@ public class DirectoryTest {
         mockMvc.perform(post("/v1/elements/stash?ids=" + rootDirectoryUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isOk());
+                .andExpect(status().isOk());
         output.clear();
 
         rootDirectory.setSubdirectoriesCount(0L);
@@ -1173,13 +1176,13 @@ public class DirectoryTest {
         mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid1)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isOk());
+                .andExpect(status().isOk());
         output.clear();
 
         mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid4)
                         .header("userId", "userId2")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isOk());
+                .andExpect(status().isOk());
         output.clear();
 
         subDirAttributes1.setSubdirectoriesCount(0L);
@@ -1189,7 +1192,7 @@ public class DirectoryTest {
         mockMvc.perform(delete("/v1/elements?ids=" + subDirUuid1 + "," + subDirUuid4)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isForbidden());
+                .andExpect(status().isForbidden());
         output.clear();
         checkStashedElements(List.of(Pair.of(subDirAttributes4, 0L)));
     }

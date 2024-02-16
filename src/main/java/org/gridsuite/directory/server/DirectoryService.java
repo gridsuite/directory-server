@@ -471,12 +471,6 @@ public class DirectoryService {
         return getElementEntity(elementUuid).orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
     }
 
-    private List<Optional<DirectoryElementEntity>> getDirectoryElementEntity(List<UUID> elementUuid) {
-        return elementUuid.stream()
-                .map(this::getElementEntity)
-                .toList();
-    }
-
     private Optional<DirectoryElementEntity> getElementEntity(UUID elementUuid) {
         return directoryElementRepository.findById(elementUuid);
     }
@@ -718,11 +712,9 @@ public class DirectoryService {
 
         // Collect all entities with their descendents in one list
         List<DirectoryElementEntity> allEntities = updatableEntities.stream()
-                        .flatMap(entity -> {
-                            List<DirectoryElementEntity> elementEntities = new ArrayList<>(directoryElementRepository.findAllDescendantsWithSameStashDate(entity.getId(), userId));
-                            elementEntities.add(entity);
-                            return elementEntities.stream();
-                        }).toList();
+                        .flatMap(entity -> Stream.concat(directoryElementRepository.findAllDescendantsWithSameStashDate(entity.getId(), userId).stream(),
+                                                         Stream.of(entity)))
+                        .toList();
 
         // Delete all entities
         directoryElementRepository.deleteAllById(allEntities.stream().map(DirectoryElementEntity::getId).toList());
@@ -751,14 +743,14 @@ public class DirectoryService {
     }
 
     private List<DirectoryElementEntity> getUpdatableEntities(List<DirectoryElementEntity> entities,
-                                                              List<DirectoryElementEntity> unauthorizedEntityIds,
+                                                              List<DirectoryElementEntity> notUpdatableEntities,
                                                               String userId,
                                                               boolean forDeletion) {
         return entities.stream()
                 .filter(entity -> {
                     boolean isUpdatable = forDeletion ? Objects.equals(userId, entity.getOwner()) : Objects.equals(userId, entity.getOwner()) || !entity.getIsPrivate();
                     if (!isUpdatable) {
-                        unauthorizedEntityIds.add(entity);
+                        notUpdatableEntities.add(entity);
                     }
                     return isUpdatable;
                 })
