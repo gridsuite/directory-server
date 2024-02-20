@@ -517,7 +517,7 @@ public class DirectoryService {
     }
 
     private Boolean isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
-        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
+        return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
     }
 
     public UUID getDirectoryUuid(String directoryName, UUID parentDirectoryUuid) {
@@ -535,7 +535,7 @@ public class DirectoryService {
     }
 
     public boolean elementExists(UUID parentDirectoryUuid, String elementName, String type) {
-        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
+        return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
     }
 
     public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types) {
@@ -652,6 +652,11 @@ public class DirectoryService {
         );
         directoryElementRepository.saveAll(entities);
         emitDirectoryChangedNotification(parentUuid, userId);
+        if (!notUpdatableEntities.isEmpty()) {
+            throw new DirectoryException(NOT_ALLOWED,
+                    String.format("Some or all of the elements can not be restored : %s",
+                            String.join(", ", notUpdatableEntities.stream().map(DirectoryElementEntity::getName).toList())));
+        }
     }
 
     public void stashElements(List<UUID> elementsUuid, String userId) {
