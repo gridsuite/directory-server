@@ -615,12 +615,26 @@ public class DirectoryService {
     }
 
     public void restoreElements(List<UUID> elementsUuid, UUID parentUuid, String userId) {
-        // Get all updatable entities
+        // Get parent directory
+        ElementAttributes parent = getElement(parentUuid);
+
+        // Get all updatable entities. Entities should be public or created by the user, so it can be restored
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
-        List<DirectoryElementEntity> updatableEntities = getUpdatableEntities(directoryElementRepository.findAllStashedElements(elementsUuid, true, userId),
-                notUpdatableEntities,
-                userId,
-                false);
+        List<DirectoryElementEntity> allStashedElements = directoryElementRepository.findAllStashedElements(elementsUuid, true, userId);
+        List<DirectoryElementEntity> updatableEntities = new ArrayList<>();
+        if (parent.getAccessRights().isPrivate()) {
+            updatableEntities.addAll(getEntitiesCreatedBySameUser(allStashedElements, notUpdatableEntities, userId));
+        } else {
+            updatableEntities.addAll(allStashedElements.stream()
+                    .filter(entity -> {
+                        boolean isUpdatable = Objects.equals(userId, entity.getOwner()) || !entity.getIsPrivate();
+                        if (!isUpdatable) {
+                            notUpdatableEntities.add(entity);
+                        }
+                        return isUpdatable;
+                    })
+                    .toList());
+        }
 
         List<DirectoryElementEntity> entities = updatableEntities
                 .stream()
@@ -640,7 +654,7 @@ public class DirectoryService {
                 })
                 .toList();
 
-        var parent = getElement(parentUuid);
+        directoryElementRepository.saveAll(entities);
         notificationService.emitDirectoryChanged(
                 parentUuid,
                 parent.getElementName(),
@@ -650,12 +664,9 @@ public class DirectoryService {
                 parentUuid == null,
                 NotificationType.UPDATE_DIRECTORY
         );
-        directoryElementRepository.saveAll(entities);
         emitDirectoryChangedNotification(parentUuid, userId);
         if (!notUpdatableEntities.isEmpty()) {
-            throw new DirectoryException(NOT_ALLOWED,
-                    String.format("Some or all of the elements can not be restored : %s",
-                            String.join(", ", notUpdatableEntities.stream().map(DirectoryElementEntity::getName).toList())));
+            throw new DirectoryException(NOT_ALLOWED);
         }
     }
 
@@ -664,7 +675,7 @@ public class DirectoryService {
         LocalDateTime stashDate = LocalDateTime.now();
         List<DirectoryElementEntity> entities = directoryElementRepository.findAllByIdInAndStashed(elementsUuid, false);
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
-        List<DirectoryElementEntity> updatableEntities = getUpdatableEntities(entities, notUpdatableEntities, userId, true);
+        List<DirectoryElementEntity> updatableEntities = getEntitiesCreatedBySameUser(entities, notUpdatableEntities, userId);
 
         directoryElementRepository.saveAll(updatableEntities.stream()
                 .flatMap(entity -> {
@@ -713,7 +724,7 @@ public class DirectoryService {
     public void deleteElements(List<UUID> elementsUuid, String userId) {
         // Get all updatable entities
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
-        List<DirectoryElementEntity> updatableEntities = getUpdatableEntities(directoryElementRepository.findAllByIdInAndStashed(elementsUuid, true), notUpdatableEntities, userId, true);
+        List<DirectoryElementEntity> updatableEntities = getEntitiesCreatedBySameUser(directoryElementRepository.findAllByIdInAndStashed(elementsUuid, true), notUpdatableEntities, userId);
 
         // Collect all entities with their descendents in one list
         List<DirectoryElementEntity> allEntities = updatableEntities.stream()
@@ -747,13 +758,12 @@ public class DirectoryService {
         }
     }
 
-    private List<DirectoryElementEntity> getUpdatableEntities(List<DirectoryElementEntity> entities,
-                                                              List<DirectoryElementEntity> notUpdatableEntities,
-                                                              String userId,
-                                                              boolean forDeletion) {
+    private List<DirectoryElementEntity> getEntitiesCreatedBySameUser(List<DirectoryElementEntity> entities,
+                                                                      List<DirectoryElementEntity> notUpdatableEntities,
+                                                                      String userId) {
         return entities.stream()
                 .filter(entity -> {
-                    boolean isUpdatable = forDeletion ? Objects.equals(userId, entity.getOwner()) : Objects.equals(userId, entity.getOwner()) || !entity.getIsPrivate();
+                    boolean isUpdatable = Objects.equals(userId, entity.getOwner());
                     if (!isUpdatable) {
                         notUpdatableEntities.add(entity);
                     }
