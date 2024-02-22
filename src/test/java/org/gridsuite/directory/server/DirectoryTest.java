@@ -56,6 +56,7 @@ import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOT
 import static org.gridsuite.directory.server.DirectoryService.CONTINGENCY_LIST;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.FILTER;
+import static org.gridsuite.directory.server.DirectoryService.MODIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
@@ -1185,7 +1186,7 @@ public class DirectoryTest {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
         var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
 
-        // Insert a sub-element of type DIRECTORY
+        // get sub-elements list
         if (httpCodeExpected == 200) {
             MvcResult result = mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids + typesPath)
                     .header("userId", userId))
@@ -1204,9 +1205,9 @@ public class DirectoryTest {
         return Collections.emptyList();
     }
 
-    private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) throws Exception {
-        // Insert a sub-element of type DIRECTORY
-        MvcResult response = mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
+    private void insertSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes, boolean allowNewName) throws Exception {
+        // Insert a sub-element in a directory
+        MvcResult response = mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements" + (allowNewName ? "?allowNewName=true" : ""))
                         .header("userId", subElementAttributes.getOwner())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(subElementAttributes)))
@@ -1233,7 +1234,10 @@ public class DirectoryTest {
         assertEquals(!isParentPrivate, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+    }
 
+    private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) throws Exception {
+        insertSubElement(parentDirectoryUUid, isParentPrivate, subElementAttributes, false);
         assertElementIsProperlyInserted(subElementAttributes);
     }
 
@@ -1491,6 +1495,27 @@ public class DirectoryTest {
 
         //we don't care about message
         output.clear();
+    }
+
+    @Test
+    @SneakyThrows
+    public void testCreateModificationElementWithAutomaticNewName() {
+        final String userId = "Doe";
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirModif", false, userId);
+
+        // insert a new element
+        final String modifElementName = "modif";
+        ElementAttributes modifAttributes = toElementAttributes(UUID.randomUUID(), modifElementName, MODIFICATION, null, userId);
+        insertAndCheckSubElement(rootDirUuid, false, modifAttributes);
+
+        // insert another new element having the same existing name, allowing duplication with a new name
+        ElementAttributes anotherModifAttributes = toElementAttributes(UUID.randomUUID(), modifElementName, MODIFICATION, null, userId);
+        insertSubElement(rootDirUuid, false, anotherModifAttributes, true);
+        // expecting "incremental name"
+        anotherModifAttributes.setElementName(modifElementName + "(1)");
+        assertElementIsProperlyInserted(anotherModifAttributes);
+
+        checkDirectoryContent(rootDirUuid, userId, List.of(MODIFICATION), List.of(modifAttributes, anotherModifAttributes));
     }
 
     @After
