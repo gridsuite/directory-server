@@ -20,3 +20,11 @@ spring:
 powsybl-ws:
   database:
     name: directory
+
+# Spring Boot + JVM auto-detects Kubernetes deployment environments. This checks happens at build time with Spring Native, so the
+# liveness and readiness endpoints are not enabled automatically.
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
