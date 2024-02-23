@@ -1121,7 +1121,6 @@ public class DirectoryTest {
         insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes4);
         insertAndCheckSubElement(subDirUuid4, false, subDirAttributes3);
         subDirAttributes1.setSubdirectoriesCount(1L);
-        subDirAttributes4.setSubdirectoriesCount(1L);
         checkDirectoryContent(rootDirectoryUuid, "userId", List.of(subDirAttributes1, subDirAttributes4));
 
         // Insert a  sub-element of type STUDY
