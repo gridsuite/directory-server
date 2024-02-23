@@ -614,6 +614,25 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
+    private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,
+                                                              List<DirectoryElementEntity> rejectedEntities,
+                                                              String userId,
+                                                              boolean isParentPrivate) {
+        if (isParentPrivate) {
+            return getEntitiesCreatedBySameUser(entities, rejectedEntities, userId);
+        }
+
+        return entities.stream()
+                .filter(entity -> {
+                    boolean isUpdatable = Objects.equals(userId, entity.getOwner()) || !entity.getIsPrivate();
+                    if (!isUpdatable) {
+                        rejectedEntities.add(entity);
+                    }
+                    return isUpdatable;
+                })
+                .toList();
+    }
+
     public void restoreElements(List<UUID> elementsUuid, UUID parentUuid, String userId) {
         // Get parent directory
         ElementAttributes parent = getElement(parentUuid);
@@ -621,20 +640,7 @@ public class DirectoryService {
         // Get all updatable entities. Entities should be public or created by the user, so it can be restored
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
         List<DirectoryElementEntity> allStashedElements = directoryElementRepository.findAllStashedElements(elementsUuid, true, userId);
-        List<DirectoryElementEntity> updatableEntities = new ArrayList<>();
-        if (parent.getAccessRights().isPrivate()) {
-            updatableEntities.addAll(getEntitiesCreatedBySameUser(allStashedElements, notUpdatableEntities, userId));
-        } else {
-            updatableEntities.addAll(allStashedElements.stream()
-                    .filter(entity -> {
-                        boolean isUpdatable = Objects.equals(userId, entity.getOwner()) || !entity.getIsPrivate();
-                        if (!isUpdatable) {
-                            notUpdatableEntities.add(entity);
-                        }
-                        return isUpdatable;
-                    })
-                    .toList());
-        }
+        List<DirectoryElementEntity> updatableEntities = getEntitiesToRestore(allStashedElements, notUpdatableEntities, userId, parent.getAccessRights().isPrivate());
 
         List<DirectoryElementEntity> entities = updatableEntities
                 .stream()
@@ -643,7 +649,11 @@ public class DirectoryService {
                     entity.setName(getDuplicateNameCandidate(parentUuid, entity.getName(), entity.getType(), userId));
 
                     // Retrieve descendants of the current entity
-                    List<DirectoryElementEntity> descendants = directoryElementRepository.findAllDescendantsWithSameStashDate(entity.getId(), userId);
+                    List<DirectoryElementEntity> descendants = getEntitiesToRestore(
+                            directoryElementRepository.findAllDescendantsWithSameStashDate(entity.getId(), userId),
+                            notUpdatableEntities,
+                            userId,
+                            parent.getAccessRights().isPrivate());
 
                     // Combine parent and descendants into a single list
                     List<DirectoryElementEntity> result = new ArrayList<>();
