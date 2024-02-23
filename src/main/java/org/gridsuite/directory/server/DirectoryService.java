@@ -260,7 +260,7 @@ public class DirectoryService {
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
-            List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentIdAndStashed(directoryUuid, false);
+        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentIdAndStashed(directoryUuid, false);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements
                 .stream()
