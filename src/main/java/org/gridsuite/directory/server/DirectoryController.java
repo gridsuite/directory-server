@@ -99,7 +99,7 @@ public class DirectoryController {
     @GetMapping(value = "/elements/stash")
     @Operation(summary = "Get the list of elements in the trash")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "the list of nodes in the trash")})
+        @ApiResponse(responseCode = "200", description = "the list of elements in the trash")})
     public ResponseEntity<List<Pair<ElementAttributes, Long>>> getStashedElements(@RequestHeader("userId") String userId) {
         return ResponseEntity.ok().body(service.getStashedElements(userId));
     }
