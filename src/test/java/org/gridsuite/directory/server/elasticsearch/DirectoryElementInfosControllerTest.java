@@ -7,7 +7,6 @@
 package org.gridsuite.directory.server.elasticsearch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Iterables;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -27,7 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -82,6 +81,6 @@ class DirectoryElementInfosControllerTest {
         mockMvc.perform(post("/v1/elements/reindex-all"))
                 .andExpect(status().isOk());
 
-        assertEquals(2, Iterables.size(directoryElementInfosRepository.findAll()));
+        assertEquals(2, directoryElementInfosRepository.findAll().size());
     }
 }
