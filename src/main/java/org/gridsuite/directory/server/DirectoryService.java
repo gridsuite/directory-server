@@ -632,7 +632,7 @@ public class DirectoryService {
                 .map(ElementAttributes::toDirectoryElementInfos)
                 .toList());
     }
-  
+
     private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,
                                                               List<DirectoryElementEntity> rejectedEntities,
                                                               String userId,
