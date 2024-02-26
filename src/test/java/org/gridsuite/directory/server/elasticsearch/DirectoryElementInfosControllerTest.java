@@ -70,7 +70,7 @@ class DirectoryElementInfosControllerTest {
         ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "caseName", "CASE",
                 false, "user", null, now, now, userId);
         String requestBody = objectMapper.writeValueAsString(caseElement);
-        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir")
+        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1")
                         .header("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
