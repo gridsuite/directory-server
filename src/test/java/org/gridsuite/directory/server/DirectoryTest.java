@@ -30,6 +30,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
@@ -57,6 +58,7 @@ import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOT
 import static org.gridsuite.directory.server.DirectoryService.CONTINGENCY_LIST;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.FILTER;
+import static org.gridsuite.directory.server.DirectoryService.MODIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
@@ -1091,6 +1093,122 @@ public class DirectoryTest {
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
     }
 
+    @SneakyThrows
+    @Test
+    public void testStashAndRestoreElements() {
+        // Insert a root directory
+        ElementAttributes rootDirectory = retrieveInsertAndCheckRootDirectory("directory", false, "userId");
+        UUID rootDirectoryUuid = rootDirectory.getElementUuid();
+
+        // Insert a sub-elements of type DIRECTORY
+        UUID subDirUuid1 = UUID.randomUUID();
+        ElementAttributes subDirAttributes1 = toElementAttributes(subDirUuid1, "newSubDir1", DIRECTORY, true, "userId");
+
+        UUID subDirUuid2 = UUID.randomUUID();
+        ElementAttributes subDirAttributes2 = toElementAttributes(subDirUuid2, "newSubDir2", DIRECTORY, false, "userId");
+
+        UUID subDirUuid3 = UUID.randomUUID();
+        ElementAttributes subDirAttributes3 = toElementAttributes(subDirUuid3, "newSubDir3", DIRECTORY, true, "userId2");
+
+        UUID subDirUuid4 = UUID.randomUUID();
+        ElementAttributes subDirAttributes4 = toElementAttributes(subDirUuid4, "newSubDir4", DIRECTORY, false, "userId2");
+
+        //          root
+        //         /    \
+        //       dir1    dir4
+        //        |       |
+        //       dir2    dir3
+        insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes1);
+        insertAndCheckSubElement(subDirUuid1, true, subDirAttributes2);
+        insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes4);
+        insertAndCheckSubElement(subDirUuid4, false, subDirAttributes3);
+        subDirAttributes1.setSubdirectoriesCount(1L);
+        checkDirectoryContent(rootDirectoryUuid, "userId", List.of(subDirAttributes1, subDirAttributes4));
+
+        // Insert a  sub-element of type STUDY
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, null, "userId", "descr study");
+        insertAndCheckSubElement(rootDirectoryUuid, false, subEltAttributes);
+        checkDirectoryContent(rootDirectoryUuid, "userId", List.of(subDirAttributes1, subDirAttributes4, subEltAttributes));
+        checkElementNameExistInDirectory(rootDirectoryUuid, "newStudy", STUDY, HttpStatus.OK);
+
+        mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid4)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid1)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        output.clear();
+
+        subDirAttributes1.setSubdirectoriesCount(0L);
+        checkStashedElements(List.of(Pair.of(subDirAttributes1, 1L)));
+
+        mockMvc.perform(post("/v1/elements/" + rootDirectoryUuid + "/restore")
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(subDirUuid1))))
+                .andExpect(status().isOk());
+        output.clear();
+        checkStashedElements(List.of());
+
+        mockMvc.perform(post("/v1/elements/stash?ids=" + rootDirectoryUuid)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        output.clear();
+
+        rootDirectory.setSubdirectoriesCount(0L);
+        checkStashedElements(List.of(Pair.of(rootDirectory, 4L)));
+
+        ElementAttributes rootDirectory2 = retrieveInsertAndCheckRootDirectory("directory", false, "userId");
+        UUID rootDirectoryUuid2 = rootDirectory2.getElementUuid();
+
+        mockMvc.perform(post("/v1/elements/" + rootDirectoryUuid2 + "/restore")
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(subDirUuid1))))
+                .andExpect(status().isOk());
+        output.clear();
+
+        checkStashedElements(List.of());
+
+        mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid1)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        output.clear();
+
+        mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid4)
+                        .header("userId", "userId2")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+        output.clear();
+
+        subDirAttributes1.setSubdirectoriesCount(0L);
+        subDirAttributes4.setSubdirectoriesCount(0L);
+        checkStashedElements(List.of(Pair.of(subDirAttributes1, 1L), Pair.of(subDirAttributes4, 0L)));
+
+        mockMvc.perform(delete("/v1/elements?ids=" + subDirUuid1 + "," + subDirUuid4)
+                        .header("userId", "userId")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+        output.clear();
+        checkStashedElements(List.of(Pair.of(subDirAttributes4, 0L)));
+    }
+
+    private void checkStashedElements(List<Pair<ElementAttributes, Long>> expectedStashed) throws Exception {
+        String response = mockMvc.perform(get("/v1/elements/stash")
+                        .header("userId", "userId"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertEquals(objectMapper.writeValueAsString(expectedStashed), response);
+    }
+
     private List<ElementAttributes> getPath(UUID elementUuid, String userId) throws Exception {
         String response = mockMvc.perform(get("/v1/elements/" + elementUuid + "/path")
                         .header("userId", userId))
@@ -1187,7 +1305,7 @@ public class DirectoryTest {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
         var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
 
-        // Insert a sub-element of type DIRECTORY
+        // get sub-elements list
         if (httpCodeExpected == 200) {
             MvcResult result = mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids + typesPath)
                     .header("userId", userId))
@@ -1206,9 +1324,9 @@ public class DirectoryTest {
         return Collections.emptyList();
     }
 
-    private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) throws Exception {
-        // Insert a sub-element of type DIRECTORY
-        MvcResult response = mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
+    private void insertSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes, boolean allowNewName) throws Exception {
+        // Insert a sub-element in a directory
+        MvcResult response = mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements" + (allowNewName ? "?allowNewName=true" : ""))
                         .header("userId", subElementAttributes.getOwner())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(subElementAttributes)))
@@ -1235,7 +1353,10 @@ public class DirectoryTest {
         assertEquals(!isParentPrivate, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+    }
 
+    private void insertAndCheckSubElement(UUID parentDirectoryUUid, boolean isParentPrivate, ElementAttributes subElementAttributes) throws Exception {
+        insertSubElement(parentDirectoryUUid, isParentPrivate, subElementAttributes, false);
         assertElementIsProperlyInserted(subElementAttributes);
     }
 
@@ -1493,6 +1614,27 @@ public class DirectoryTest {
 
         //we don't care about message
         output.clear();
+    }
+
+    @Test
+    @SneakyThrows
+    public void testCreateModificationElementWithAutomaticNewName() {
+        final String userId = "Doe";
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirModif", false, userId);
+
+        // insert a new element
+        final String modifElementName = "modif";
+        ElementAttributes modifAttributes = toElementAttributes(UUID.randomUUID(), modifElementName, MODIFICATION, null, userId);
+        insertAndCheckSubElement(rootDirUuid, false, modifAttributes);
+
+        // insert another new element having the same existing name, allowing duplication with a new name
+        ElementAttributes anotherModifAttributes = toElementAttributes(UUID.randomUUID(), modifElementName, MODIFICATION, null, userId);
+        insertSubElement(rootDirUuid, false, anotherModifAttributes, true);
+        // expecting "incremental name"
+        anotherModifAttributes.setElementName(modifElementName + "(1)");
+        assertElementIsProperlyInserted(anotherModifAttributes);
+
+        checkDirectoryContent(rootDirUuid, userId, List.of(MODIFICATION), List.of(modifAttributes, anotherModifAttributes));
     }
 
     @After
