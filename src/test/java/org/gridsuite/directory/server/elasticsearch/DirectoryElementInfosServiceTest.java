@@ -6,7 +6,6 @@
  */
 package org.gridsuite.directory.server.elasticsearch;
 
-import org.gridsuite.directory.server.DirectoryService;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,9 +31,6 @@ class DirectoryElementInfosServiceTest {
 
     @Autowired
     DirectoryElementInfosRepository directoryElementInfosRepository;
-
-    @Autowired
-    DirectoryService service;
 
     private void cleanDB() {
         directoryElementInfosRepository.deleteAll();

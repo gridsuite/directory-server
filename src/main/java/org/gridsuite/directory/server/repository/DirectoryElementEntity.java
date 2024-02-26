@@ -61,6 +61,12 @@ public class DirectoryElementEntity {
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
 
+    @Column(name = "stashed")
+    private boolean stashed;
+
+    @Column(name = "stash_date")
+    private LocalDateTime stashDate;
+
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         if (StringUtils.isNotBlank(newElementAttributes.getElementName())) {
             this.name = newElementAttributes.getElementName();
@@ -91,6 +97,12 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getCreationDate()) &&
             Objects.isNull(newElementAttributes.getLastModificationDate()) &&
             Objects.isNull(newElementAttributes.getLastModifiedBy());
+    }
+
+    public DirectoryElementEntity stashElement(boolean stashed, LocalDateTime stashDate) {
+        this.stashDate = stashDate;
+        this.stashed = stashed;
+        return this;
     }
 
     public DirectoryElementInfos toDirectoryElementInfos() {

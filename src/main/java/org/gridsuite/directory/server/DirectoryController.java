@@ -7,11 +7,13 @@
 package org.gridsuite.directory.server;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -48,9 +50,10 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
         @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<ElementAttributes> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
-                                                                 @RequestBody ElementAttributes elementAttributes,
-                                                                 @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId));
+                                             @Parameter(description = "if element already exists a new incremental name is provided") @RequestParam(value = "allowNewName", required = false, defaultValue = "false") Boolean allowNewName,
+                                             @RequestBody ElementAttributes elementAttributes,
+                                             @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId, allowNewName));
     }
 
     @PostMapping(value = "/directories/paths/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -74,6 +77,33 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
     }
 
+    @PostMapping(value = "/elements/stash")
+    @Operation(summary = "Stash elements")
+        @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were stashed")})
+    public ResponseEntity<Void> stashElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
+                                              @RequestHeader("userId") String userId) {
+        service.stashElements(elementsUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/elements/{parentUuid}/restore")
+    @Operation(summary = "Restore elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were restored ")})
+    public ResponseEntity<Void> restoreElements(@RequestBody List<UUID> elementsUuid,
+                                                @PathVariable("parentUuid") UUID parentUuid,
+                                                @RequestHeader("userId") String userId) {
+        service.restoreElements(elementsUuid, parentUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/elements/stash")
+    @Operation(summary = "Get the list of elements in the trash")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "the list of elements in the trash")})
+    public ResponseEntity<List<Pair<ElementAttributes, Long>>> getStashedElements(@RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.getStashedElements(userId));
+    }
+
     @DeleteMapping(value = "/elements/{elementUuid}")
     @Operation(summary = "Remove directory/element")
     @ApiResponses(value = {
@@ -83,6 +113,15 @@ public class DirectoryController {
     public ResponseEntity<Void> deleteElement(@PathVariable("elementUuid") UUID elementUuid,
                                                     @RequestHeader("userId") String userId) {
         service.deleteElement(elementUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/elements")
+    @Operation(summary = "Remove directories/elements")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"))
+    public ResponseEntity<Void> deleteElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
+                                               @RequestHeader("userId") String userId) {
+        service.deleteElements(elementsUuid, userId);
         return ResponseEntity.ok().build();
     }
 
