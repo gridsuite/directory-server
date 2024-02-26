@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.util.Pair;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +52,7 @@ public class DirectoryService {
     public static final String STUDY = "STUDY";
     public static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
     public static final String FILTER = "FILTER";
+    public static final String MODIFICATION = "MODIFICATION";
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
     public static final String HEADER_UPDATE_TYPE = "updateType";
@@ -107,11 +109,14 @@ public class DirectoryService {
     }
 
     /* methods */
-    public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId) {
+    public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, Boolean allowNewName) {
         if (elementAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
-
+        if (Boolean.TRUE.equals(allowNewName)) {
+            // use another available name if necessary
+            elementAttributes.setElementName(getDuplicateNameCandidate(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType(), userId));
+        }
         assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
         assertAccessibleDirectory(parentDirectoryUuid, userId);
         ElementAttributes result = insertElement(elementAttributes, parentDirectoryUuid);
@@ -164,7 +169,9 @@ public class DirectoryService {
                                            elementAttributes.getDescription(),
                                            now,
                                            now,
-                                           elementAttributes.getOwner()
+                                           elementAttributes.getOwner(),
+                                    false,
+                                  null
                 )
             )
         );
@@ -219,7 +226,7 @@ public class DirectoryService {
                             toElementAttributes(UUID.randomUUID(), s, DIRECTORY,
                                     false, userId, null, now, now, userId),
                             parentDirectoryUuid,
-                            userId).getElementUuid();
+                            userId, false).getElementUuid();
                 }
             } else {
                 parentDirectoryUuid = currentDirectoryUuid;
@@ -256,13 +263,13 @@ public class DirectoryService {
     }
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types) {
-        return getAllDirectoryElementsStream(directoryUuid, types)
+        return getAllDirectoryElementsStream(directoryUuid, types, userId)
                 .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) || elementAttributes.isAllowed(userId));
     }
 
-    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types) {
-        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentId(directoryUuid);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types);
+    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
+        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentIdAndStashed(directoryUuid, false);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements
                 .stream()
                 .filter(e -> e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
@@ -271,15 +278,18 @@ public class DirectoryService {
 
     public List<ElementAttributes> getRootDirectories(String userId, List<String> types) {
         List<DirectoryElementEntity> directoryElements = directoryElementRepository.findRootDirectoriesByUserId(userId);
-        Map<UUID, Long> subdirectoriesCountsMap;
-        if (!types.isEmpty()) {
-            subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types);
-        } else {
-            subdirectoriesCountsMap = getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types, userId);
-        }
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements.stream()
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    private Map<UUID, Long> getSubDirectoriesCountMap(String userId, List<String> types, List<DirectoryElementEntity> directoryElements) {
+        if (!types.isEmpty()) {
+            return getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types);
+        } else {
+            return getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types, userId);
+        }
     }
 
     public void updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
@@ -426,7 +436,7 @@ public class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
     }
 
     /***
@@ -519,7 +529,7 @@ public class DirectoryService {
     }
 
     private Boolean isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
-        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
+        return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
     }
 
     public UUID getDirectoryUuid(String directoryName, UUID parentDirectoryUuid) {
@@ -537,11 +547,11 @@ public class DirectoryService {
     }
 
     public boolean elementExists(UUID parentDirectoryUuid, String elementName, String type) {
-        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
+        return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
     }
 
     public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types) {
-        List<DirectoryElementEntity> elementEntities = directoryElementRepository.findAllById(ids);
+        List<DirectoryElementEntity> elementEntities = directoryElementRepository.findAllByIdInAndStashed(ids, false);
 
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
             throw new DirectoryException(NOT_FOUND);
@@ -621,5 +631,173 @@ public class DirectoryService {
         directoryElementInfosService.addAll(directoryElementRepository.findAll().stream()
                 .map(ElementAttributes::toDirectoryElementInfos)
                 .toList());
+    }
+  
+    private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,
+                                                              List<DirectoryElementEntity> rejectedEntities,
+                                                              String userId,
+                                                              boolean isParentPrivate) {
+        if (isParentPrivate) {
+            return getEntitiesCreatedBySameUser(entities, rejectedEntities, userId);
+        }
+
+        return entities.stream()
+                .filter(entity -> {
+                    boolean isUpdatable = Objects.equals(userId, entity.getOwner()) || !entity.getIsPrivate();
+                    if (!isUpdatable) {
+                        rejectedEntities.add(entity);
+                    }
+                    return isUpdatable;
+                })
+                .toList();
+    }
+
+    public void restoreElements(List<UUID> elementsUuid, UUID parentUuid, String userId) {
+        // Get parent directory
+        ElementAttributes parent = getElement(parentUuid);
+
+        // Get all updatable entities. Entities should be public or created by the user, so it can be restored
+        List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
+        List<DirectoryElementEntity> allStashedElements = directoryElementRepository.findAllStashedElements(elementsUuid, true, userId);
+        List<DirectoryElementEntity> updatableEntities = getEntitiesToRestore(allStashedElements, notUpdatableEntities, userId, parent.getAccessRights().isPrivate());
+
+        List<DirectoryElementEntity> entities = updatableEntities
+                .stream()
+                .flatMap(entity -> {
+                    entity.setParentId(parentUuid);
+                    entity.setName(getDuplicateNameCandidate(parentUuid, entity.getName(), entity.getType(), userId));
+
+                    // Retrieve descendants of the current entity
+                    List<DirectoryElementEntity> descendants = getEntitiesToRestore(
+                            directoryElementRepository.findAllDescendantsWithSameStashDate(entity.getId(), userId),
+                            notUpdatableEntities,
+                            userId,
+                            parent.getAccessRights().isPrivate());
+
+                    // Combine parent and descendants into a single list
+                    List<DirectoryElementEntity> result = new ArrayList<>();
+                    result.add(entity);
+                    result.addAll(descendants);
+
+                    return result.stream().map(e -> e.stashElement(false, null));
+                })
+                .toList();
+
+        directoryElementRepository.saveAll(entities);
+        notificationService.emitDirectoryChanged(
+                parentUuid,
+                parent.getElementName(),
+                userId,
+                null,
+                parent.getAccessRights().isPrivate(),
+                parentUuid == null,
+                NotificationType.UPDATE_DIRECTORY
+        );
+        emitDirectoryChangedNotification(parentUuid, userId);
+        if (!notUpdatableEntities.isEmpty()) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+    }
+
+    public void stashElements(List<UUID> elementsUuid, String userId) {
+        // we add the same stash date to all the elements that are deleted together
+        LocalDateTime stashDate = LocalDateTime.now();
+        List<DirectoryElementEntity> entities = directoryElementRepository.findAllByIdInAndStashed(elementsUuid, false);
+        List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
+        List<DirectoryElementEntity> updatableEntities = getEntitiesCreatedBySameUser(entities, notUpdatableEntities, userId);
+
+        directoryElementRepository.saveAll(updatableEntities.stream()
+                .flatMap(entity -> {
+                    List<DirectoryElementEntity> descendants = directoryElementRepository.findAllDescendants(entity.getId(), userId);
+                    // Combine parent and descendants into a single list
+                    List<DirectoryElementEntity> result = new ArrayList<>();
+                    result.add(entity);
+                    result.addAll(descendants);
+                    return result.stream().map(e -> {
+                        DirectoryElementEntity stashedElement = e.stashElement(true, stashDate);
+                        if (Objects.equals(e.getType(), STUDY)) {
+                            notificationService.emitDeletedStudy(entity.getId(), userId);
+                        }
+                        return stashedElement;
+                    });
+                })
+                .toList());
+
+        updatableEntities.forEach(entity -> {
+            UUID parentUuid = getParentUuid(entity.getId());
+            notificationService.emitDirectoryChanged(
+                    parentUuid == null ? entity.getId() : parentUuid,
+                    entity.getName(),
+                    userId,
+                    null,
+                    entity.getIsPrivate(),
+                    parentUuid == null,
+                    parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY
+            );
+        });
+
+        if (!notUpdatableEntities.isEmpty()) {
+            throw new DirectoryException(NOT_ALLOWED,
+                    String.format("Some or all of the elements can not be deleted : %s",
+                            String.join(", ", notUpdatableEntities.stream().map(DirectoryElementEntity::getName).toList())));
+        }
+    }
+
+    public List<Pair<ElementAttributes, Long>> getStashedElements(String userId) {
+        List<DirectoryElementEntity> entities = directoryElementRepository.getElementsStashed(userId);
+        return entities.stream()
+                .map(entity -> Pair.of(toElementAttributes(entity), directoryElementRepository.countDescendants(entity.getId(), userId) - 1))
+                .toList();
+    }
+
+    public void deleteElements(List<UUID> elementsUuid, String userId) {
+        // Get all updatable entities
+        List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
+        List<DirectoryElementEntity> updatableEntities = getEntitiesCreatedBySameUser(directoryElementRepository.findAllByIdInAndStashed(elementsUuid, true), notUpdatableEntities, userId);
+
+        // Collect all entities with their descendents in one list
+        List<DirectoryElementEntity> allEntities = updatableEntities.stream()
+                        .flatMap(entity -> Stream.concat(directoryElementRepository.findAllDescendantsWithSameStashDate(entity.getId(), userId).stream(),
+                                                         Stream.of(entity)))
+                        .toList();
+
+        // Delete all entities
+        directoryElementRepository.deleteAllById(allEntities.stream().map(DirectoryElementEntity::getId).toList());
+
+        // Send notification for all deleted elements
+        allEntities.forEach(entity -> {
+            UUID parentUuid = entity.getParentId();
+            notificationService.emitDirectoryChanged(
+                    parentUuid == null ? entity.getId() : parentUuid,
+                    entity.getName(),
+                    userId,
+                    null,
+                    entity.getIsPrivate(),
+                    parentUuid == null,
+                    parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY
+            );
+            if (STUDY.equals(entity.getType())) {
+                notificationService.emitDeletedStudy(entity.getId(), userId);
+            }
+        });
+        if (!notUpdatableEntities.isEmpty()) {
+            throw new DirectoryException(NOT_ALLOWED,
+                    String.format("Some or all of the elements can not be deleted : %s",
+                            String.join(", ", notUpdatableEntities.stream().map(DirectoryElementEntity::getName).toList())));
+        }
+    }
+
+    private List<DirectoryElementEntity> getEntitiesCreatedBySameUser(List<DirectoryElementEntity> entities,
+                                                                      List<DirectoryElementEntity> notUpdatableEntities,
+                                                                      String userId) {
+        return entities.stream()
+                .filter(entity -> {
+                    boolean isUpdatable = Objects.equals(userId, entity.getOwner());
+                    if (!isUpdatable) {
+                        notUpdatableEntities.add(entity);
+                    }
+                    return isUpdatable;
+                })
+                .toList();
     }
 }
