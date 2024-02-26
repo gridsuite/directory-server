@@ -11,6 +11,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 
 import jakarta.persistence.*;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -89,5 +91,15 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getCreationDate()) &&
             Objects.isNull(newElementAttributes.getLastModificationDate()) &&
             Objects.isNull(newElementAttributes.getLastModifiedBy());
+    }
+
+    public DirectoryElementInfos toDirectoryElementInfos() {
+        return DirectoryElementInfos.builder()
+                .id(getId().toString())
+                .name(getName())
+                .parentId(getParentId() == null ? getId().toString() : getParentId().toString())
+                .type(getType())
+                .lastModificationDate(getLastModificationDate())
+                .build();
     }
 }

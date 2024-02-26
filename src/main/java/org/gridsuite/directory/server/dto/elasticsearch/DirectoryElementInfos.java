@@ -8,7 +8,6 @@ package org.gridsuite.directory.server.dto.elasticsearch;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
-import lombok.experimental.Accessors;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
@@ -21,7 +20,6 @@ import java.time.LocalDateTime;
  */
 @SuperBuilder
 @NoArgsConstructor
-@Accessors(chain = true)
 @Setter
 @Getter
 @ToString
@@ -57,7 +55,7 @@ public class DirectoryElementInfos {
     @Field("subdirectoriesCount")
     private Long subdirectoriesCount;
 
-    @Field("lastModificationDate")
+    @Field(name = "lastModificationDate", type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
     LocalDateTime lastModificationDate;
 
     @Field("isPrivate")

@@ -10,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.DirectoryException;
-import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
 import java.time.ZoneOffset;
@@ -93,15 +92,5 @@ public class ElementAttributes {
             .subdirectoriesCount(subdirectoriesCount).description(elementDescription)
             .lastModificationDate(lastModificationDate).lastModifiedBy(lastModifiedBy)
             .build();
-    }
-
-    public static DirectoryElementInfos toDirectoryElementInfos(DirectoryElementEntity entity) {
-        return DirectoryElementInfos.builder()
-                .id(entity.getId().toString())
-                .name(entity.getName())
-                .parentId(entity.getParentId() == null ? entity.getId().toString() : entity.getParentId().toString())
-                .type(entity.getType())
-                .lastModificationDate(entity.getLastModificationDate())
-                .build();
     }
 }

@@ -8,7 +8,9 @@ package org.gridsuite.directory.server;
 
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.AccessRightsAttributes;
+import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosService;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -31,14 +33,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.directory.server.DirectoryException.Type.IS_DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
-import static org.gridsuite.directory.server.NotificationService.HEADER_ERROR;
-import static org.gridsuite.directory.server.NotificationService.HEADER_STUDY_UUID;
-import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
-import static org.gridsuite.directory.server.dto.ElementAttributes.toDirectoryElementInfos;
+import static org.gridsuite.directory.server.DirectoryException.Type.*;
+import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 
 /**
@@ -114,9 +110,8 @@ public class DirectoryService {
 
         assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
         assertAccessibleDirectory(parentDirectoryUuid, userId);
-        ElementAttributes result = insertElement(elementAttributes, parentDirectoryUuid);
-        DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(result.getElementUuid());
-        directoryElementInfosRepository.save(toDirectoryElementInfos(elementToUpdate));
+        DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
+        directoryElementInfosRepository.save(elementEntity.toDirectoryElementInfos());
         var isCurrentElementPrivate = elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null;
 
         notificationService.emitDirectoryChanged(
@@ -129,7 +124,7 @@ public class DirectoryService {
                 NotificationType.UPDATE_DIRECTORY
         );
 
-        return result;
+        return toElementAttributes(elementEntity);
     }
 
     private void assertElementNotExist(UUID parentDirectoryUuid, String elementName, String type) {
@@ -151,22 +146,21 @@ public class DirectoryService {
     }
 
     /* methods */
-    private ElementAttributes insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
+    private DirectoryElementEntity insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
         //We need to limit the precision to avoid database precision storage limit issue (postgres has a precision of 6 digits while h2 can go to 9)
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-        return toElementAttributes(directoryElementRepository.save(
+        return directoryElementRepository.save(
                 new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
-                                           parentDirectoryUuid,
-                                           elementAttributes.getElementName(),
-                                           elementAttributes.getType(),
-                                           elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
-                                           elementAttributes.getOwner(),
-                                           elementAttributes.getDescription(),
-                                           now,
-                                           now,
-                                           elementAttributes.getOwner()
+                        parentDirectoryUuid,
+                        elementAttributes.getElementName(),
+                        elementAttributes.getType(),
+                        elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
+                        elementAttributes.getOwner(),
+                        elementAttributes.getDescription(),
+                        now,
+                        now,
+                        elementAttributes.getOwner()
                 )
-            )
         );
     }
 
@@ -176,7 +170,7 @@ public class DirectoryService {
         }
 
         assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName());
-        ElementAttributes elementAttributes = insertElement(toElementAttributes(rootDirectoryAttributes), null);
+        ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
 
         notificationService.emitDirectoryChanged(
                 elementAttributes.getElementUuid(),
@@ -292,7 +286,7 @@ public class DirectoryService {
         }
 
         DirectoryElementEntity elementEntity = directoryElementRepository.save(directoryElement.update(newElementAttributes));
-        directoryElementInfosRepository.save(toDirectoryElementInfos(elementEntity));
+        directoryElementInfosRepository.save(elementEntity.toDirectoryElementInfos());
         notificationService.emitDirectoryChanged(
                 elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
                 elementEntity.getName(),
@@ -619,7 +613,7 @@ public class DirectoryService {
     @Transactional
     public void reindexAllElements() {
         directoryElementInfosService.addAll(directoryElementRepository.findAll().stream()
-                .map(ElementAttributes::toDirectoryElementInfos)
+                .map(DirectoryElementEntity::toDirectoryElementInfos)
                 .toList());
     }
 }
