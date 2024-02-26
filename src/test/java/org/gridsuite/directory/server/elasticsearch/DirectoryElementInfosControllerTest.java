@@ -54,6 +54,7 @@ class DirectoryElementInfosControllerTest {
     private DirectoryElementRepository directoryElementRepository;
 
     private void cleanDB() {
+        directoryElementRepository.deleteAll();
         directoryElementInfosRepository.deleteAll();
     }
 
