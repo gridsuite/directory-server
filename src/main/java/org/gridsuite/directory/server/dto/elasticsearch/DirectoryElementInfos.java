@@ -25,13 +25,12 @@ import java.time.LocalDateTime;
 @ToString
 @EqualsAndHashCode
 @Schema(description = "Directory element infos")
-@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}elements")
+@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements")
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "DirectoryElementInfos")
 public class DirectoryElementInfos {
-
     @Id
-    @Field("id")
+    @Field
     private String id;
 
     @MultiField(
@@ -43,22 +42,21 @@ public class DirectoryElementInfos {
             )
     private String name;
 
-    @Field("parentId")
+    @Field(type = FieldType.Text)
     private String parentId;
 
-    @Field("type")
+    @Field(type = FieldType.Text)
     private String type;
 
-    @Field("owner")
+    @Field(type = FieldType.Text)
     private String owner;
 
-    @Field("subdirectoriesCount")
+    @Field(type = FieldType.Long)
     private Long subdirectoriesCount;
 
-    @Field(name = "lastModificationDate", type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
+    @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
     LocalDateTime lastModificationDate;
 
-    @Field("isPrivate")
+    @Field(type = FieldType.Boolean)
     private Boolean isPrivate;
-
 }

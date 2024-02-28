@@ -22,7 +22,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,12 +38,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class DirectoryElementInfosControllerTest {
 
     @Autowired
-    DirectoryElementInfosService directoryElementInfosService;
-
-    @Autowired
-    DirectoryElementInfosRepository directoryElementInfosRepository;
-
-    @Autowired
     private MockMvc mockMvc;
 
     @Autowired
@@ -52,6 +45,9 @@ class DirectoryElementInfosControllerTest {
 
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
+
+    @Autowired
+    DirectoryElementInfosRepository directoryElementInfosRepository;
 
     private void cleanDB() {
         directoryElementRepository.deleteAll();
@@ -64,13 +60,13 @@ class DirectoryElementInfosControllerTest {
     }
 
     @Test
-    void testReindexAllElementsEndpoint() throws Exception {
+    void testReindexAll() throws Exception {
         String userId = "user";
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).withNano(0);
         ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "caseName", "CASE",
                 false, "user", null, now, now, userId);
         String requestBody = objectMapper.writeValueAsString(caseElement);
-        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1")
+        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=dir")
                         .header("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))

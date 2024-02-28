@@ -7,6 +7,7 @@
 package org.gridsuite.directory.server.elasticsearch;
 
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class DirectoryElementInfosServiceTest {
 
     @Autowired
-    DirectoryElementInfosService directoryElementInfosService;
+    DirectoryRepositoryService repositoryService;
 
     @Autowired
     DirectoryElementInfosRepository directoryElementInfosRepository;
@@ -50,7 +51,7 @@ class DirectoryElementInfosServiceTest {
 
         // Add
         List<DirectoryElementInfos> infos = List.of(studyInfos, filterInfos, directoryInfos, contingencyListInfos);
-        directoryElementInfosService.addAll(infos);
+        repositoryService.saveElementsInfos(infos);
         List<DirectoryElementInfos> infosDB = directoryElementInfosRepository.findAll();
         assertEquals(4, infosDB.size());
         assertEquals(infos, infosDB);

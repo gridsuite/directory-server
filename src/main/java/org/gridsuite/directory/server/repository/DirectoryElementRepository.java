@@ -23,6 +23,8 @@ import java.util.UUID;
 @Repository
 public interface DirectoryElementRepository extends JpaRepository<DirectoryElementEntity, UUID> {
 
+    List<DirectoryElementEntity> findAllByStashed(boolean stashed);
+
     List<DirectoryElementEntity> findAllByParentIdAndStashed(UUID parentId, boolean stashed);
 
     List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed);
@@ -49,10 +51,6 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
 
     boolean existsByIdAndOwnerOrIsPrivateAndId(UUID id, String owner, boolean isPrivate, UUID id2);
-
-    default boolean canRead(UUID id, String userId) {
-        return existsByIdAndOwnerOrIsPrivateAndId(id, userId, false, id);
-    }
 
     interface SubDirectoryCount {
         UUID getId();

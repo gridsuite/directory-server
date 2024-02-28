@@ -109,8 +109,10 @@ public class DirectoryElementEntity {
         return DirectoryElementInfos.builder()
                 .id(getId().toString())
                 .name(getName())
+                .owner(getOwner())
                 .parentId(getParentId() == null ? getId().toString() : getParentId().toString())
                 .type(getType())
+                .isPrivate(getIsPrivate())
                 .lastModificationDate(getLastModificationDate())
                 .build();
     }
