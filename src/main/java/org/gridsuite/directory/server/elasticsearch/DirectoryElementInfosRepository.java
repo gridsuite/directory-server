@@ -9,11 +9,10 @@ package org.gridsuite.directory.server.elasticsearch;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 
-import java.util.List;
+import java.util.UUID;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-public interface DirectoryElementInfosRepository extends ElasticsearchRepository<DirectoryElementInfos, String> {
-    List<DirectoryElementInfos> findAll();
+public interface DirectoryElementInfosRepository extends ElasticsearchRepository<DirectoryElementInfos, UUID> {
 }

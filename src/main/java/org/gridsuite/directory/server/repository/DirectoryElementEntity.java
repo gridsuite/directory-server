@@ -107,10 +107,10 @@ public class DirectoryElementEntity {
 
     public DirectoryElementInfos toDirectoryElementInfos() {
         return DirectoryElementInfos.builder()
-                .id(getId().toString())
+                .id(getId())
                 .name(getName())
                 .owner(getOwner())
-                .parentId(getParentId() == null ? getId().toString() : getParentId().toString())
+                .parentId(getParentId() == null ? getId() : getParentId())
                 .type(getType())
                 .isPrivate(getIsPrivate())
                 .lastModificationDate(getLastModificationDate())

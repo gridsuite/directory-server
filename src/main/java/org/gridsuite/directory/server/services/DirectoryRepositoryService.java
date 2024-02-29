@@ -62,7 +62,7 @@ public class DirectoryRepositoryService {
 
     public void saveStashedElements(@NonNull List<DirectoryElementEntity> directoryElementEntities) {
         directoryElementRepository.saveAll(directoryElementEntities);
-        directoryElementInfosRepository.deleteAllById(directoryElementEntities.stream().map(DirectoryElementEntity::getId).map(UUID::toString).toList());
+        directoryElementInfosRepository.deleteAllById(directoryElementEntities.stream().map(DirectoryElementEntity::getId).toList());
     }
 
     public void saveRestoredElements(@NonNull List<DirectoryElementEntity> directoryElementEntities) {
@@ -84,12 +84,12 @@ public class DirectoryRepositoryService {
 
     public void deleteElement(UUID elementUuid) {
         directoryElementRepository.deleteById(elementUuid);
-        directoryElementInfosRepository.deleteById(elementUuid.toString());
+        directoryElementInfosRepository.deleteById(elementUuid);
     }
 
     public void deleteElements(List<UUID> elementUuids) {
         directoryElementRepository.deleteAllById(elementUuids);
-        directoryElementInfosRepository.deleteAllById(elementUuids.stream().map(UUID::toString).toList());
+        directoryElementInfosRepository.deleteAllById(elementUuids);
     }
 
     public boolean canRead(UUID id, String userId) {

@@ -14,6 +14,7 @@ import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -30,8 +31,7 @@ import java.time.LocalDateTime;
 @TypeAlias(value = "DirectoryElementInfos")
 public class DirectoryElementInfos {
     @Id
-    @Field
-    private String id;
+    private UUID id;
 
     @MultiField(
             mainField = @Field(name = "name", type = FieldType.Text),
@@ -42,17 +42,14 @@ public class DirectoryElementInfos {
             )
     private String name;
 
-    @Field(type = FieldType.Text)
-    private String parentId;
+    private UUID parentId;
 
-    @Field(type = FieldType.Text)
     private String type;
 
-    @Field(type = FieldType.Text)
     private String owner;
 
     @Field(type = FieldType.Long)
-    private Long subdirectoriesCount;
+    private long subdirectoriesCount;
 
     @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
     LocalDateTime lastModificationDate;

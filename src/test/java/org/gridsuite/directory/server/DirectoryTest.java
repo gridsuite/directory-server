@@ -8,6 +8,7 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
@@ -1521,7 +1522,7 @@ public class DirectoryTest {
 
     private void assertNbElementsInRepositories(int nbEntities, int nbElementsInfos) {
         assertEquals(nbEntities, directoryElementRepository.findAll().size());
-        assertEquals(nbElementsInfos, directoryElementInfosRepository.findAll().size());
+        assertEquals(nbElementsInfos, Iterables.size(directoryElementInfosRepository.findAll()));
     }
 
     private void assertElementIsProperlyInserted(ElementAttributes elementAttributes) throws Exception {
