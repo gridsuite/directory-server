@@ -13,6 +13,7 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.utils.MatcherJson;
+import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,7 @@ import static org.junit.Assert.assertThrows;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
+@DisableElasticsearch
 public class ElementAttributesTest {
 
     private static final UUID ELEMENT_UUID = UUID.randomUUID();

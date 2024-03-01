@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,8 +34,11 @@ public class DirectoryController {
 
     private final DirectoryService service;
 
-    public DirectoryController(DirectoryService service) {
+    private final DirectoryRepositoryService repositoryService;
+
+    public DirectoryController(DirectoryService service, DirectoryRepositoryService repositoryService) {
         this.service = service;
+        this.repositoryService = repositoryService;
     }
 
     @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -247,7 +251,15 @@ public class DirectoryController {
     public ResponseEntity<Void> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
                                                     @PathVariable("type") String type) {
-        HttpStatus status = service.elementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
+        HttpStatus status = repositoryService.isElementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
+    }
+
+    @PostMapping(value = "/elements/reindex-all")
+    @Operation(summary = "reindex the element")
+    @ApiResponse(responseCode = "200", description = "Elements reindexed")
+    public ResponseEntity<Void> reindexAllElements() {
+        service.reindexAllElements();
+        return ResponseEntity.ok().build();
     }
 }

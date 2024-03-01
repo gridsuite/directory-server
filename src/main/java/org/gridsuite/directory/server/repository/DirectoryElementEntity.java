@@ -11,6 +11,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 
 import jakarta.persistence.*;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -101,5 +103,17 @@ public class DirectoryElementEntity {
         this.stashDate = stashDate;
         this.stashed = stashed;
         return this;
+    }
+
+    public DirectoryElementInfos toDirectoryElementInfos() {
+        return DirectoryElementInfos.builder()
+                .id(getId())
+                .name(getName())
+                .owner(getOwner())
+                .parentId(getParentId() == null ? getId() : getParentId())
+                .type(getType())
+                .isPrivate(getIsPrivate())
+                .lastModificationDate(getLastModificationDate())
+                .build();
     }
 }

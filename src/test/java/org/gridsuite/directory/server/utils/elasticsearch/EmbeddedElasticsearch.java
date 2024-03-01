@@ -1,0 +1,58 @@
+/*
+  Copyright (c) 2024, RTE (http://www.rte-france.com)
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.gridsuite.directory.server.utils.elasticsearch;
+
+import org.springframework.stereotype.Component;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+
+import java.util.Map;
+
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
+@Component
+public class EmbeddedElasticsearch {
+
+    private static final String ES_DOCKER_IMAGE_NAME = "docker.elastic.co/elasticsearch/elasticsearch";
+    private static final String ES_DOCKER_IMAGE_VERSION = "8.7.1";
+
+    private static ElasticsearchContainer elasticsearchContainer;
+
+    @PostConstruct
+    public void postConstruct() {
+        if (elasticsearchContainer != null) {
+            return;
+        }
+
+        elasticsearchContainer = new ElasticsearchContainer(String.format("%s:%s", ES_DOCKER_IMAGE_NAME, ES_DOCKER_IMAGE_VERSION));
+        Map<String, String> envMap = elasticsearchContainer.getEnvMap();
+        envMap.put("discovery.type", "single-node");
+        envMap.put("LOGSPOUT", "ignore");
+        //Els 8 has security enabled by default
+        envMap.put("xpack.security.enabled", Boolean.FALSE.toString());
+        envMap.put("ingest.geoip.downloader.enabled", Boolean.FALSE.toString());
+        envMap.put("ES_JAVA_OPTS", "-Xms128m -Xmx128m");
+        elasticsearchContainer.start();
+
+        System.setProperty("spring.data.elasticsearch.embedded", Boolean.toString(true));
+        System.setProperty("spring.data.elasticsearch.embedded.port", Integer.toString(elasticsearchContainer.getMappedPort(9200)));
+    }
+
+    @PreDestroy
+    private void preDestroy() {
+        if (elasticsearchContainer == null) {
+            return;
+        }
+
+        elasticsearchContainer.stop();
+        elasticsearchContainer = null;
+    }
+}
+

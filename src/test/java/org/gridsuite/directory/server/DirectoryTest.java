@@ -8,11 +8,13 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.StudyService;
@@ -45,31 +47,16 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
-import static org.gridsuite.directory.server.DirectoryService.CONTINGENCY_LIST;
-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryService.FILTER;
-import static org.gridsuite.directory.server.DirectoryService.MODIFICATION;
-import static org.gridsuite.directory.server.DirectoryService.STUDY;
+import static org.gridsuite.directory.server.DirectoryService.*;
+import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.junit.Assert.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -113,6 +100,9 @@ public class DirectoryTest {
     private DirectoryElementRepository directoryElementRepository;
 
     @Autowired
+    DirectoryElementInfosRepository directoryElementInfosRepository;
+
+    @Autowired
     private OutputDestination output;
 
     @Autowired
@@ -120,11 +110,18 @@ public class DirectoryTest {
 
     private void cleanDB() {
         directoryElementRepository.deleteAll();
+        directoryElementInfosRepository.deleteAll();
     }
 
     @Before
     public void setup() {
         cleanDB();
+    }
+
+    @After
+    public void tearDown() {
+        List<String> destinations = List.of(elementUpdateDestination, directoryUpdateDestination);
+        assertQueuesEmptyThenClear(destinations);
     }
 
     @Test
@@ -352,9 +349,13 @@ public class DirectoryTest {
         ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21UUID, false, filterAttributes);
 
+        assertNbElementsInRepositories(4);
+
         mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
                 .header("userId", "Doe"))
                 .andExpect(status().isOk());
+
+        assertNbElementsInRepositories(4);
 
         // assert that the broker message has been sent a root directory creation request message
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
@@ -398,15 +399,21 @@ public class DirectoryTest {
         ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21PrivateUUID, true, filterAttributes);
 
+        assertNbElementsInRepositories(4);
+
         // Move from public folder to private folder is forbidden if the issuer of the operation isn't the element's owner
         mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
                 .header("userId", "Roger"))
             .andExpect(status().isForbidden());
 
+        assertNbElementsInRepositories(4);
+
         // Move from public folder to private folder is allowed if the issuer of the operation is the element's owner
         mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
                 .header("userId", "Doe"))
                 .andExpect(status().isOk());
+
+        assertNbElementsInRepositories(4);
 
         // assert that the broker message has been sent a root directory creation request message
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
@@ -449,9 +456,13 @@ public class DirectoryTest {
         ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21PrivateUUID, true, filterAttributes);
 
+        assertNbElementsInRepositories(4);
+
         mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
                         .header("userId", "Unallowed User"))
                 .andExpect(status().isForbidden());
+
+        assertNbElementsInRepositories(4);
     }
 
     @Test
@@ -462,6 +473,8 @@ public class DirectoryTest {
         ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, filterAttributes);
 
+        assertNbElementsInRepositories(2);
+
         UUID unknownUuid = UUID.randomUUID();
 
         mockMvc.perform(put("/v1/elements/" + unknownUuid + "?newDirectory=" + rootDir20Uuid)
@@ -471,6 +484,8 @@ public class DirectoryTest {
         mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + unknownUuid)
                         .header("userId", "Doe"))
                 .andExpect(status().isNotFound());
+
+        assertNbElementsInRepositories(2);
     }
 
     @Test
@@ -493,9 +508,13 @@ public class DirectoryTest {
         ElementAttributes filterwithSameNameAndTypeAttributes = toElementAttributes(filterwithSameNameAndTypeUuid, "filter", FILTER, null, "Doe");
         insertAndCheckSubElement(directory21UUID, false, filterwithSameNameAndTypeAttributes);
 
+        assertNbElementsInRepositories(4);
+
         mockMvc.perform(put("/v1/elements/" + filterwithSameNameAndTypeUuid + "?newDirectory=" + rootDir20Uuid)
                         .header("userId", "Doe"))
                 .andExpect(status().isForbidden());
+
+        assertNbElementsInRepositories(4);
     }
 
     @Test
@@ -510,9 +529,13 @@ public class DirectoryTest {
         ElementAttributes filter2Attributes = toElementAttributes(filter2Uuid, "filter2", FILTER, null, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, filter2Attributes);
 
+        assertNbElementsInRepositories(3);
+
         mockMvc.perform(put("/v1/elements/" + filter1Uuid + "?newDirectory=" + filter2Uuid)
                         .header("userId", "Doe"))
                 .andExpect(status().isForbidden());
+
+        assertNbElementsInRepositories(3);
     }
 
     @Test
@@ -528,6 +551,8 @@ public class DirectoryTest {
         mockMvc.perform(put("/v1/elements/" + directory21UUID + "?newDirectory=" + rootDir10Uuid)
                         .header("userId", "Doe"))
                 .andExpect(status().isForbidden());
+
+        assertNbElementsInRepositories(3);
     }
 
     @Test
@@ -540,9 +565,13 @@ public class DirectoryTest {
         ElementAttributes study21Attributes = toElementAttributes(study21UUID, "Study21", STUDY, null, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, study21Attributes);
 
+        assertNbElementsInRepositories(3);
+
         mockMvc.perform(put("/v1/elements/" + study21UUID + "?newDirectory=" + rootDir10Uuid)
                         .header("userId", "Doe"))
                 .andExpect(status().isOk());
+
+        assertNbElementsInRepositories(3);
 
         // assert that the broker message has been sent a update notification on directory
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
@@ -576,9 +605,13 @@ public class DirectoryTest {
         ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
 
+        assertNbElementsInRepositories(3);
+
         mockMvc.perform(put("/v1/elements/" + rootDir10Uuid + "?newDirectory=" + rootDir20Uuid)
                         .header("userId", "Doe"))
                 .andExpect(status().isForbidden());
+
+        assertNbElementsInRepositories(3);
     }
 
     @Test
@@ -744,6 +777,8 @@ public class DirectoryTest {
 
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), true, subDirStudyAttributes);
 
+        assertNbElementsInRepositories(5);
+
         deleteElement(rootDirUuid, rootDirUuid, "userId", true, true, false, 3);
 
         checkElementNotFound(rootDirUuid, "userId");
@@ -751,6 +786,8 @@ public class DirectoryTest {
         checkElementNotFound(study2Attributes.getElementUuid(), "userId");
         checkElementNotFound(subDirAttributes.getElementUuid(), "userId");
         checkElementNotFound(subDirStudyAttributes.getElementUuid(), "userId");
+
+        assertNbElementsInRepositories(0);
     }
 
     @Test
@@ -764,8 +801,12 @@ public class DirectoryTest {
         ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_UUID, "study1", STUDY, null, "user1");
         insertAndCheckSubElement(rootDirUuid, false, study1Attributes);
 
+        assertNbElementsInRepositories(2);
+
         renameElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", "newName1", false, false);
         checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "newName1", STUDY, null, "user1", null, study1Attributes.getCreationDate(), study1Attributes.getLastModificationDate(), "user1")));
+
+        assertNbElementsInRepositories(2);
     }
 
     @Test
@@ -826,9 +867,13 @@ public class DirectoryTest {
         UUID rootDirUuid = rootDir.getElementUuid();
         ZonedDateTime rootDirCreationDate = rootDir.getCreationDate();
 
+        assertNbElementsInRepositories(1);
+
         //the name should not change
         renameElementExpectFail(rootDirUuid, "user1", "newName1", 403);
         checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, true, "Doe", null, rootDirCreationDate, rootDirCreationDate, "Doe")));
+
+        assertNbElementsInRepositories(1);
     }
 
     @Test
@@ -970,6 +1015,8 @@ public class DirectoryTest {
 
         rootDirectory.setSubdirectoriesCount(3L);
         checkRootDirectoriesList("user1", List.of(FILTER), List.of(rootDirectory, directory));
+
+        assertNbElementsInRepositories(7);
     }
 
     @SneakyThrows
@@ -1044,6 +1091,8 @@ public class DirectoryTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isForbidden());
+
+        assertNbElementsInRepositories(1);
     }
 
     @Test
@@ -1058,6 +1107,8 @@ public class DirectoryTest {
      // Insert a filter with empty name in the root directory and expect a 403
         ElementAttributes filterWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", FILTER, null, "user1");
         insertExpectFail(rootDirUuid, filterWithoutNameAttributes);
+
+        assertNbElementsInRepositories(1);
     }
 
     @Test
@@ -1123,11 +1174,13 @@ public class DirectoryTest {
         subDirAttributes1.setSubdirectoriesCount(1L);
         checkDirectoryContent(rootDirectoryUuid, "userId", List.of(subDirAttributes1, subDirAttributes4));
 
-        // Insert a  sub-element of type STUDY
+        // Insert a sub-element of type STUDY
         ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, null, "userId", "descr study");
         insertAndCheckSubElement(rootDirectoryUuid, false, subEltAttributes);
         checkDirectoryContent(rootDirectoryUuid, "userId", List.of(subDirAttributes1, subDirAttributes4, subEltAttributes));
         checkElementNameExistInDirectory(rootDirectoryUuid, "newStudy", STUDY, HttpStatus.OK);
+
+        assertNbElementsInRepositories(6, 6);
 
         mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid4)
                         .header("userId", "userId")
@@ -1140,6 +1193,8 @@ public class DirectoryTest {
                 .andExpect(status().isOk());
         output.clear();
 
+        assertNbElementsInRepositories(6, 4);
+
         subDirAttributes1.setSubdirectoriesCount(0L);
         checkStashedElements(List.of(Pair.of(subDirAttributes1, 1L)));
 
@@ -1151,6 +1206,8 @@ public class DirectoryTest {
         output.clear();
         checkStashedElements(List.of());
 
+        assertNbElementsInRepositories(6, 6);
+
         mockMvc.perform(post("/v1/elements/stash?ids=" + rootDirectoryUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON))
@@ -1159,6 +1216,8 @@ public class DirectoryTest {
 
         rootDirectory.setSubdirectoriesCount(0L);
         checkStashedElements(List.of(Pair.of(rootDirectory, 4L)));
+
+        assertNbElementsInRepositories(6, 1); // 'newSubDir3' is private with a different owner 'userId2'
 
         ElementAttributes rootDirectory2 = retrieveInsertAndCheckRootDirectory("directory", false, "userId");
         UUID rootDirectoryUuid2 = rootDirectory2.getElementUuid();
@@ -1172,17 +1231,23 @@ public class DirectoryTest {
 
         checkStashedElements(List.of());
 
+        assertNbElementsInRepositories(7, 7);
+
         mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid1)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         output.clear();
 
+        assertNbElementsInRepositories(7, 5);
+
         mockMvc.perform(post("/v1/elements/stash?ids=" + subDirUuid4)
                         .header("userId", "userId2")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
         output.clear();
+
+        assertNbElementsInRepositories(7, 3);
 
         subDirAttributes1.setSubdirectoriesCount(0L);
         subDirAttributes4.setSubdirectoriesCount(0L);
@@ -1194,6 +1259,8 @@ public class DirectoryTest {
                 .andExpect(status().isForbidden());
         output.clear();
         checkStashedElements(List.of(Pair.of(subDirAttributes4, 0L)));
+
+        assertNbElementsInRepositories(5, 3);
     }
 
     private void checkStashedElements(List<Pair<ElementAttributes, Long>> expectedStashed) throws Exception {
@@ -1449,6 +1516,15 @@ public class DirectoryTest {
         objectMapper.readerForListOf(ElementAttributes.class).readValue(result.getResponse().getContentAsString());
     }
 
+    private void assertNbElementsInRepositories(int nbElements) {
+        assertNbElementsInRepositories(nbElements, nbElements);
+    }
+
+    private void assertNbElementsInRepositories(int nbEntities, int nbElementsInfos) {
+        assertEquals(nbEntities, directoryElementRepository.findAll().size());
+        assertEquals(nbElementsInfos, Iterables.size(directoryElementInfosRepository.findAll()));
+    }
+
     private void assertElementIsProperlyInserted(ElementAttributes elementAttributes) throws Exception {
         String response = mockMvc.perform(get("/v1/elements/" + elementAttributes.getElementUuid())
                         .header("userId", "userId"))
@@ -1610,6 +1686,8 @@ public class DirectoryTest {
         //the element is in dir2
         assertEquals(dir2Uuid, insertedCaseElement.getParentId());
 
+        assertNbElementsInRepositories(3);
+
         //we don't care about message
         output.clear();
     }
@@ -1633,12 +1711,26 @@ public class DirectoryTest {
         assertElementIsProperlyInserted(anotherModifAttributes);
 
         checkDirectoryContent(rootDirUuid, userId, List.of(MODIFICATION), List.of(modifAttributes, anotherModifAttributes));
+
+        assertNbElementsInRepositories(3);
     }
 
-    @After
-    public void tearDown() {
-        List<String> destinations = List.of(elementUpdateDestination, directoryUpdateDestination);
-        assertQueuesEmptyThenClear(destinations);
+    @Test
+    @SneakyThrows
+    public void testReindexAll() {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
+        DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", STUDY, true, "userId", "description", now, now, "userId", false, null);
+
+        directoryElementRepository.saveAll(List.of(dirEntity, studyEntity));
+
+        assertNbElementsInRepositories(2, 0);
+
+        mockMvc.perform(post("/v1/elements/reindex-all")).andExpect(status().isOk());
+
+        assertNbElementsInRepositories(2, 2);
+
+        output.clear();
     }
 
     private void assertQueuesEmptyThenClear(List<String> destinations) {

@@ -13,10 +13,10 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.util.Pair;
 import org.springframework.messaging.Message;
@@ -32,13 +32,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.directory.server.DirectoryException.Type.IS_DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
-import static org.gridsuite.directory.server.NotificationService.HEADER_ERROR;
-import static org.gridsuite.directory.server.NotificationService.HEADER_STUDY_UUID;
-import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
+import static org.gridsuite.directory.server.DirectoryException.Type.*;
+import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 
 /**
@@ -58,19 +53,18 @@ public class DirectoryService {
     public static final String UPDATE_TYPE_STUDIES = "studies";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
-    private final DirectoryElementRepository directoryElementRepository;
 
-    private StudyService studyService;
+    private final StudyService studyService;
 
-    @Autowired
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
 
-    public DirectoryService(
-        DirectoryElementRepository directoryElementRepository,
-        StudyService studyService) {
-        this.directoryElementRepository = directoryElementRepository;
+    private final DirectoryRepositoryService repositoryService;
 
+    public DirectoryService(DirectoryRepositoryService repositoryService,
+                            StudyService studyService, NotificationService notificationService) {
+        this.repositoryService = repositoryService;
         this.studyService = studyService;
+        this.notificationService = notificationService;
     }
 
     /* notifications */
@@ -87,13 +81,13 @@ public class DirectoryService {
                 if (UPDATE_TYPE_STUDIES.equals(updateType) && studyUuidHeader != null) {
                     UUID studyUuid = UUID.fromString(studyUuidHeader);
 
-                    UUID parentUuid = getParentUuid(studyUuid);
-                    Optional<DirectoryElementEntity> elementEntity = getElementEntity(studyUuid);
+                    UUID parentUuid = repositoryService.getParentUuid(studyUuid);
+                    Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
                     String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
                     if (error != null && elementName != null) {
                         deleteElement(studyUuid, userId);
                     }
-                    boolean isPrivate = isPrivateForNotification(parentUuid, isPrivateDirectory(studyUuid));
+                    boolean isPrivate = isPrivateForNotification(parentUuid, repositoryService.isPrivateDirectory(studyUuid));
                     notificationService.emitDirectoryChanged(parentUuid, elementName, userId, error, isPrivate, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
                 }
             } catch (Exception e) {
@@ -113,7 +107,7 @@ public class DirectoryService {
         }
         assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
         assertAccessibleDirectory(parentDirectoryUuid, userId);
-        ElementAttributes result = insertElement(elementAttributes, parentDirectoryUuid);
+        DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
         var isCurrentElementPrivate = elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null;
 
         notificationService.emitDirectoryChanged(
@@ -126,17 +120,17 @@ public class DirectoryService {
                 NotificationType.UPDATE_DIRECTORY
         );
 
-        return result;
+        return toElementAttributes(elementEntity);
     }
 
     private void assertElementNotExist(UUID parentDirectoryUuid, String elementName, String type) {
-        if (Boolean.TRUE.equals(isElementExists(parentDirectoryUuid, elementName, type))) {
+        if (Boolean.TRUE.equals(repositoryService.isElementExists(parentDirectoryUuid, elementName, type))) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
 
     private void assertRootDirectoryNotExist(String rootName) {
-        if (Boolean.TRUE.equals(isRootDirectoryExist(rootName))) {
+        if (Boolean.TRUE.equals(repositoryService.isRootDirectoryExist(rootName))) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
@@ -148,24 +142,23 @@ public class DirectoryService {
     }
 
     /* methods */
-    private ElementAttributes insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
+    private DirectoryElementEntity insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
         //We need to limit the precision to avoid database precision storage limit issue (postgres has a precision of 6 digits while h2 can go to 9)
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-        return toElementAttributes(directoryElementRepository.save(
+        return repositoryService.saveElement(
                 new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
-                                           parentDirectoryUuid,
-                                           elementAttributes.getElementName(),
-                                           elementAttributes.getType(),
-                                           elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
-                                           elementAttributes.getOwner(),
-                                           elementAttributes.getDescription(),
-                                           now,
-                                           now,
-                                           elementAttributes.getOwner(),
-                                    false,
-                                  null
+                        parentDirectoryUuid,
+                        elementAttributes.getElementName(),
+                        elementAttributes.getType(),
+                        elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
+                        elementAttributes.getOwner(),
+                        elementAttributes.getDescription(),
+                        now,
+                        now,
+                        elementAttributes.getOwner(),
+                        false,
+                        null
                 )
-            )
         );
     }
 
@@ -175,7 +168,7 @@ public class DirectoryService {
         }
 
         assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName());
-        ElementAttributes elementAttributes = insertElement(toElementAttributes(rootDirectoryAttributes), null);
+        ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
 
         notificationService.emitDirectoryChanged(
                 elementAttributes.getElementUuid(),
@@ -228,14 +221,14 @@ public class DirectoryService {
     }
 
     private Map<UUID, Long> getSubElementsCount(List<UUID> subDirectories, List<String> types) {
-        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = directoryElementRepository.getSubdirectoriesCounts(subDirectories, types);
+        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = repositoryService.getSubdirectoriesCounts(subDirectories, types);
         Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
         subdirectoriesCountsList.forEach(e -> subdirectoriesCountsMap.put(e.getId(), e.getCount()));
         return subdirectoriesCountsMap;
     }
 
     private Map<UUID, Long> getSubElementsCount(List<UUID> subDirectories, List<String> types, String userId) {
-        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = directoryElementRepository.getSubdirectoriesCounts(subDirectories, types, userId);
+        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = repositoryService.getSubdirectoriesCounts(subDirectories, types, userId);
         Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
         subdirectoriesCountsList.forEach(e -> subdirectoriesCountsMap.put(e.getId(), e.getCount()));
         return subdirectoriesCountsMap;
@@ -260,7 +253,7 @@ public class DirectoryService {
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
-        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findAllByParentIdAndStashed(directoryUuid, false);
+        List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentIdAndStashed(directoryUuid, false);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements
                 .stream()
@@ -269,7 +262,7 @@ public class DirectoryService {
     }
 
     public List<ElementAttributes> getRootDirectories(String userId, List<String> types) {
-        List<DirectoryElementEntity> directoryElements = directoryElementRepository.findRootDirectoriesByUserId(userId);
+        List<DirectoryElementEntity> directoryElements = repositoryService.findRootDirectoriesByUserId(userId);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements.stream()
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
@@ -293,7 +286,7 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
-        DirectoryElementEntity elementEntity = directoryElementRepository.save(directoryElement.update(newElementAttributes));
+        DirectoryElementEntity elementEntity = repositoryService.saveElement(directoryElement.update(newElementAttributes));
 
         notificationService.emitDirectoryChanged(
                 elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
@@ -319,8 +312,8 @@ public class DirectoryService {
     }
 
     public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
-        Optional<DirectoryElementEntity> optElement = getElementEntity(elementUuid);
-        Optional<DirectoryElementEntity> optNewDirectory = getElementEntity(newDirectoryUuid);
+        Optional<DirectoryElementEntity> optElement = repositoryService.getElementEntity(elementUuid);
+        Optional<DirectoryElementEntity> optNewDirectory = repositoryService.getElementEntity(newDirectoryUuid);
         DirectoryElementEntity oldDirectory;
         DirectoryElementEntity element;
         DirectoryElementEntity newDirectory;
@@ -346,9 +339,9 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
-        oldDirectory = getElementEntity(element.getParentId()).orElseThrow();
+        oldDirectory = repositoryService.getElementEntity(element.getParentId()).orElseThrow();
         element.setParentId(newDirectoryUuid);
-        directoryElementRepository.save(element);
+        repositoryService.saveElement(element);
 
         notificationService.emitDirectoryChanged(
                 element.getParentId(),
@@ -356,7 +349,7 @@ public class DirectoryService {
                 userId,
                 null,
                 isPrivateForNotification(element.getParentId(), false),
-                isRootDirectory(element.getId()),
+                repositoryService.isRootDirectory(element.getId()),
                 NotificationType.UPDATE_DIRECTORY
         );
 
@@ -366,7 +359,7 @@ public class DirectoryService {
                 userId,
                 null,
                 isPrivateForNotification(oldDirectory.getId(), false),
-                isRootDirectory(element.getId()),
+                repositoryService.isRootDirectory(element.getId()),
                 NotificationType.UPDATE_DIRECTORY
         );
 
@@ -400,8 +393,8 @@ public class DirectoryService {
         if (elementAttributes == null || !isElementUpdatable(elementAttributes, userId, true)) {
             throw new DirectoryException(NOT_ALLOWED);
         }
-        UUID parentUuid = getParentUuid(elementUuid);
-        deleteObject(elementAttributes, userId);
+        UUID parentUuid = repositoryService.getParentUuid(elementUuid);
+        deleteElement(elementAttributes, userId);
         var isCurrentElementPrivate = elementAttributes.getAccessRights() != null ? elementAttributes.getAccessRights().isPrivate() : null;
         boolean isPrivate = isPrivateForNotification(parentUuid, isCurrentElementPrivate);
 
@@ -416,28 +409,28 @@ public class DirectoryService {
         );
     }
 
-    private void deleteObject(ElementAttributes elementAttributes, String userId) {
+    private void deleteElement(ElementAttributes elementAttributes, String userId) {
         if (elementAttributes.getType().equals(DIRECTORY)) {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
-        directoryElementRepository.deleteById(elementAttributes.getElementUuid());
+        repositoryService.deleteElement(elementAttributes.getElementUuid());
         if (STUDY.equals(elementAttributes.getType())) {
             notificationService.emitDeletedStudy(elementAttributes.getElementUuid(), userId);
         }
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteObject(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
     }
 
     /***
      * Retrieve path of an element
-     * @param elementUuid
-     * @param userId
+     * @param elementUuid element uuid
+     * @param userId owner
      * @return ElementAttributes of element and all it's parents up to root directory
      */
     public List<ElementAttributes> getPath(UUID elementUuid, String userId) {
-        Optional<DirectoryElementEntity> currentElementOpt = getElementEntity(elementUuid);
+        Optional<DirectoryElementEntity> currentElementOpt = repositoryService.getElementEntity(elementUuid);
         ArrayList<ElementAttributes> path = new ArrayList<>();
         boolean allowed;
         if (currentElementOpt.isEmpty()) {
@@ -448,7 +441,7 @@ public class DirectoryService {
         if (currentElement.getType().equals(DIRECTORY)) {
             allowed = toElementAttributes(currentElement).isAllowed(userId);
         } else {
-            allowed = toElementAttributes(getElementEntity(currentElement.getParentId()).orElseThrow()).isAllowed(userId);
+            allowed = toElementAttributes(repositoryService.getElementEntity(currentElement.getParentId()).orElseThrow()).isAllowed(userId);
         }
 
         if (!allowed) {
@@ -458,7 +451,7 @@ public class DirectoryService {
         path.add(toElementAttributes(currentElement));
 
         while (currentElement.getParentId() != null) {
-            currentElement = getElementEntity(currentElement.getParentId()).orElseThrow();
+            currentElement = repositoryService.getElementEntity(currentElement.getParentId()).orElseThrow();
             ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
             path.add(currentElementAttributes);
         }
@@ -471,17 +464,13 @@ public class DirectoryService {
     }
 
     private DirectoryElementEntity getDirectoryElementEntity(UUID elementUuid) {
-        return getElementEntity(elementUuid).orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
-    }
-
-    private Optional<DirectoryElementEntity> getElementEntity(UUID elementUuid) {
-        return directoryElementRepository.findById(elementUuid);
+        return repositoryService.getElementEntity(elementUuid).orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
     }
 
     private ElementAttributes getParentElement(UUID elementUuid) {
-        return Stream.of(getParentUuid(elementUuid))
+        return Stream.of(repositoryService.getParentUuid(elementUuid))
             .filter(Objects::nonNull)
-            .map(this::getElementEntity)
+            .map(repositoryService::getElementEntity)
             .filter(Optional::isPresent)
             .map(Optional::get)
             .map(ElementAttributes::toElementAttributes)
@@ -489,47 +478,21 @@ public class DirectoryService {
             .orElseThrow(() -> DirectoryException.createElementNotFound("Parent of", elementUuid));
     }
 
-    private UUID getParentUuid(UUID elementUuid) {
-        return directoryElementRepository
-            .findById(elementUuid)
-            .map(DirectoryElementEntity::getParentId)
-            .orElse(null);
-    }
-
-    private boolean isPrivateDirectory(UUID directoryUuid) {
-        // TODO replace orElse by the commented line (orElseThrow)
-        // Should be done after deleting the notification sent by the study server on delete (!)
-        return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::getIsPrivate).orElse(false);
-        //.orElseThrow(() -> new DirectoryServerException(directoryUuid + " not found!"));
-    }
-
-    private boolean isRootDirectory(UUID directoryUuid) {
-        return getParentUuid(directoryUuid) == null;
-    }
-
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
         if (parentDirectoryUuid == null) {
             return Boolean.TRUE.equals(isCurrentElementPrivate); // null may only come from borked REST request
         } else {
-            return isPrivateDirectory(parentDirectoryUuid);
+            return repositoryService.isPrivateDirectory(parentDirectoryUuid);
         }
-    }
-
-    private Boolean isRootDirectoryExist(String rootName) {
-        return !directoryElementRepository.findRootDirectoriesByName(rootName).isEmpty();
-    }
-
-    private Boolean isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
-        return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
     }
 
     public UUID getDirectoryUuid(String directoryName, UUID parentDirectoryUuid) {
         List<DirectoryElementEntity> directories;
         //If parentDirectoryUuid is null we search for a rootDirectory
         if (parentDirectoryUuid == null) {
-            directories = directoryElementRepository.findRootDirectoriesByName(directoryName);
+            directories = repositoryService.findRootDirectoriesByName(directoryName);
         } else {
-            directories = directoryElementRepository.findDirectoriesByNameAndParentId(directoryName, parentDirectoryUuid);
+            directories = repositoryService.findDirectoriesByNameAndParentId(directoryName, parentDirectoryUuid);
         }
         if (!directories.isEmpty()) {
             return directories.get(0).getId();
@@ -537,12 +500,8 @@ public class DirectoryService {
         return null;
     }
 
-    public boolean elementExists(UUID parentDirectoryUuid, String elementName, String type) {
-        return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
-    }
-
     public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types) {
-        List<DirectoryElementEntity> elementEntities = directoryElementRepository.findAllByIdInAndStashed(ids, false);
+        List<DirectoryElementEntity> elementEntities = repositoryService.findAllByIdInAndStashed(ids, false);
 
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
             throw new DirectoryException(NOT_FOUND);
@@ -572,7 +531,7 @@ public class DirectoryService {
 
     public void emitDirectoryChangedNotification(UUID elementUuid, String userId) {
         ElementAttributes elementAttributes = getElement(elementUuid);
-        UUID parentUuid = getParentUuid(elementUuid);
+        UUID parentUuid = repositoryService.getParentUuid(elementUuid);
         Boolean isPrivate = elementAttributes.getAccessRights().isPrivate();
         if (isPrivate == null) { // Then take accessRights from the parent element
             isPrivate = getElement(parentUuid).getAccessRights().isPrivate();
@@ -603,10 +562,10 @@ public class DirectoryService {
     }
 
     public String getDuplicateNameCandidate(UUID directoryUuid, String elementName, String elementType, String userId) {
-        if (!directoryElementRepository.canRead(directoryUuid, userId)) {
+        if (!repositoryService.canRead(directoryUuid, userId)) {
             throw new DirectoryException(NOT_ALLOWED);
         }
-        var idLikes = new HashSet<>(directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(elementType, directoryUuid, elementName));
+        var idLikes = new HashSet<>(repositoryService.getNameByTypeAndParentIdAndNameStartWith(elementType, directoryUuid, elementName));
         if (!idLikes.contains(elementName)) {
             return elementName;
         }
@@ -615,6 +574,11 @@ public class DirectoryService {
             ++i;
         }
         return nameCandidate(elementName, i);
+    }
+
+    @Transactional
+    public void reindexAllElements() {
+        repositoryService.reindexAllElements();
     }
 
     private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,
@@ -642,7 +606,7 @@ public class DirectoryService {
 
         // Get all updatable entities. Entities should be public or created by the user, so it can be restored
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
-        List<DirectoryElementEntity> allStashedElements = directoryElementRepository.findAllStashedElements(elementsUuid, true, userId);
+        List<DirectoryElementEntity> allStashedElements = repositoryService.findAllStashedElements(elementsUuid, true, userId);
         List<DirectoryElementEntity> updatableEntities = getEntitiesToRestore(allStashedElements, notUpdatableEntities, userId, parent.getAccessRights().isPrivate());
 
         List<DirectoryElementEntity> entities = updatableEntities
@@ -653,7 +617,7 @@ public class DirectoryService {
 
                     // Retrieve descendants of the current entity
                     List<DirectoryElementEntity> descendants = getEntitiesToRestore(
-                            directoryElementRepository.findAllDescendantsWithSameStashDate(entity.getId(), userId),
+                            repositoryService.findAllDescendantsWithSameStashDate(entity.getId(), userId),
                             notUpdatableEntities,
                             userId,
                             parent.getAccessRights().isPrivate());
@@ -667,7 +631,7 @@ public class DirectoryService {
                 })
                 .toList();
 
-        directoryElementRepository.saveAll(entities);
+        repositoryService.saveRestoredElements(entities);
         notificationService.emitDirectoryChanged(
                 parentUuid,
                 parent.getElementName(),
@@ -686,13 +650,13 @@ public class DirectoryService {
     public void stashElements(List<UUID> elementsUuid, String userId) {
         // we add the same stash date to all the elements that are deleted together
         LocalDateTime stashDate = LocalDateTime.now();
-        List<DirectoryElementEntity> entities = directoryElementRepository.findAllByIdInAndStashed(elementsUuid, false);
+        List<DirectoryElementEntity> entities = repositoryService.findAllByIdInAndStashed(elementsUuid, false);
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
         List<DirectoryElementEntity> updatableEntities = getEntitiesCreatedBySameUser(entities, notUpdatableEntities, userId);
 
-        directoryElementRepository.saveAll(updatableEntities.stream()
+        repositoryService.saveStashedElements(updatableEntities.stream()
                 .flatMap(entity -> {
-                    List<DirectoryElementEntity> descendants = directoryElementRepository.findAllDescendants(entity.getId(), userId);
+                    List<DirectoryElementEntity> descendants = repositoryService.findAllDescendants(entity.getId(), userId);
                     // Combine parent and descendants into a single list
                     List<DirectoryElementEntity> result = new ArrayList<>();
                     result.add(entity);
@@ -708,7 +672,7 @@ public class DirectoryService {
                 .toList());
 
         updatableEntities.forEach(entity -> {
-            UUID parentUuid = getParentUuid(entity.getId());
+            UUID parentUuid = repositoryService.getParentUuid(entity.getId());
             notificationService.emitDirectoryChanged(
                     parentUuid == null ? entity.getId() : parentUuid,
                     entity.getName(),
@@ -728,25 +692,25 @@ public class DirectoryService {
     }
 
     public List<Pair<ElementAttributes, Long>> getStashedElements(String userId) {
-        List<DirectoryElementEntity> entities = directoryElementRepository.getElementsStashed(userId);
+        List<DirectoryElementEntity> entities = repositoryService.getElementsStashed(userId);
         return entities.stream()
-                .map(entity -> Pair.of(toElementAttributes(entity), directoryElementRepository.countDescendants(entity.getId(), userId) - 1))
+                .map(entity -> Pair.of(toElementAttributes(entity), repositoryService.countDescendants(entity.getId(), userId) - 1))
                 .toList();
     }
 
     public void deleteElements(List<UUID> elementsUuid, String userId) {
         // Get all updatable entities
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
-        List<DirectoryElementEntity> updatableEntities = getEntitiesCreatedBySameUser(directoryElementRepository.findAllByIdInAndStashed(elementsUuid, true), notUpdatableEntities, userId);
+        List<DirectoryElementEntity> updatableEntities = getEntitiesCreatedBySameUser(repositoryService.findAllByIdInAndStashed(elementsUuid, true), notUpdatableEntities, userId);
 
         // Collect all entities with their descendents in one list
         List<DirectoryElementEntity> allEntities = updatableEntities.stream()
-                        .flatMap(entity -> Stream.concat(directoryElementRepository.findAllDescendantsWithSameStashDate(entity.getId(), userId).stream(),
+                        .flatMap(entity -> Stream.concat(repositoryService.findAllDescendantsWithSameStashDate(entity.getId(), userId).stream(),
                                                          Stream.of(entity)))
                         .toList();
 
-        // Delete all entities
-        directoryElementRepository.deleteAllById(allEntities.stream().map(DirectoryElementEntity::getId).toList());
+        // Delete all elements
+        repositoryService.deleteElements(allEntities.stream().map(DirectoryElementEntity::getId).toList());
 
         // Send notification for all deleted elements
         allEntities.forEach(entity -> {
