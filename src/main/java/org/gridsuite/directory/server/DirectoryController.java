@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
@@ -261,5 +262,15 @@ public class DirectoryController {
     public ResponseEntity<Void> reindexAllElements() {
         service.reindexAllElements();
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/elements/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search elements in elasticsearch")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})
+    public ResponseEntity<List<DirectoryElementInfos>> searchElements(
+            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
+            @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(service.searchElements(userInput, userId));
     }
 }

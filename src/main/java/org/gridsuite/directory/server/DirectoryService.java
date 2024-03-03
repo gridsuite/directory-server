@@ -11,8 +11,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
@@ -60,11 +62,15 @@ public class DirectoryService {
 
     private final DirectoryRepositoryService repositoryService;
 
+    private final DirectoryElementInfosService directoryElementInfosService;
+
     public DirectoryService(DirectoryRepositoryService repositoryService,
-                            StudyService studyService, NotificationService notificationService) {
+                            StudyService studyService, NotificationService notificationService,
+                            DirectoryElementInfosService directoryElementInfosService) {
         this.repositoryService = repositoryService;
         this.studyService = studyService;
         this.notificationService = notificationService;
+        this.directoryElementInfosService = directoryElementInfosService;
     }
 
     /* notifications */
@@ -579,6 +585,10 @@ public class DirectoryService {
     @Transactional
     public void reindexAllElements() {
         repositoryService.reindexAllElements();
+    }
+
+    public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
+        return directoryElementInfosService.searchElements(userInput, userId);
     }
 
     private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,
