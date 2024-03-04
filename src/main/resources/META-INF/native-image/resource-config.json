@@ -1,0 +1,9 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\Qelasticsearch_settings.json\\E"
+      }
+    ]
+  }
+}

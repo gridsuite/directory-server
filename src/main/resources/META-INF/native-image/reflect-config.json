@@ -1,5 +1,17 @@
 [
 {
   "name":"[Ljava.util.UUID;"
+},
+{
+  "name":"org.springframework.core.env.AbstractEnvironment",
+  "methods":[{"name":"getProperty","parameterTypes":["java.lang.String"]}]
+},
+{
+  "name":"co.elastic.clients.elasticsearch._types.mapping.TypeMapping",
+  "fields":[{"name":"_DESERIALIZER"}]
+},
+{
+  "name":"co.elastic.clients.elasticsearch.indices.IndexSettings",
+  "fields":[{"name":"_DESERIALIZER"}]
 }
 ]
