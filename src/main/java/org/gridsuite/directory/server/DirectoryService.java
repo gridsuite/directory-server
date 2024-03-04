@@ -591,7 +591,9 @@ public class DirectoryService {
 
         return entities.stream()
                 .filter(entity -> {
-                    boolean isUpdatable = Objects.equals(userId, entity.getOwner()) || !entity.getIsPrivate();
+                    boolean isUpdatable = Objects.equals(userId, entity.getOwner()) ||
+                            (entity.getIsPrivate() == null && !getParentElement(entity.getId()).getAccessRights().isPrivate()) ||
+                            !entity.getIsPrivate();
                     if (!isUpdatable) {
                         rejectedEntities.add(entity);
                     }
