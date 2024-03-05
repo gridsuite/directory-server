@@ -591,7 +591,8 @@ public class DirectoryService {
 
         return entities.stream()
                 .filter(entity -> {
-                    boolean isUpdatable = Objects.equals(userId, entity.getOwner()) || !entity.getIsPrivate();
+                    boolean isPublicElement = entity.getIsPrivate() == null && !getParentElement(entity.getId()).getAccessRights().isPrivate() || !entity.getIsPrivate();
+                    boolean isUpdatable = Objects.equals(userId, entity.getOwner()) || isPublicElement;
                     if (!isUpdatable) {
                         rejectedEntities.add(entity);
                     }
@@ -603,6 +604,9 @@ public class DirectoryService {
     public void restoreElements(List<UUID> elementsUuid, UUID parentUuid, String userId) {
         // Get parent directory
         ElementAttributes parent = getElement(parentUuid);
+        if (parent == null) {
+            throw new DirectoryException(NOT_FOUND, String.format("The directory '%s' not found !", parentUuid));
+        }
 
         // Get all updatable entities. Entities should be public or created by the user, so it can be restored
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
