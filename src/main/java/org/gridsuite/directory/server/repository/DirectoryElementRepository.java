@@ -128,4 +128,17 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
                     "WHERE e.stashed = false " +
                     "AND (e.is_private = false OR e.owner = :userId OR (e.is_private IS NULL AND NOT EXISTS (SELECT 1 FROM element WHERE id = eh.parent_element_id AND is_private = true)))")
     List<DirectoryElementEntity> findAllDescendants(@Param("elementId") UUID elementId, @Param("userId") String userId);
+
+    @Query(nativeQuery = true, value =
+            "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id) AS ( " +
+                    "  SELECT id AS element_id, parent_id AS parent_element_id FROM element WHERE id = :elementId " +
+                    "  UNION ALL " +
+                    "  SELECT e.id AS element_id, e.parent_id AS parent_element_id " +
+                    "  FROM element e " +
+                    "  INNER JOIN ElementHierarchy ON ElementHierarchy.parent_element_id = e.id WHERE e.parent_id IS NOT NULL) " +
+                    "SELECT * FROM element e " +
+                    "JOIN ElementHierarchy eh ON e.id = eh.parent_element_id " +
+                    "WHERE e.stashed = false " +
+                    "AND (e.is_private = false OR e.owner = :userId OR (e.is_private IS NULL AND NOT EXISTS (SELECT 1 FROM element WHERE id = eh.element_id AND is_private = true)))")
+    List<DirectoryElementEntity> findAllAscendants(@Param("elementId") UUID elementId, @Param("userId") String userId);
 }

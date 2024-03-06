@@ -50,6 +50,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
@@ -206,6 +207,7 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
 
         List<ElementAttributes> path = getPath(study1UUID, "Doe");
+        assertRequestsCount(101, 17, 0, 13);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
@@ -237,6 +239,7 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
 
         List<ElementAttributes> path = getPath(filter1UUID, "Doe");
+        assertRequestsCount(135, 24, 0, 20);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
@@ -284,6 +287,7 @@ public class DirectoryTest {
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
 
         List<ElementAttributes> path = getPath(rootDirUuid, "Doe");
+        assertRequestsCount(721, 95, 30, 93);
 
         assertEquals(
                 path.stream()
@@ -1523,6 +1527,13 @@ public class DirectoryTest {
     private void assertNbElementsInRepositories(int nbEntities, int nbElementsInfos) {
         assertEquals(nbEntities, directoryElementRepository.findAll().size());
         assertEquals(nbElementsInfos, Iterables.size(directoryElementInfosRepository.findAll()));
+    }
+
+    public void assertRequestsCount(long select, long insert, long update, long delete) {
+        assertSelectCount(select);
+        assertInsertCount(insert);
+        assertUpdateCount(update);
+        assertDeleteCount(delete);
     }
 
     private void assertElementIsProperlyInserted(ElementAttributes elementAttributes) throws Exception {

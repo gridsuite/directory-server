@@ -25,7 +25,7 @@ import java.util.List;
 @Service
 public class DirectoryElementInfosService {
 
-    private static final int PAGE_MAX_SIZE = 400;
+    private static final int PAGE_MAX_SIZE = 10;
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -39,12 +39,17 @@ public class DirectoryElementInfosService {
         WildcardQuery elementSearchQuery = Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*");
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
         boolQueryBuilder.mustNot(Queries.termQuery("type", "directory")._toQuery());
-        BoolQuery isPrivateTrueQuery = new BoolQuery.Builder()
+        BoolQuery isOwnerQuery = new BoolQuery.Builder()
                 .filter(Queries.termQuery("isprivate", "true")._toQuery())
-                .filter(Queries.termQuery("owner", userId)._toQuery())
+                .must(Queries.termQuery("owner", userId)._toQuery())
                 .build();
-        boolQueryBuilder.should(isPrivateTrueQuery._toQuery());
-        boolQueryBuilder.should(Queries.termQuery("isprivate", "false")._toQuery());
+
+        BoolQuery isPublicQuery = new BoolQuery.Builder()
+                .filter(Queries.termQuery("isprivate", "false")._toQuery())
+                .build();
+
+        boolQueryBuilder.should(isOwnerQuery._toQuery());
+        boolQueryBuilder.should(isPublicQuery._toQuery());
         boolQueryBuilder.filter(elementSearchQuery._toQuery());
         BoolQuery finalQuery = boolQueryBuilder.build();
 

@@ -15,9 +15,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -67,7 +65,7 @@ public class DirectoryRepositoryService {
 
     public void saveRestoredElements(@NonNull List<DirectoryElementEntity> directoryElementEntities) {
         directoryElementRepository.saveAll(directoryElementEntities);
-        saveElementsInfos(directoryElementEntities.stream().map(DirectoryElementEntity::toDirectoryElementInfos).toList());
+        saveElementsInfos(directoryElementEntities.stream().map(this::directoryElementInfosBuilder).toList());
     }
 
     public void saveElementsInfos(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
@@ -78,7 +76,7 @@ public class DirectoryRepositoryService {
 
     public DirectoryElementEntity saveElement(DirectoryElementEntity elementEntity) {
         DirectoryElementEntity savedElementEntity = directoryElementRepository.save(elementEntity);
-        directoryElementInfosRepository.save(savedElementEntity.toDirectoryElementInfos());
+        directoryElementInfosRepository.save(directoryElementInfosBuilder(savedElementEntity));
         return savedElementEntity;
     }
 
@@ -98,7 +96,7 @@ public class DirectoryRepositoryService {
 
     public void reindexAllElements() {
         saveElementsInfos(directoryElementRepository.findAllByStashed(false).stream()
-                .map(DirectoryElementEntity::toDirectoryElementInfos)
+                .map(this::directoryElementInfosBuilder)
                 .toList());
     }
 
@@ -153,11 +151,21 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.findAllDescendants(elementId, userId);
     }
 
+    public List<DirectoryElementEntity> findAllAscendants(UUID elementId, String userId) {
+        return directoryElementRepository.findAllAscendants(elementId, userId);
+    }
+
     public List<DirectoryElementEntity> getElementsStashed(String userId) {
         return directoryElementRepository.getElementsStashed(userId);
     }
 
     public Long countDescendants(UUID elementId, String userId) {
         return directoryElementRepository.countDescendants(elementId, userId);
+    }
+
+    public DirectoryElementInfos directoryElementInfosBuilder(DirectoryElementEntity directoryElementEntity) {
+        boolean isPrivate = directoryElementEntity.getParentId() == null ? directoryElementEntity.getIsPrivate() :
+                isPrivateDirectory(directoryElementEntity.getParentId());
+        return directoryElementEntity.toDirectoryElementInfos(isPrivate);
     }
 }
