@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
+import com.vladmihalcea.sql.SQLStatementCountValidator;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
@@ -112,6 +113,7 @@ public class DirectoryTest {
     private void cleanDB() {
         directoryElementRepository.deleteAll();
         directoryElementInfosRepository.deleteAll();
+        SQLStatementCountValidator.reset();
     }
 
     @Before
@@ -205,9 +207,9 @@ public class DirectoryTest {
         UUID study1UUID = UUID.randomUUID();
         ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", STUDY, null, "Doe");
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
-
+        SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(study1UUID, "Doe");
-        assertRequestsCount(101, 17, 0, 13);
+        assertRequestsCount(2, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
@@ -237,9 +239,9 @@ public class DirectoryTest {
         UUID filter1UUID = UUID.randomUUID();
         ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
-
+        SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(filter1UUID, "Doe");
-        assertRequestsCount(135, 24, 0, 20);
+        assertRequestsCount(2, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
@@ -285,9 +287,9 @@ public class DirectoryTest {
     public void testGetPathOfRootDir() throws Exception {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
-
+        SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(rootDirUuid, "Doe");
-        assertRequestsCount(721, 95, 30, 93);
+        assertRequestsCount(1, 0, 0, 0);
 
         assertEquals(
                 path.stream()

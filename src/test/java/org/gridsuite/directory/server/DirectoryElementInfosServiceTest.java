@@ -6,30 +6,23 @@
  */
 package org.gridsuite.directory.server;
 
-import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import com.google.common.collect.Iterables;
 import org.apache.commons.collections4.IterableUtils;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
-import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
