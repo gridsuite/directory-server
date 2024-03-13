@@ -234,7 +234,7 @@ public class DirectoryService {
         return subdirectoriesCountsMap;
     }
 
-    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<String> types) {
+    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<String> types, boolean stashed) {
         ElementAttributes elementAttributes = getElement(directoryUuid);
         if (elementAttributes == null) {
             throw DirectoryException.createElementNotFound(DIRECTORY, directoryUuid);
@@ -248,12 +248,20 @@ public class DirectoryService {
     }
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types) {
-        return getAllDirectoryElementsStream(directoryUuid, types, userId)
+        return getDirectoryElementsStream(directoryUuid, userId, types, false);
+    }
+
+    private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types, boolean stashed) {
+        return getAllDirectoryElementsStream(directoryUuid, types, userId, stashed)
                 .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) || elementAttributes.isAllowed(userId));
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
-        List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentIdAndStashed(directoryUuid, false);
+        return getAllDirectoryElementsStream(directoryUuid, types, userId, false);
+    }
+
+    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId, boolean stashed) {
+        List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentIdAndStashed(directoryUuid, stashed);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements
                 .stream()
