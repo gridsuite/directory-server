@@ -579,15 +579,33 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
+    public Map<String, UUID> getElementNamesFromPath(List<ElementAttributes> elementAttributesList) {
+        return elementAttributesList.stream()
+                .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), DIRECTORY))
+                .collect(Collectors.toMap(
+                        ElementAttributes::getElementName,
+                        ElementAttributes::getElementUuid
+                ));
+    }
+
+    private Map<String, UUID> getPathAndExtractNames(UUID elementUuid, String userId) {
+        List<ElementAttributes> elementAttributesList = getPath(elementUuid, userId);
+        return getElementNamesFromPath(elementAttributesList);
+    }
+
     @Transactional
     public void reindexAllElements() {
         repositoryService.reindexAllElements();
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
-        List<DirectoryElementInfos> directoryElementInfosList = directoryElementInfosService.searchElements(userInput, userId);
-        directoryElementInfosList.forEach(e -> e.setPath(getPath(e.getId(), userId)));
-        return directoryElementInfosList;
+        return directoryElementInfosService.searchElements(userInput, userId)
+                .stream()
+                .peek(e -> {
+                    Map<String, UUID> path = getPathAndExtractNames(e.getId(), userId);
+                    e.setElementName(new ArrayList<>(path.keySet()));
+                    e.setElementUuid(new ArrayList<>(path.values()));
+                }).toList();
     }
 
     private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,

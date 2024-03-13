@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Transient;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.*;
@@ -61,5 +60,9 @@ public class DirectoryElementInfos {
     private Boolean isPrivate;
 
     @Transient
-    private List<ElementAttributes> path;
+    private List<String> elementName;
+
+    @Transient
+    private List<UUID> elementUuid;
+
 }
