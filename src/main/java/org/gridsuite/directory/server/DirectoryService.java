@@ -244,7 +244,7 @@ public class DirectoryService {
             return List.of();
         }
 
-        return getDirectoryElementsStream(directoryUuid, userId, types).collect(Collectors.toList());
+        return getDirectoryElementsStream(directoryUuid, userId, types, stashed).collect(Collectors.toList());
     }
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types) {
