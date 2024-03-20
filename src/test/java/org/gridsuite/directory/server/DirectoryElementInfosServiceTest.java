@@ -20,10 +20,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -74,42 +77,23 @@ class DirectoryElementInfosServiceTest {
         assertEquals(0, Iterables.size(directoryElementInfosRepository.findAll()));
     }
 
-    /*private BoolQuery buildBoolQueryElementName(String elementName) {
-        return new BoolQuery.Builder().filter(Queries.termQuery(EQUIPMENT_TYPE_FIELD, elementName)._toQuery()).build();
-    }
-
     @Test
     void searchElementInfos() {
-        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type("STUDY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
-        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type("FILTER").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
-        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type("DIRECTORY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
-        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type("CONTINGENCY_LIST").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type("DIRECTORY").owner("admin").parentId(UUID.randomUUID()).isPrivate(false).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type("FILTER").owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type("STUDY").owner("admin1").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type("CONTINGENCY_LIST").owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
 
-        List<DirectoryElementInfos> infos = List.of(studyInfos, filterInfos, directoryInfos, contingencyListInfos);
+        List<DirectoryElementInfos> infos = List.of(directoryInfos, filterInfos, studyInfos, contingencyListInfos);
         repositoryService.saveElementsInfos(infos);
 
-        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("aFilter", "admin"));
-        Assert.assertEquals(0, hits.size());
-
-        hits = new HashSet<>(directoryElementInfosService.searchElements(buildBoolQueryElementName("aStudy")));
-        Assert.assertEquals(1, hits.size());
-        assertTrue(hits.contains(filterInfos));
-
-        hits = new HashSet<>(directoryElementInfosService.searchElements(buildBoolQueryElementName("aContingencyList")));
-        Assert.assertEquals(3, hits.size());
-        assertTrue(hits.contains(studyInfos));
+        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", "admin"));
+        assertEquals(3, hits.size());
         assertTrue(hits.contains(filterInfos));
         assertTrue(hits.contains(contingencyListInfos));
+        assertTrue(hits.contains(studyInfos));
 
-        hits = new HashSet<>(directoryElementInfosService.searchElements(buildBoolQueryElementName("TWO_WINDINGS_TRANSFORMER")));
-
-        Assert.assertEquals(2, hits.size());
-        assertTrue(hits.contains(filterInfos));
-        assertTrue(hits.contains(filterInfos));
-
-        hits = new HashSet<>(directoryElementInfosService.searchElements(buildBoolQueryElementName("CONFIGURED_BUS")));
-
-        Assert.assertEquals(1, hits.size());
-        assertTrue(hits.contains(filterInfos));
-    }*/
+        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory", "admin"));
+        assertEquals(0, hits.size());
+    }
 }
