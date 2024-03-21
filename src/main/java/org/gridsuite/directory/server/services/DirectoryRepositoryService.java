@@ -126,7 +126,7 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.findAllDescendantsWithSameStashDate(elementId, userId);
     }
 
-    public List<DirectoryElementEntity> findAllByParentIdAndStashed(UUID parentId, boolean stashed, LocalDateTime stashDate) {
+    public List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, LocalDateTime stashDate) {
         return directoryElementRepository.findAllByParentIdAndStashedAndStashDate(parentId, stashed, stashDate);
     }
 
