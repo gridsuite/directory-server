@@ -261,7 +261,8 @@ public class DirectoryService {
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId, boolean stashed) {
-        List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentIdAndStashed(directoryUuid, stashed);
+        LocalDateTime stashDate = stashed ? getDirectoryElementEntity(directoryUuid).getStashDate() : null;
+        List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentIdAndStashed(directoryUuid, stashed, stashDate);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements
                 .stream()
