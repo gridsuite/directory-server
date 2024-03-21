@@ -303,17 +303,5 @@
             <artifactId>to-string-verifier</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>net.ttddyy</groupId>
-            <artifactId>datasource-proxy</artifactId>
-            <version>1.6</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.vladmihalcea</groupId>
-            <artifactId>db-util</artifactId>
-            <version>1.0.5</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 </project>
