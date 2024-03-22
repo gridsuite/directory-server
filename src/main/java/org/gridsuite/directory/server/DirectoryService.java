@@ -584,8 +584,10 @@ public class DirectoryService {
                 .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), DIRECTORY))
                 .collect(Collectors.toMap(
                         ElementAttributes::getElementName,
-                        ElementAttributes::getElementUuid
-                ));
+                        ElementAttributes::getElementUuid,
+                        (existingValue, newValue) -> existingValue,
+                        LinkedHashMap::new // Maintain insertion order
+                         ));
     }
 
     private Map<String, UUID> getPathAndExtractNames(UUID elementUuid, String userId) {
@@ -601,10 +603,11 @@ public class DirectoryService {
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
         return directoryElementInfosService.searchElements(userInput, userId)
                 .stream()
-                .peek(e -> {
+                .map(e -> {
                     Map<String, UUID> path = getPathAndExtractNames(e.getId(), userId);
                     e.setElementName(new ArrayList<>(path.keySet()));
                     e.setElementUuid(new ArrayList<>(path.values()));
+                    return e;
                 }).toList();
     }
 
