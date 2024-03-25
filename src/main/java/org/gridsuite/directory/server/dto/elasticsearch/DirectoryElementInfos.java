@@ -60,9 +60,9 @@ public class DirectoryElementInfos {
     private Boolean isPrivate;
 
     @Transient
-    private List<String> elementName;
+    private List<String> directoryName;
 
     @Transient
-    private List<UUID> elementUuid;
+    private List<UUID> directoryUuid;
 
 }

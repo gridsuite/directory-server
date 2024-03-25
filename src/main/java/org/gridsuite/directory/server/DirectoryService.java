@@ -579,18 +579,18 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    public Map<String, UUID> getElementNamesFromPath(List<ElementAttributes> elementAttributesList) {
+    public Map<UUID, String> getElementNamesFromPath(List<ElementAttributes> elementAttributesList) {
         return elementAttributesList.stream()
                 .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), DIRECTORY))
                 .collect(Collectors.toMap(
-                        ElementAttributes::getElementName,
                         ElementAttributes::getElementUuid,
+                        ElementAttributes::getElementName,
                         (existingValue, newValue) -> existingValue,
                         LinkedHashMap::new // Maintain insertion order
                          ));
     }
 
-    private Map<String, UUID> getPathAndExtractNames(UUID elementUuid, String userId) {
+    private Map<UUID, String> getPathAndExtractNames(UUID elementUuid, String userId) {
         List<ElementAttributes> elementAttributesList = getPath(elementUuid, userId);
         return getElementNamesFromPath(elementAttributesList);
     }
@@ -601,14 +601,13 @@ public class DirectoryService {
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
-        return directoryElementInfosService.searchElements(userInput, userId)
-                .stream()
-                .map(e -> {
-                    Map<String, UUID> path = getPathAndExtractNames(e.getId(), userId);
-                    e.setElementName(new ArrayList<>(path.keySet()));
-                    e.setElementUuid(new ArrayList<>(path.values()));
-                    return e;
-                }).toList();
+        List<DirectoryElementInfos> directoryElementInfosList = directoryElementInfosService.searchElements(userInput, userId);
+        directoryElementInfosList.forEach(e -> {
+            Map<UUID, String> path = getPathAndExtractNames(e.getId(), userId);
+            e.setDirectoryUuid(new ArrayList<>(path.keySet()));
+            e.setDirectoryName(new ArrayList<>(path.values()));
+        });
+        return directoryElementInfosList;
     }
 
     private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,

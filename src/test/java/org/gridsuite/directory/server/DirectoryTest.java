@@ -58,6 +58,7 @@ import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_T
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -1743,6 +1744,30 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(2, 2);
 
+        output.clear();
+    }
+
+    @Test
+    public void testSearch() throws Exception {
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "recollement", "STUDY",
+                false, "user", null, now, now, "user");
+        String requestBody = objectMapper.writeValueAsString(caseElement);
+        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
+                        .header("userId", "user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        MvcResult mvcResult;
+        String resultAsString;
+
+        mvcResult = mockMvc
+                .perform(get("/v1/elements/search?userInput={request}", "r").header("userId", "user"))
+                .andExpectAll(status().isOk()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        List<Object> result = objectMapper.readValue(resultAsString, new TypeReference<>() { });
+        assertEquals(1, result.size());
         output.clear();
     }
 
