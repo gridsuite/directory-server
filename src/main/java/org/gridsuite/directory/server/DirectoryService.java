@@ -311,61 +311,70 @@ public class DirectoryService {
         elementToUpdate.setLastModifiedBy(lastModifiedBy);
     }
 
-    public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
-        Optional<DirectoryElementEntity> optElement = repositoryService.getElementEntity(elementUuid);
-        Optional<DirectoryElementEntity> optNewDirectory = repositoryService.getElementEntity(newDirectoryUuid);
-        DirectoryElementEntity oldDirectory;
-        DirectoryElementEntity element;
-        DirectoryElementEntity newDirectory;
-        if (optElement.isEmpty()) {
-            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
-        }
-        if (optNewDirectory.isEmpty()) {
-            throw DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid);
-        }
-        element = optElement.get();
-        newDirectory = optNewDirectory.get();
+    public void updateElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
+        if (!elementsUuids.isEmpty()) {
+            Optional<DirectoryElementEntity> optNewDirectory = repositoryService.getElementEntity(newDirectoryUuid);
+            if (optNewDirectory.isEmpty()) {
+                throw DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid);
+            }
+            DirectoryElementEntity newDirectory;
+            newDirectory = optNewDirectory.get();
+            if (!newDirectory.getType().equals(DIRECTORY)) {
+                throw new DirectoryException(NOT_DIRECTORY);
+            }
+            for (UUID elementUuid : elementsUuids) {
+                Optional<DirectoryElementEntity> optElement = repositoryService.getElementEntity(elementUuid);
 
-        if (element.getType().equals(DIRECTORY)) {
-            throw new DirectoryException(IS_DIRECTORY);
-        }
-        if (!newDirectory.getType().equals(DIRECTORY)) {
-            throw new DirectoryException(NOT_DIRECTORY);
-        }
-        if (!isElementUpdatable(toElementAttributes(element), userId, false)) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
-        if (directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType())) {
-            throw new DirectoryException(NOT_ALLOWED);
+                DirectoryElementEntity oldDirectory;
+                DirectoryElementEntity element;
+
+                if (optElement.isEmpty()) {
+                    throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+                }
+
+                element = optElement.get();
+
+                if (element.getType().equals(DIRECTORY)) {
+                    throw new DirectoryException(IS_DIRECTORY);
+                }
+
+                if (!isElementUpdatable(toElementAttributes(element), userId, false)) {
+                    throw new DirectoryException(NOT_ALLOWED);
+                }
+                if (directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType())) {
+                    throw new DirectoryException(NOT_ALLOWED);
+                }
+
+                oldDirectory = repositoryService.getElementEntity(element.getParentId()).orElseThrow();
+                element.setParentId(newDirectoryUuid);
+                repositoryService.saveElement(element);
+
+                notificationService.emitDirectoryChanged(
+                        element.getParentId(),
+                        element.getName(),
+                        userId,
+                        null,
+                        isPrivateForNotification(element.getParentId(), false),
+                        repositoryService.isRootDirectory(element.getId()),
+                        NotificationType.UPDATE_DIRECTORY
+                );
+
+                notificationService.emitDirectoryChanged(
+                        oldDirectory.getId(),
+                        element.getName(),
+                        userId,
+                        null,
+                        isPrivateForNotification(oldDirectory.getId(), false),
+                        repositoryService.isRootDirectory(element.getId()),
+                        NotificationType.UPDATE_DIRECTORY
+                );
+
+                if (element.getType().equals(STUDY)) {
+                    studyService.notifyStudyUpdate(elementUuid, userId);
+                }
+            }
         }
 
-        oldDirectory = repositoryService.getElementEntity(element.getParentId()).orElseThrow();
-        element.setParentId(newDirectoryUuid);
-        repositoryService.saveElement(element);
-
-        notificationService.emitDirectoryChanged(
-                element.getParentId(),
-                element.getName(),
-                userId,
-                null,
-                isPrivateForNotification(element.getParentId(), false),
-                repositoryService.isRootDirectory(element.getId()),
-                NotificationType.UPDATE_DIRECTORY
-        );
-
-        notificationService.emitDirectoryChanged(
-                oldDirectory.getId(),
-                element.getName(),
-                userId,
-                null,
-                isPrivateForNotification(oldDirectory.getId(), false),
-                repositoryService.isRootDirectory(element.getId()),
-                NotificationType.UPDATE_DIRECTORY
-        );
-
-        if (element.getType().equals(STUDY)) {
-            studyService.notifyStudyUpdate(elementUuid, userId);
-        }
     }
 
     private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String userId, String elementName, String elementType) {

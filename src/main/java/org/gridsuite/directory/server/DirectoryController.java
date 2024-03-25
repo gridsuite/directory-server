@@ -206,17 +206,18 @@ public class DirectoryController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/elements/{elementUuid}", params = "newDirectory")
+    @PutMapping(value = "/elements", params = "targetDirectoryUuid")
     @Operation(summary = "Move element within directory tree")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Element was successfully updated"),
         @ApiResponse(responseCode = "404", description = "The element or the targeted directory was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized execute this update")
     })
-    public ResponseEntity<Void> updateElementDirectory(@PathVariable("elementUuid") UUID elementUuid,
-                                                    @RequestParam UUID newDirectory,
-                                                    @RequestHeader("userId") String userId) {
-        service.updateElementDirectory(elementUuid, newDirectory, userId);
+    public ResponseEntity<Void> updateElementDirectory(
+            @RequestParam UUID targetDirectoryUuid,
+            @RequestBody List<UUID> elementsUuids,
+            @RequestHeader("userId") String userId) {
+        service.updateElementsDirectory(elementsUuids, targetDirectoryUuid, userId);
         return ResponseEntity.ok().build();
     }
 
