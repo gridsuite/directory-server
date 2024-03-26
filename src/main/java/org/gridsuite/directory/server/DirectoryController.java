@@ -208,13 +208,13 @@ public class DirectoryController {
     }
 
     @PutMapping(value = "/elements", params = "targetDirectoryUuid")
-    @Operation(summary = "Move element within directory tree")
+    @Operation(summary = "Move elements within directory tree")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Element was successfully updated"),
-        @ApiResponse(responseCode = "404", description = "The element or the targeted directory was not found"),
+        @ApiResponse(responseCode = "200", description = "Elements was successfully updated"),
+        @ApiResponse(responseCode = "404", description = "The elements or the targeted directory was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized execute this update")
     })
-    public ResponseEntity<Void> updateElementDirectory(
+    public ResponseEntity<Void> updateElementsDirectory(
             @RequestParam UUID targetDirectoryUuid,
             @RequestBody List<UUID> elementsUuids,
             @RequestHeader("userId") String userId) {
