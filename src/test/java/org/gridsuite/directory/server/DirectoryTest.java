@@ -304,6 +304,42 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testGetPathOfStashedElement() throws Exception {
+        final String userId = "Doe";
+        final String folderName = "folderName";
+        final String elementName = "elementName";
+        final UUID elementId = UUID.randomUUID();
+
+        UUID rootDirUuid = insertAndCheckRootDirectory(folderName, false, userId);
+        ElementAttributes modifAttributes = toElementAttributes(elementId, elementName, MODIFICATION, null, userId);
+        insertAndCheckSubElement(rootDirUuid, false, modifAttributes);
+
+        String response = mockMvc.perform(get("/v1/elements/" + elementId + "/path")
+                        .header("userId", userId))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        // expected path is /folderName/elementName = 2 entries in response
+        List<ElementAttributes> pathList = objectMapper.readValue(response, new TypeReference<>() {
+        });
+        assertEquals(2, pathList.size());
+        assertEquals(elementName, pathList.get(0).getElementName());
+        assertEquals(folderName, pathList.get(1).getElementName());
+
+        mockMvc.perform(post("/v1/elements/stash?ids=" + elementId)
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        // after being stashed, we cannot get the element's path anymore
+        mockMvc.perform(get("/v1/elements/" + elementId + "/path")
+                .header("userId", "user1")).andExpect(status().isNotFound());
+
+        output.receive(TIMEOUT, directoryUpdateDestination);
+    }
+
+    @Test
     public void testTwoUsersTwoPublicDirectories() throws Exception {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
