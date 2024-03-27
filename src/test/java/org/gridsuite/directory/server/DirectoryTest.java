@@ -351,8 +351,10 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(4);
 
-        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
-                .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
                 .andExpect(status().isOk());
 
         assertNbElementsInRepositories(4);
@@ -402,15 +404,19 @@ public class DirectoryTest {
         assertNbElementsInRepositories(4);
 
         // Move from public folder to private folder is forbidden if the issuer of the operation isn't the element's owner
-        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
-                .header("userId", "Roger"))
-            .andExpect(status().isForbidden());
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
+                        .header("userId", "Roger")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+                .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(4);
 
         // Move from public folder to private folder is allowed if the issuer of the operation is the element's owner
-        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
-                .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
                 .andExpect(status().isOk());
 
         assertNbElementsInRepositories(4);
@@ -458,8 +464,10 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(4);
 
-        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + rootDir10Uuid)
-                        .header("userId", "Unallowed User"))
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
+                        .header("userId", "Unallowed User")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(List.of(filterUuid))))
                 .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(4);
@@ -477,12 +485,16 @@ public class DirectoryTest {
 
         UUID unknownUuid = UUID.randomUUID();
 
-        mockMvc.perform(put("/v1/elements/" + unknownUuid + "?newDirectory=" + rootDir20Uuid)
-                        .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements/?targetDirectoryUuid=" + rootDir20Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(unknownUuid))))
                 .andExpect(status().isNotFound());
 
-        mockMvc.perform(put("/v1/elements/" + filterUuid + "?newDirectory=" + unknownUuid)
-                        .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements/?targetDirectoryUuid=" + unknownUuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
                 .andExpect(status().isNotFound());
 
         assertNbElementsInRepositories(2);
@@ -510,8 +522,10 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(4);
 
-        mockMvc.perform(put("/v1/elements/" + filterwithSameNameAndTypeUuid + "?newDirectory=" + rootDir20Uuid)
-                        .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir20Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(filterwithSameNameAndTypeUuid))))
                 .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(4);
@@ -531,8 +545,11 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(3);
 
-        mockMvc.perform(put("/v1/elements/" + filter1Uuid + "?newDirectory=" + filter2Uuid)
-                        .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + filter2Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(filter1Uuid)))
+                )
                 .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(3);
@@ -548,8 +565,10 @@ public class DirectoryTest {
         ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, false, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, false, directory20Attributes);
 
-        mockMvc.perform(put("/v1/elements/" + directory21UUID + "?newDirectory=" + rootDir10Uuid)
-                        .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(directory21UUID))))
                 .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(3);
@@ -567,8 +586,11 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(3);
 
-        mockMvc.perform(put("/v1/elements/" + study21UUID + "?newDirectory=" + rootDir10Uuid)
-                        .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(study21UUID)))
+                )
                 .andExpect(status().isOk());
 
         assertNbElementsInRepositories(3);
@@ -607,8 +629,10 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(3);
 
-        mockMvc.perform(put("/v1/elements/" + rootDir10Uuid + "?newDirectory=" + rootDir20Uuid)
-                        .header("userId", "Doe"))
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir20Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(rootDir10Uuid))))
                 .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(3);

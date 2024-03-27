@@ -320,60 +320,62 @@ public class DirectoryService {
         elementToUpdate.setLastModifiedBy(lastModifiedBy);
     }
 
-    public void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
-        Optional<DirectoryElementEntity> optElement = repositoryService.getElementEntity(elementUuid);
-        Optional<DirectoryElementEntity> optNewDirectory = repositoryService.getElementEntity(newDirectoryUuid);
-        DirectoryElementEntity oldDirectory;
-        DirectoryElementEntity element;
-        DirectoryElementEntity newDirectory;
-        if (optElement.isEmpty()) {
-            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+    public void updateElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
+        if (elementsUuids.isEmpty()) {
+            throw new DirectoryException(NOT_ALLOWED);
         }
-        if (optNewDirectory.isEmpty()) {
-            throw DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid);
-        }
-        element = optElement.get();
-        newDirectory = optNewDirectory.get();
 
+        validateNewDirectory(newDirectoryUuid);
+
+        elementsUuids.forEach(elementUuid -> updateElementDirectory(elementUuid, newDirectoryUuid, userId));
+    }
+
+    private void updateElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
+        DirectoryElementEntity element = repositoryService.getElementEntity(elementUuid)
+                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
+
+        validateElementForUpdate(element, newDirectoryUuid, userId);
+
+        DirectoryElementEntity oldDirectory = repositoryService.getElementEntity(element.getParentId()).orElseThrow();
+        updateElementParentDirectory(element, newDirectoryUuid);
+        emitDirectoryChangedNotifications(element, oldDirectory, userId);
+
+        notifyStudyUpdateIfApplicable(element, userId);
+    }
+
+    private void validateElementForUpdate(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
         if (element.getType().equals(DIRECTORY)) {
             throw new DirectoryException(IS_DIRECTORY);
         }
-        if (!newDirectory.getType().equals(DIRECTORY)) {
-            throw new DirectoryException(NOT_DIRECTORY);
-        }
-        if (!isElementUpdatable(toElementAttributes(element), userId, false)) {
+        if (!isElementUpdatable(toElementAttributes(element), userId, false) ||
+                directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType())) {
             throw new DirectoryException(NOT_ALLOWED);
         }
-        if (directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType())) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
+    }
 
-        oldDirectory = repositoryService.getElementEntity(element.getParentId()).orElseThrow();
+    private void updateElementParentDirectory(DirectoryElementEntity element, UUID newDirectoryUuid) {
         element.setParentId(newDirectoryUuid);
         repositoryService.saveElement(element);
+    }
 
-        notificationService.emitDirectoryChanged(
-                element.getParentId(),
-                element.getName(),
-                userId,
-                null,
-                isPrivateForNotification(element.getParentId(), false),
-                repositoryService.isRootDirectory(element.getId()),
-                NotificationType.UPDATE_DIRECTORY
-        );
+    private void emitDirectoryChangedNotifications(DirectoryElementEntity element, DirectoryElementEntity oldDirectory, String userId) {
+        boolean isPrivate = isPrivateForNotification(element.getParentId(), false);
+        notificationService.emitDirectoryChanged(element.getParentId(), element.getName(), userId, null, isPrivate, repositoryService.isRootDirectory(element.getId()), NotificationType.UPDATE_DIRECTORY);
+        notificationService.emitDirectoryChanged(oldDirectory.getId(), element.getName(), userId, null, isPrivateForNotification(oldDirectory.getId(), false), repositoryService.isRootDirectory(element.getId()), NotificationType.UPDATE_DIRECTORY);
+    }
 
-        notificationService.emitDirectoryChanged(
-                oldDirectory.getId(),
-                element.getName(),
-                userId,
-                null,
-                isPrivateForNotification(oldDirectory.getId(), false),
-                repositoryService.isRootDirectory(element.getId()),
-                NotificationType.UPDATE_DIRECTORY
-        );
-
+    private void notifyStudyUpdateIfApplicable(DirectoryElementEntity element, String userId) {
         if (element.getType().equals(STUDY)) {
-            studyService.notifyStudyUpdate(elementUuid, userId);
+            studyService.notifyStudyUpdate(element.getId(), userId);
+        }
+    }
+
+    private void validateNewDirectory(UUID newDirectoryUuid) {
+        DirectoryElementEntity newDirectory = repositoryService.getElementEntity(newDirectoryUuid)
+                .orElseThrow(() -> DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid));
+
+        if (!newDirectory.getType().equals(DIRECTORY)) {
+            throw new DirectoryException(NOT_DIRECTORY);
         }
     }
 
