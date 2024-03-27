@@ -442,13 +442,15 @@ public class DirectoryService {
      */
     public List<ElementAttributes> getPath(UUID elementUuid, String userId) {
         Optional<DirectoryElementEntity> currentElementOpt = repositoryService.getElementEntity(elementUuid);
-        ArrayList<ElementAttributes> path = new ArrayList<>();
-        boolean allowed;
         if (currentElementOpt.isEmpty()) {
             throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
         }
         DirectoryElementEntity currentElement = currentElementOpt.get();
+        if (currentElement.isStashed()) {
+            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+        }
 
+        boolean allowed;
         if (currentElement.getType().equals(DIRECTORY)) {
             allowed = toElementAttributes(currentElement).isAllowed(userId);
         } else {
@@ -459,6 +461,7 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
+        ArrayList<ElementAttributes> path = new ArrayList<>();
         path.add(toElementAttributes(currentElement));
 
         while (currentElement.getParentId() != null) {
