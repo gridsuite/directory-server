@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
+import com.vladmihalcea.sql.SQLStatementCountValidator;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
@@ -50,12 +51,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -111,6 +114,7 @@ public class DirectoryTest {
     private void cleanDB() {
         directoryElementRepository.deleteAll();
         directoryElementInfosRepository.deleteAll();
+        SQLStatementCountValidator.reset();
     }
 
     @Before
@@ -204,8 +208,9 @@ public class DirectoryTest {
         UUID study1UUID = UUID.randomUUID();
         ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", STUDY, null, "Doe");
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
-
+        SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(study1UUID, "Doe");
+        assertRequestsCount(2, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
@@ -235,8 +240,9 @@ public class DirectoryTest {
         UUID filter1UUID = UUID.randomUUID();
         ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
-
+        SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(filter1UUID, "Doe");
+        assertRequestsCount(2, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
@@ -282,8 +288,9 @@ public class DirectoryTest {
     public void testGetPathOfRootDir() throws Exception {
      // Insert a public root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
-
+        SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(rootDirUuid, "Doe");
+        assertRequestsCount(1, 0, 0, 0);
 
         assertEquals(
                 path.stream()
@@ -1549,6 +1556,13 @@ public class DirectoryTest {
         assertEquals(nbElementsInfos, Iterables.size(directoryElementInfosRepository.findAll()));
     }
 
+    public void assertRequestsCount(long select, long insert, long update, long delete) {
+        assertSelectCount(select);
+        assertInsertCount(insert);
+        assertUpdateCount(update);
+        assertDeleteCount(delete);
+    }
+
     private void assertElementIsProperlyInserted(ElementAttributes elementAttributes) throws Exception {
         String response = mockMvc.perform(get("/v1/elements/" + elementAttributes.getElementUuid())
                         .header("userId", "userId"))
@@ -1754,6 +1768,30 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(2, 2);
 
+        output.clear();
+    }
+
+    @Test
+    public void testSearch() throws Exception {
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "recollement", "STUDY",
+                false, "user", null, now, now, "user");
+        String requestBody = objectMapper.writeValueAsString(caseElement);
+        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
+                        .header("userId", "user")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        MvcResult mvcResult;
+        String resultAsString;
+
+        mvcResult = mockMvc
+                .perform(get("/v1/elements/search?userInput={request}", "r").header("userId", "user"))
+                .andExpectAll(status().isOk()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        List<Object> result = objectMapper.readValue(resultAsString, new TypeReference<>() { });
+        assertEquals(1, result.size());
         output.clear();
     }
 

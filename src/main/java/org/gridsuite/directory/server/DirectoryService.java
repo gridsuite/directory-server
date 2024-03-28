@@ -11,8 +11,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
@@ -60,11 +62,15 @@ public class DirectoryService {
 
     private final DirectoryRepositoryService repositoryService;
 
+    private final DirectoryElementInfosService directoryElementInfosService;
+
     public DirectoryService(DirectoryRepositoryService repositoryService,
-                            StudyService studyService, NotificationService notificationService) {
+                            StudyService studyService, NotificationService notificationService,
+                            DirectoryElementInfosService directoryElementInfosService) {
         this.repositoryService = repositoryService;
         this.studyService = studyService;
         this.notificationService = notificationService;
+        this.directoryElementInfosService = directoryElementInfosService;
     }
 
     /* notifications */
@@ -441,31 +447,22 @@ public class DirectoryService {
      * @return ElementAttributes of element and all it's parents up to root directory
      */
     public List<ElementAttributes> getPath(UUID elementUuid, String userId) {
-        Optional<DirectoryElementEntity> currentElementOpt = repositoryService.getElementEntity(elementUuid);
-        ArrayList<ElementAttributes> path = new ArrayList<>();
-        boolean allowed;
-        if (currentElementOpt.isEmpty()) {
-            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
-        }
-        DirectoryElementEntity currentElement = currentElementOpt.get();
+        DirectoryElementEntity currentElement = repositoryService.getElementEntity(elementUuid)
+                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
 
-        if (currentElement.getType().equals(DIRECTORY)) {
-            allowed = toElementAttributes(currentElement).isAllowed(userId);
-        } else {
-            allowed = toElementAttributes(repositoryService.getElementEntity(currentElement.getParentId()).orElseThrow()).isAllowed(userId);
-        }
+        boolean allowed = (Objects.equals(currentElement.getType(), DIRECTORY)) ?
+                toElementAttributes(currentElement).isAllowed(userId) :
+                getParentElement(elementUuid).isAllowed(userId);
 
         if (!allowed) {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
+        List<ElementAttributes> path = new ArrayList<>();
         path.add(toElementAttributes(currentElement));
 
-        while (currentElement.getParentId() != null) {
-            currentElement = repositoryService.getElementEntity(currentElement.getParentId()).orElseThrow();
-            ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
-            path.add(currentElementAttributes);
-        }
+        List<DirectoryElementEntity> ancestors = repositoryService.findAllAscendants(elementUuid, userId);
+        path.addAll(ancestors.stream().map(ElementAttributes::toElementAttributes).toList());
 
         return path;
     }
@@ -587,9 +584,35 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
+    public Map<UUID, String> getElementNamesFromPath(List<ElementAttributes> elementAttributesList) {
+        return elementAttributesList.stream()
+                .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), DIRECTORY))
+                .collect(Collectors.toMap(
+                        ElementAttributes::getElementUuid,
+                        ElementAttributes::getElementName,
+                        (existingValue, newValue) -> existingValue,
+                        LinkedHashMap::new // Maintain insertion order
+                         ));
+    }
+
+    private Map<UUID, String> getPathAndExtractNames(UUID elementUuid, String userId) {
+        List<ElementAttributes> elementAttributesList = getPath(elementUuid, userId);
+        return getElementNamesFromPath(elementAttributesList);
+    }
+
     @Transactional
     public void reindexAllElements() {
         repositoryService.reindexAllElements();
+    }
+
+    public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
+        List<DirectoryElementInfos> directoryElementInfosList = directoryElementInfosService.searchElements(userInput, userId);
+        directoryElementInfosList.forEach(e -> {
+            Map<UUID, String> path = getPathAndExtractNames(e.getId(), userId);
+            e.setPathUuid(new ArrayList<>(path.keySet()));
+            e.setPathName(new ArrayList<>(path.values()));
+        });
+        return directoryElementInfosList;
     }
 
     private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,
