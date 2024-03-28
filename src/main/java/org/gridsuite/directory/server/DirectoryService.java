@@ -6,7 +6,6 @@
  */
 package org.gridsuite.directory.server;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
@@ -442,7 +441,7 @@ public class DirectoryService {
 
         boolean allowed = (Objects.equals(currentElement.getType(), DIRECTORY)) ?
                 toElementAttributes(currentElement).isAllowed(userId) :
-                toElementAttributes(getParentElement(currentElement)).isAllowed(userId);
+                getParentElement(elementUuid).isAllowed(userId);
 
         if (!allowed) {
             throw new DirectoryException(NOT_ALLOWED);
@@ -455,11 +454,6 @@ public class DirectoryService {
         path.addAll(ancestors.stream().map(ElementAttributes::toElementAttributes).toList());
 
         return path;
-    }
-
-    private DirectoryElementEntity getParentElement(@NotNull DirectoryElementEntity currentElement) {
-        return repositoryService.getElementEntity(currentElement.getParentId())
-                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, currentElement.getParentId()));
     }
 
     public ElementAttributes getElement(UUID elementUuid) {
@@ -604,8 +598,8 @@ public class DirectoryService {
         List<DirectoryElementInfos> directoryElementInfosList = directoryElementInfosService.searchElements(userInput, userId);
         directoryElementInfosList.forEach(e -> {
             Map<UUID, String> path = getPathAndExtractNames(e.getId(), userId);
-            e.setDirectoryUuid(new ArrayList<>(path.keySet()));
-            e.setDirectoryName(new ArrayList<>(path.values()));
+            e.setPathUuid(new ArrayList<>(path.keySet()));
+            e.setPathName(new ArrayList<>(path.values()));
         });
         return directoryElementInfosList;
     }
