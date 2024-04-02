@@ -73,7 +73,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT e FROM DirectoryElementEntity e " +
             "WHERE e.id IN :uuids " +
             "AND e.stashed = :stashed " +
-            "AND (e.owner = :userId OR e.isPrivate = false OR (e.isPrivate IS NULL AND NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.isPrivate = true)))")
+            "AND e.owner = :userId ")
     List<DirectoryElementEntity> findAllStashedElements(@Param("uuids") List<UUID> uuids,
                                                         @Param("stashed") boolean stashed,
                                                         @Param("userId") String userId);
