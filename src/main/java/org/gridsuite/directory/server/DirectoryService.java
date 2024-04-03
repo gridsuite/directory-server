@@ -713,6 +713,16 @@ public class DirectoryService {
                 .toList();
     }
 
+    public List<ElementAttributes> getElementsStashedMoreThanDaysAgo(int daysAgo) {
+        List<DirectoryElementEntity> entities = repositoryService.getElementsStashedMoreThanDaysAgo(daysAgo);
+        if (entities.isEmpty()) {
+            throw new DirectoryException(NOT_FOUND);
+        }
+        return entities.stream()
+                .map(entity -> toElementAttributes(entity))
+                .toList();
+    }
+
     public void deleteElements(List<UUID> elementsUuid, String userId) {
         // Get all updatable entities
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();

@@ -89,6 +89,16 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
             ")")
     List<DirectoryElementEntity> getElementsStashed(String userId);
 
+    @Query("SELECT e FROM DirectoryElementEntity e " +
+            "WHERE e.stashed = true " +
+            "AND (" +
+            "      e.parentId IS NULL OR " + // Element has no parent
+            "      NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.stashed = true) OR " + // Parent is not stashed
+            "      NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.stashDate = e.stashDate)" + // Parent has different stash date
+            ")")
+    List<DirectoryElementEntity> getElementsStashed();
+
+
     // This query to count all the deleted descendants of each element
     // It uses CTE (Common Table Expression) which is temporary result set that we use to count all descendents of an element
     @Query(nativeQuery = true, value =

@@ -1285,6 +1285,18 @@ public class DirectoryTest {
         checkStashedElements(List.of(Pair.of(subDirAttributes4, 0L)));
 
         assertNbElementsInRepositories(5, 3);
+
+        updateStashedElementsDate(List.of(subDirAttributes3), 3);
+        checkStashedElementsRetrievalByAgeInDays(List.of(subDirAttributes3), 2);
+    }
+
+    private void updateStashedElementsDate(List<ElementAttributes> elementAttributes, int minusDays) {
+        List<DirectoryElementEntity> directoryElementEntity = directoryElementRepository.findAllByIdInAndStashed(elementAttributes.stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList()), true);
+        directoryElementEntity.forEach(e -> {
+            e.setStashDate(LocalDateTime.now().minusDays(minusDays));
+            e.setStashed(true);
+        });
+        directoryElementRepository.saveAll(directoryElementEntity);
     }
 
     private void checkStashedElements(List<Pair<ElementAttributes, Long>> expectedStashed) throws Exception {
@@ -1295,6 +1307,17 @@ public class DirectoryTest {
                 .getResponse()
                 .getContentAsString();
 
+        assertEquals(objectMapper.writeValueAsString(expectedStashed), response);
+    }
+
+    private void checkStashedElementsRetrievalByAgeInDays(List<ElementAttributes> expectedStashed, int daysAgo) throws Exception {
+
+        String response = mockMvc.perform(get("/v1/elements/stashed")
+                        .queryParam("daysAgo", String.valueOf(daysAgo)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         assertEquals(objectMapper.writeValueAsString(expectedStashed), response);
     }
 

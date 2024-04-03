@@ -108,6 +108,16 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getStashedElements(userId));
     }
 
+    @GetMapping(value = "/elements/stashed")
+    @Operation(summary = "Get the list of ElementAttributes in the trash stashed a specified number of days ago")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The list of ElementAttributes stashed more than the specified number of days ago")
+    })
+    public ResponseEntity<List<ElementAttributes>> getStashedElementsOlderThanDays(
+            @RequestParam("daysAgo") int daysAgo) {
+        return ResponseEntity.ok().body(service.getElementsStashedMoreThanDaysAgo(daysAgo));
+    }
+
     @DeleteMapping(value = "/elements/{elementUuid}")
     @Operation(summary = "Remove directory/element")
     @ApiResponses(value = {

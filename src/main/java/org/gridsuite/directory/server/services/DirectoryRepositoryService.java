@@ -158,6 +158,12 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getElementsStashed(userId);
     }
 
+    public List<DirectoryElementEntity> getElementsStashedMoreThanDaysAgo(int daysAgo) {
+        List<DirectoryElementEntity> elementsStashed = directoryElementRepository.getElementsStashed();
+        elementsStashed.removeIf(element -> element.getStashDate().isAfter(LocalDateTime.now().minusDays(daysAgo)));
+        return elementsStashed;
+    }
+
     public Long countDescendants(UUID elementId, String userId) {
         return directoryElementRepository.countDescendants(elementId, userId);
     }
