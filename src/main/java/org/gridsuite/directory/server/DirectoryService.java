@@ -716,7 +716,7 @@ public class DirectoryService {
     public List<ElementAttributes> getElementsStashedMoreThanDaysAgo(int daysAgo) {
         List<DirectoryElementEntity> entities = repositoryService.getElementsStashedMoreThanDaysAgo(daysAgo);
         if (entities.isEmpty()) {
-            throw new DirectoryException(NOT_FOUND);
+            return List.of();
         }
         return entities.stream()
                 .map(entity -> toElementAttributes(entity))
