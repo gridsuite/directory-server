@@ -1220,7 +1220,7 @@ public class DirectoryTest {
         assertNbElementsInRepositories(6, 4);
 
         subDirAttributes1.setSubdirectoriesCount(0L);
-        checkStashedElements(List.of());
+        checkStashedElements(List.of(Pair.of(subDirAttributes1, 1L)));
 
         mockMvc.perform(post("/v1/elements/" + rootDirectoryUuid + "/restore")
                         .header("userId", "userId")
@@ -1275,7 +1275,7 @@ public class DirectoryTest {
 
         subDirAttributes1.setSubdirectoriesCount(0L);
         subDirAttributes4.setSubdirectoriesCount(0L);
-        checkStashedElements(List.of());
+        checkStashedElements(List.of(Pair.of(subDirAttributes1, 1L)));
 
         mockMvc.perform(delete("/v1/elements?ids=" + subDirUuid1 + "," + subDirUuid4)
                         .header("userId", "userId")
