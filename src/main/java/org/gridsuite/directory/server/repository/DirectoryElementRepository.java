@@ -70,13 +70,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
 
-    @Query("SELECT e FROM DirectoryElementEntity e " +
-            "WHERE e.id IN :uuids " +
-            "AND e.stashed = :stashed " +
-            "AND e.owner = :userId ")
-    List<DirectoryElementEntity> findAllStashedElements(@Param("uuids") List<UUID> uuids,
-                                                        @Param("stashed") boolean stashed,
-                                                        @Param("userId") String userId);
+    List<DirectoryElementEntity> findByIdInAndStashedTrueAndOwner(@Param("uuids") List<UUID> uuids, @Param("userId") String userId);
 
     // We select all stashed elements that do not have a parent, or have a parent that is not deleted, or a parent that is deleted in different operation
     @Query("SELECT e FROM DirectoryElementEntity e " +
