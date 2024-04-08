@@ -107,10 +107,10 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
             "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id) AS ( " +
                     "  SELECT id AS element_id, parent_id AS parent_element_id FROM element WHERE id = :elementId " +
                     "  UNION ALL " +
-                    "  SELECT e.id, e.parent_id FROM element e " +
-                    "  INNER JOIN ElementHierarchy ON ElementHierarchy.parent_element_id = e.id WHERE e.parent_id IS NOT NULL) " +
+                    "  (SELECT e_child.id, e_child.parent_id FROM element e_child " +
+                    "  INNER JOIN ElementHierarchy e_parent ON e_parent.element_id = e_child.parent_id)) " +
                     "SELECT * FROM element e " +
-                    "WHERE e.id IN (SELECT id FROM ElementHierarchy) " +
+                    "WHERE e.id IN (SELECT element_id FROM ElementHierarchy) " +
                     "AND e.stashed = true " +
                     "AND (e.is_private = false OR e.owner = :userId OR (e.is_private IS NULL AND NOT EXISTS (SELECT 1 FROM element WHERE id = e.parent_id AND is_private = true))) " +
                     "AND e.id != :elementId " +
