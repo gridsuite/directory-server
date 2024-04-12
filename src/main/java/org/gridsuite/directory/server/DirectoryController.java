@@ -81,33 +81,6 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
     }
 
-    @PostMapping(value = "/elements/stash")
-    @Operation(summary = "Stash elements")
-        @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were stashed")})
-    public ResponseEntity<Void> stashElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
-                                              @RequestHeader("userId") String userId) {
-        service.stashElements(elementsUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/elements/{parentUuid}/restore")
-    @Operation(summary = "Restore elements")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were restored ")})
-    public ResponseEntity<Void> restoreElements(@RequestBody List<UUID> elementsUuid,
-                                                @PathVariable("parentUuid") UUID parentUuid,
-                                                @RequestHeader("userId") String userId) {
-        service.restoreElements(elementsUuid, parentUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/elements/stash")
-    @Operation(summary = "Get the list of elements in the trash")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "the list of elements in the trash")})
-    public ResponseEntity<List<Pair<ElementAttributes, Long>>> getStashedElements(@RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.getStashedElements(userId));
-    }
-
     @DeleteMapping(value = "/elements/{elementUuid}")
     @Operation(summary = "Remove directory/element")
     @ApiResponses(value = {
@@ -124,8 +97,9 @@ public class DirectoryController {
     @Operation(summary = "Remove directories/elements")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"))
     public ResponseEntity<Void> deleteElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
+                                               @Parameter(description = "parent directory UUID of elements to delete") @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
                                                @RequestHeader("userId") String userId) {
-        service.deleteElements(elementsUuid, userId);
+        service.deleteElements(elementsUuid, parentDirectoryUuid, userId);
         return ResponseEntity.ok().build();
     }
 
