@@ -621,7 +621,7 @@ public class DirectoryService {
 
         // Get all updatable entities. Entities should be public or created by the user, so it can be restored
         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
-        List<DirectoryElementEntity> allStashedElements = repositoryService.findAllStashedElements(elementsUuid, true, userId);
+        List<DirectoryElementEntity> allStashedElements = repositoryService.findAllStashedElements(elementsUuid, userId);
         List<DirectoryElementEntity> updatableEntities = getEntitiesToRestore(allStashedElements, notUpdatableEntities, userId, parent.getAccessRights().isPrivate());
 
         List<DirectoryElementEntity> entities = updatableEntities

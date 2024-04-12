@@ -70,20 +70,13 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
 
-    @Query("SELECT e FROM DirectoryElementEntity e " +
-            "WHERE e.id IN :uuids " +
-            "AND e.stashed = :stashed " +
-            "AND (e.owner = :userId OR e.isPrivate = false OR (e.isPrivate IS NULL AND NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.isPrivate = true)))")
-    List<DirectoryElementEntity> findAllStashedElements(@Param("uuids") List<UUID> uuids,
-                                                        @Param("stashed") boolean stashed,
-                                                        @Param("userId") String userId);
+    List<DirectoryElementEntity> findByIdInAndStashedTrueAndOwner(@Param("uuids") List<UUID> uuids, @Param("userId") String userId);
 
     // We select all stashed elements that do not have a parent, or have a parent that is not deleted, or a parent that is deleted in different operation
     @Query("SELECT e FROM DirectoryElementEntity e " +
             "WHERE e.stashed = true AND " +
-            "(e.isPrivate = false or e.owner = :userId or (e.isPrivate IS NULL AND NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.isPrivate = true))) " +
-            "AND (" +
-            "      e.parentId IS NULL OR " + // Element has no parent
+            "e.owner = :userId AND " +
+            "(e.parentId IS NULL OR " + // Element has no parent
             "      NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.stashed = true) OR " + // Parent is not stashed
             "      NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.stashDate = e.stashDate)" + // Parent has different stash date
             ")")

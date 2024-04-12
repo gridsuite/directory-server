@@ -146,8 +146,8 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(type, parentId, name);
     }
 
-    public List<DirectoryElementEntity> findAllStashedElements(List<UUID> uuids, boolean stashed, String userId) {
-        return directoryElementRepository.findAllStashedElements(uuids, stashed, userId);
+    public List<DirectoryElementEntity> findAllStashedElements(List<UUID> uuids, String userId) {
+        return directoryElementRepository.findByIdInAndStashedTrueAndOwner(uuids, userId);
     }
 
     public List<DirectoryElementEntity> findAllDescendants(UUID elementId, String userId) {
