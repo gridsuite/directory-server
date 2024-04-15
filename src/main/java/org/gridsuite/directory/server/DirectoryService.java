@@ -6,7 +6,6 @@
  */
 package org.gridsuite.directory.server;
 
-import jakarta.xml.bind.Element;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.AccessRightsAttributes;
@@ -19,7 +18,6 @@ import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.util.Pair;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

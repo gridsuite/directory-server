@@ -1,6 +1,5 @@
 package org.gridsuite.directory.server.services;
 
-import org.gridsuite.directory.server.NotificationService;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.springframework.stereotype.Service;
@@ -14,17 +13,16 @@ import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttr
 public class SupervisionService {
     private final DirectoryRepositoryService repositoryService;
 
-    public SupervisionService(DirectoryRepositoryService repositoryService,
-                            StudyService studyService, NotificationService notificationService) {
+    public SupervisionService(DirectoryRepositoryService repositoryService) {
         this.repositoryService = repositoryService;
     }
+
     public List<ElementAttributes> getStashedElements() {
         List<DirectoryElementEntity> entities = repositoryService.getElementsStashed();
         return entities.stream()
             .map(entity -> toElementAttributes(entity))
             .toList();
     }
-
 
     // delete all directory elements without checking owner
     public void deleteElementsByIds(List<UUID> uuids) {

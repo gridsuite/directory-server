@@ -115,6 +115,7 @@ public class DirectoryRepositoryService {
     public List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed) {
         return directoryElementRepository.findAllByIdInAndStashed(uuids, stashed);
     }
+
     public List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, LocalDateTime stashDate) {
         return directoryElementRepository.findAllByParentIdAndStashedAndStashDate(parentId, stashed, stashDate);
     }
