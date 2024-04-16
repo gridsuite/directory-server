@@ -40,8 +40,9 @@ public class DirectoryElementEntity {
     @Column(name = "name", columnDefinition = "CLOB")
     private String name;
 
-    @Column(name = "type", length = 30, nullable = false)
-    private String type;
+    @Column(name = "type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ElementType type;
 
     @Column(name = "isPrivate")
     private Boolean isPrivate;
@@ -111,7 +112,7 @@ public class DirectoryElementEntity {
                 .name(getName())
                 .owner(getOwner())
                 .parentId(getParentId() == null ? getId() : getParentId())
-                .type(getType())
+                .type(getType().name())
                 .isPrivate(getIsPrivate())
                 .lastModificationDate(getLastModificationDate())
                 .build();

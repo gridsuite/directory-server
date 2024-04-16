@@ -98,12 +98,12 @@ public class DirectoryService {
         }
         if (Boolean.TRUE.equals(allowNewName)) {
             // use another available name if necessary
-            elementAttributes.setElementName(getDuplicateNameCandidate(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType(), userId));
+            elementAttributes.setElementName(getDuplicateNameCandidate(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType().name(), userId));
         }
-        assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
+        assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType().name());
         assertAccessibleDirectory(parentDirectoryUuid, userId);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
-        var isCurrentElementPrivate = elementAttributes.getType().equals(ElementType.DIRECTORY.name()) ? elementAttributes.getAccessRights().getIsPrivate() : null;
+        var isCurrentElementPrivate = elementAttributes.getType().name().equals(ElementType.DIRECTORY.name()) ? elementAttributes.getAccessRights().getIsPrivate() : null;
 
         notificationService.emitDirectoryChanged(
                 parentDirectoryUuid,
@@ -145,7 +145,7 @@ public class DirectoryService {
                         parentDirectoryUuid,
                         elementAttributes.getElementName(),
                         elementAttributes.getType(),
-                        elementAttributes.getType().equals(ElementType.DIRECTORY.name()) ? elementAttributes.getAccessRights().getIsPrivate() : null,
+                        elementAttributes.getType().equals(ElementType.DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
                         elementAttributes.getOwner(),
                         elementAttributes.getDescription(),
                         now,
@@ -203,7 +203,7 @@ public class DirectoryService {
                 } else {
                     //and then we create the rest of the path
                     parentDirectoryUuid = createElement(
-                            toElementAttributes(UUID.randomUUID(), s, ElementType.DIRECTORY.name(),
+                            toElementAttributes(UUID.randomUUID(), s, ElementType.DIRECTORY,
                                     false, userId, null, now, now, userId),
                             parentDirectoryUuid,
                             userId, false).getElementUuid();
@@ -248,7 +248,7 @@ public class DirectoryService {
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types, boolean stashed) {
         return getAllDirectoryElementsStream(directoryUuid, types, userId, stashed)
-                .filter(elementAttributes -> !elementAttributes.getType().equals(ElementType.DIRECTORY.name()) || elementAttributes.isAllowed(userId));
+                .filter(elementAttributes -> !elementAttributes.getType().equals(ElementType.DIRECTORY) || elementAttributes.isAllowed(userId));
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
@@ -261,7 +261,7 @@ public class DirectoryService {
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements
                 .stream()
-                .filter(e -> e.getType().equals(ElementType.DIRECTORY.name()) || types.isEmpty() || types.contains(e.getType()))
+                .filter(e -> e.getType().equals(ElementType.DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
@@ -286,7 +286,7 @@ public class DirectoryService {
         if (!isElementUpdatable(toElementAttributes(directoryElement), userId, false) ||
             !directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
             !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
-             directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType())) {
+             directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType().name())) {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
@@ -303,7 +303,7 @@ public class DirectoryService {
         );
 
         //true if we updated a study name
-        if (elementEntity.getType().equals(ElementType.STUDY.name()) && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
+        if (elementEntity.getType().equals(ElementType.STUDY) && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
             studyService.notifyStudyUpdate(elementUuid, userId);
         }
     }
@@ -339,11 +339,11 @@ public class DirectoryService {
     }
 
     private void validateElementForUpdate(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
-        if (element.getType().equals(ElementType.DIRECTORY.name())) {
+        if (element.getType().equals(ElementType.DIRECTORY)) {
             throw new DirectoryException(IS_DIRECTORY);
         }
         if (!isElementUpdatable(toElementAttributes(element), userId, false) ||
-                directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType())) {
+                directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType().name())) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
@@ -360,7 +360,7 @@ public class DirectoryService {
     }
 
     private void notifyStudyUpdateIfApplicable(DirectoryElementEntity element, String userId) {
-        if (element.getType().equals(ElementType.STUDY.name())) {
+        if (element.getType().equals(ElementType.STUDY)) {
             studyService.notifyStudyUpdate(element.getId(), userId);
         }
     }
@@ -382,7 +382,7 @@ public class DirectoryService {
     }
 
     private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {
-        if (element.getType().equals(ElementType.DIRECTORY.name())) {
+        if (element.getType().equals(ElementType.DIRECTORY)) {
             return element.isAllowed(userId) &&
                 (!forDeletion || getDirectoryElementsStream(element.getElementUuid(), userId, List.of())
                     .filter(e -> e.getType().equals(ElementType.DIRECTORY.name()))
@@ -623,7 +623,7 @@ public class DirectoryService {
                 .stream()
                 .flatMap(entity -> {
                     entity.setParentId(parentUuid);
-                    entity.setName(getDuplicateNameCandidate(parentUuid, entity.getName(), entity.getType(), userId));
+                    entity.setName(getDuplicateNameCandidate(parentUuid, entity.getName(), entity.getType().name(), userId));
 
                     // Retrieve descendants of the current entity
                     List<DirectoryElementEntity> descendants = getEntitiesToRestore(
@@ -734,7 +734,7 @@ public class DirectoryService {
                     parentUuid == null,
                     parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY
             );
-            if (ElementType.STUDY.name().equals(entity.getType())) {
+            if (ElementType.STUDY.equals(entity.getType())) {
                 notificationService.emitDeletedStudy(entity.getId(), userId);
             }
         });

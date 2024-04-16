@@ -11,6 +11,7 @@ package org.gridsuite.directory.server.services;
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
  */
 public enum ElementType {
+    CASE,
     STUDY,
     CONTINGENCY_LIST,
     FILTER,

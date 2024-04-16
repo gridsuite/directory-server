@@ -35,7 +35,7 @@ public class ElementAttributes {
 
     private String elementName;
 
-    private String type;
+    private ElementType type;
 
     private AccessRightsAttributes accessRights;
 
@@ -52,7 +52,7 @@ public class ElementAttributes {
     private String lastModifiedBy;
 
     public boolean isAllowed(@NonNull String userId) {
-        if (!type.equals(ElementType.DIRECTORY.name())) {
+        if (!type.equals(ElementType.DIRECTORY)) {
             throw new DirectoryException(NOT_DIRECTORY);
         }
         return owner.equals(userId) || !accessRights.isPrivate();
@@ -67,24 +67,24 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
-        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY.name(), rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(), rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
+        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(), rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, Boolean isPrivate, @NonNull String userId) {
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull ElementType elementType, Boolean isPrivate, @NonNull String userId) {
         return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, null, null, null, null);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull ElementType elementType,
                                                         Boolean isPrivate, @NonNull String userId, @NonNull String elementDescription) {
         return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, null, null, null);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull ElementType elementType,
                                                         Boolean isPrivate, @NonNull String userId, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
         return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull ElementType elementType,
                                                         @NonNull AccessRightsAttributes accessRights, @NonNull String userId,
                                                         long subdirectoriesCount, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
         return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
