@@ -54,7 +54,7 @@ public class DirectoryUnitTest {
     public void testDeleteMultipleElements() {
         List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(e -> e.getId()).toList();
         // directory elements should not be delete with this method
-        List<UUID> elementExpectedToDeleteUuids = elementsToDelete.stream().filter(e ->  !"DIRECTORY".equals(e.getType())).map(e -> e.getId()).toList();
+        List<UUID> elementExpectedToDeleteUuids = elementsToDelete.stream().filter(e -> !"DIRECTORY".equals(e.getType())).map(e -> e.getId()).toList();
 
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
         when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(elementsToDelete);
