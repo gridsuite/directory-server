@@ -11,13 +11,13 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.services.ElementType;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -52,7 +52,7 @@ public class ElementAttributes {
     private String lastModifiedBy;
 
     public boolean isAllowed(@NonNull String userId) {
-        if (!type.equals(DIRECTORY)) {
+        if (!type.equals(ElementType.DIRECTORY.name())) {
             throw new DirectoryException(NOT_DIRECTORY);
         }
         return owner.equals(userId) || !accessRights.isPrivate();
@@ -67,7 +67,7 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
-        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(), rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
+        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), ElementType.DIRECTORY.name(), rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(), rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, Boolean isPrivate, @NonNull String userId) {
