@@ -105,14 +105,14 @@ public class DirectoryElementEntity {
         return this;
     }
 
-    public DirectoryElementInfos toDirectoryElementInfos(boolean isPrivate) {
+    public DirectoryElementInfos toDirectoryElementInfos() {
         return DirectoryElementInfos.builder()
                 .id(getId())
                 .name(getName())
                 .owner(getOwner())
                 .parentId(getParentId() == null ? getId() : getParentId())
                 .type(getType())
-                .isPrivate(getIsPrivate() == null ? isPrivate : getIsPrivate())
+                .isPrivate(getIsPrivate())
                 .lastModificationDate(getLastModificationDate())
                 .build();
     }

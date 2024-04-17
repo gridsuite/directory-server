@@ -68,7 +68,7 @@ public class DirectoryRepositoryService {
 
     public void saveRestoredElements(@NonNull List<DirectoryElementEntity> directoryElementEntities) {
         directoryElementRepository.saveAll(directoryElementEntities);
-        saveElementsInfos(directoryElementEntities.stream().map(this::directoryElementInfosBuilder).toList());
+        saveElementsInfos(directoryElementEntities.stream().map(DirectoryElementEntity::toDirectoryElementInfos).toList());
     }
 
     public void saveElementsInfos(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
@@ -79,7 +79,7 @@ public class DirectoryRepositoryService {
 
     public DirectoryElementEntity saveElement(DirectoryElementEntity elementEntity) {
         DirectoryElementEntity savedElementEntity = directoryElementRepository.save(elementEntity);
-        directoryElementInfosRepository.save(directoryElementInfosBuilder(savedElementEntity));
+        directoryElementInfosRepository.save(savedElementEntity.toDirectoryElementInfos());
         return savedElementEntity;
     }
 
@@ -99,7 +99,7 @@ public class DirectoryRepositoryService {
 
     public void reindexAllElements() {
         saveElementsInfos(directoryElementRepository.findAllByStashed(false).stream()
-                .map(this::directoryElementInfosBuilder)
+                .map(DirectoryElementEntity::toDirectoryElementInfos)
                 .toList());
     }
 
@@ -164,11 +164,5 @@ public class DirectoryRepositoryService {
 
     public Long countDescendants(UUID elementId, String userId) {
         return directoryElementRepository.countDescendants(elementId, userId);
-    }
-
-    public DirectoryElementInfos directoryElementInfosBuilder(DirectoryElementEntity directoryElementEntity) {
-        boolean isPrivate = directoryElementEntity.getParentId() == null ? directoryElementEntity.getIsPrivate() :
-                isPrivateDirectory(directoryElementEntity.getParentId());
-        return directoryElementEntity.toDirectoryElementInfos(isPrivate);
     }
 }
