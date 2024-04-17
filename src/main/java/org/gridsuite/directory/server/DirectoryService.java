@@ -449,15 +449,15 @@ public class DirectoryService {
         // getting elements by "elementUuids", filtered if they don't belong to parentDirectoryUuid, or if they are directories
         List<ElementAttributes> elementsAttributesToDelete = repositoryService.getElementEntities(elementsUuids).stream()
             .filter(element -> parentDirectoryUuid.equals(element.getParentId()))
-            .map(element -> toElementAttributes(element))
+            .map(ElementAttributes::toElementAttributes)
             .filter(element -> !DIRECTORY.equals(element.getType()))
             .toList();
 
         // deleting all elements
-        repositoryService.deleteElements(elementsAttributesToDelete.stream().map(element -> element.getElementUuid()).toList());
+        repositoryService.deleteElements(elementsAttributesToDelete.stream().map(ElementAttributes::getElementUuid).toList());
 
         // extracting studyUuids from this list, to send specific notifications
-        List<UUID> studyToDeleteUuids = elementsAttributesToDelete.stream().filter(element -> STUDY.equals(element.getType())).map(element -> element.getElementUuid()).toList();
+        List<UUID> studyToDeleteUuids = elementsAttributesToDelete.stream().filter(element -> STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid).toList();
         studyToDeleteUuids.forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));
 
         // sending directory update notification

@@ -4,6 +4,7 @@ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosReposit
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,11 +16,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @DisableElasticsearch
-public class DirectoryUnitTest {
+class DirectoryUnitTest {
     @Autowired
     DirectoryService directoryService;
 
@@ -51,7 +52,7 @@ public class DirectoryUnitTest {
     );
 
     @Test
-    public void testDeleteMultipleElements() {
+    void testDeleteMultipleElements() {
         List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(e -> e.getId()).toList();
         // directory elements should not be delete with this method
         List<UUID> elementExpectedToDeleteUuids = elementsToDelete.stream().filter(e -> !"DIRECTORY".equals(e.getType())).map(e -> e.getId()).toList();
@@ -75,10 +76,13 @@ public class DirectoryUnitTest {
     }
 
     @Test
-    public void testDeleteFromForbiddenDirectory() {
+    void testDeleteFromForbiddenDirectory() {
+        List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(e -> e.getId()).toList();
+        UUID privateDirUuid = privateDir.getId();
         when(directoryElementRepository.findById(privateDir.getId())).thenReturn(Optional.of(privateDir));
 
-        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(List.of(), privateDir.getId(), "user1"));
+
+        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, privateDirUuid, "user1"));
         assertEquals(DirectoryException.Type.NOT_ALLOWED.name(), exception.getMessage());
     }
 }
