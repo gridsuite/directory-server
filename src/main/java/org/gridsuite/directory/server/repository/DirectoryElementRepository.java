@@ -9,11 +9,9 @@ package org.gridsuite.directory.server.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,7 +24,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findAllByStashed(boolean stashed);
 
-    List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, LocalDateTime stashDate);
+    List<DirectoryElementEntity> findAllByParentIdAndStashed(UUID parentId, boolean stashed);
 
     List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed);
 
@@ -71,14 +69,4 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     void deleteById(UUID id);
 
     List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
-
-    // This query to count all the deleted descendants of each element
-    // It uses CTE (Common Table Expression) which is temporary result set that we use to count all descendents of an element
-    @Query(nativeQuery = true, value =
-            "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id) AS (" +
-                    "   SELECT id AS element_id, parent_id AS parent_element_id FROM element WHERE id = :elementId " +
-                    "   UNION ALL " +
-                    "SELECT COUNT(e.element_id) " +
-                    "FROM ElementHierarchy e ")
-    Long countDescendants(@Param("elementId") UUID elementId);
 }

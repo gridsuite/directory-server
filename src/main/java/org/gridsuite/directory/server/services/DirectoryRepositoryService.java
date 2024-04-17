@@ -15,7 +15,6 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -112,12 +111,12 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getSubdirectoriesCounts(subDirectories, elementTypes, owner);
     }
 
-    public List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed) {
-        return directoryElementRepository.findAllByIdInAndStashed(uuids, stashed);
+    public List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids) {
+        return directoryElementRepository.findAllByIdInAndStashed(uuids, false);
     }
 
-    public List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, LocalDateTime stashDate) {
-        return directoryElementRepository.findAllByParentIdAndStashedAndStashDate(parentId, stashed, stashDate);
+    public List<DirectoryElementEntity> findAllByParentId(UUID parentId) {
+        return directoryElementRepository.findAllByParentIdAndStashed(parentId, false);
     }
 
     public List<DirectoryElementEntity> findRootDirectoriesByUserId(String owner) {
@@ -134,9 +133,5 @@ public class DirectoryRepositoryService {
 
     public List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name) {
         return directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(type, parentId, name);
-    }
-
-    public List<DirectoryElementEntity> getElementsStashed() {
-        return directoryElementRepository.findAllByStashed(true);
     }
 }

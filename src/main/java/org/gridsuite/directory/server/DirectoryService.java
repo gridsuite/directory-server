@@ -233,7 +233,7 @@ public class DirectoryService {
         return subdirectoriesCountsMap;
     }
 
-    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<String> types, boolean stashed) {
+    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<String> types) {
         ElementAttributes elementAttributes = getElement(directoryUuid);
         if (elementAttributes == null) {
             throw DirectoryException.createElementNotFound(DIRECTORY, directoryUuid);
@@ -243,25 +243,16 @@ public class DirectoryService {
             return List.of();
         }
 
-        return getDirectoryElementsStream(directoryUuid, userId, types, stashed).collect(Collectors.toList());
+        return getDirectoryElementsStream(directoryUuid, userId, types).collect(Collectors.toList());
     }
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types) {
-        return getDirectoryElementsStream(directoryUuid, userId, types, false);
-    }
-
-    private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types, boolean stashed) {
-        return getAllDirectoryElementsStream(directoryUuid, types, userId, stashed)
+        return getAllDirectoryElementsStream(directoryUuid, types, userId)
                 .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) || elementAttributes.isAllowed(userId));
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
-        return getAllDirectoryElementsStream(directoryUuid, types, userId, false);
-    }
-
-    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId, boolean stashed) {
-        LocalDateTime stashDate = stashed ? getDirectoryElementEntity(directoryUuid).getStashDate() : null;
-        List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentIdAndStashedAndStashDate(directoryUuid, stashed, stashDate);
+        List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentId(directoryUuid);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements
                 .stream()
@@ -551,7 +542,7 @@ public class DirectoryService {
     }
 
     public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types) {
-        List<DirectoryElementEntity> elementEntities = repositoryService.findAllByIdInAndStashed(ids, false);
+        List<DirectoryElementEntity> elementEntities = repositoryService.findAllByIdIn(ids);
 
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
             throw new DirectoryException(NOT_FOUND);

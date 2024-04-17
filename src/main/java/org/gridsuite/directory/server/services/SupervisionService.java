@@ -2,6 +2,7 @@ package org.gridsuite.directory.server.services;
 
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,14 +12,16 @@ import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttr
 
 @Service
 public class SupervisionService {
+    private final DirectoryElementRepository directoryElementRepository;
     private final DirectoryRepositoryService repositoryService;
 
-    public SupervisionService(DirectoryRepositoryService repositoryService) {
+    public SupervisionService(DirectoryRepositoryService repositoryService, DirectoryElementRepository directoryElementRepository) {
         this.repositoryService = repositoryService;
+        this.directoryElementRepository = directoryElementRepository;
     }
 
     public List<ElementAttributes> getStashedElements() {
-        List<DirectoryElementEntity> entities = repositoryService.getElementsStashed();
+        List<DirectoryElementEntity> entities = getElementsStashed();
         return entities.stream()
             .map(entity -> toElementAttributes(entity))
             .toList();
@@ -27,5 +30,9 @@ public class SupervisionService {
     // delete all directory elements without checking owner
     public void deleteElementsByIds(List<UUID> uuids) {
         repositoryService.deleteElements(uuids);
+    }
+
+    public List<DirectoryElementEntity> getElementsStashed() {
+        return directoryElementRepository.findAllByStashed(true);
     }
 }
