@@ -50,6 +50,7 @@ public class DirectoryService {
     public static final String FILTER = "FILTER";
     public static final String MODIFICATION = "MODIFICATION";
     public static final String DIRECTORY = "DIRECTORY";
+    public static final String CASE = "CASE";
     public static final String ELEMENT = "ELEMENT";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String UPDATE_TYPE_STUDIES = "studies";
@@ -458,11 +459,8 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
-        List<ElementAttributes> path = new ArrayList<>();
-        path.add(toElementAttributes(currentElement));
-
-        List<DirectoryElementEntity> ancestors = repositoryService.findAllAscendants(elementUuid, userId);
-        path.addAll(ancestors.stream().map(ElementAttributes::toElementAttributes).toList());
+        List<ElementAttributes> path = new ArrayList<>(List.of(toElementAttributes(currentElement)));
+        path.addAll(repositoryService.findAllAscendants(elementUuid, userId).stream().map(ElementAttributes::toElementAttributes).toList());
 
         return path;
     }
@@ -476,14 +474,9 @@ public class DirectoryService {
     }
 
     private ElementAttributes getParentElement(UUID elementUuid) {
-        return Stream.of(repositoryService.getParentUuid(elementUuid))
-            .filter(Objects::nonNull)
-            .map(repositoryService::getElementEntity)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .map(ElementAttributes::toElementAttributes)
-            .findFirst()
-            .orElseThrow(() -> DirectoryException.createElementNotFound("Parent of", elementUuid));
+        return repositoryService.getElementEntity(repositoryService.getParentUuid(elementUuid))
+                .map(ElementAttributes::toElementAttributes)
+                .orElseThrow(() -> DirectoryException.createElementNotFound(DIRECTORY, elementUuid));
     }
 
     private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
@@ -584,20 +577,16 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    public Map<UUID, String> getElementNamesFromPath(List<ElementAttributes> elementAttributesList) {
-        return elementAttributesList.stream()
+    private Pair<List<UUID>, List<String>> getUuidsAndNamesFromPath(List<ElementAttributes> elementAttributesList) {
+        List<UUID> uuids = new ArrayList<>(elementAttributesList.size());
+        List<String> names = new ArrayList<>(elementAttributesList.size());
+        elementAttributesList.stream()
                 .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), DIRECTORY))
-                .collect(Collectors.toMap(
-                        ElementAttributes::getElementUuid,
-                        ElementAttributes::getElementName,
-                        (existingValue, newValue) -> existingValue,
-                        LinkedHashMap::new // Maintain insertion order
-                         ));
-    }
-
-    private Map<UUID, String> getPathAndExtractNames(UUID elementUuid, String userId) {
-        List<ElementAttributes> elementAttributesList = getPath(elementUuid, userId);
-        return getElementNamesFromPath(elementAttributesList);
+                .forEach(e -> {
+                    uuids.add(e.getElementUuid());
+                    names.add(e.getElementName());
+                });
+        return Pair.of(uuids, names);
     }
 
     @Transactional
@@ -608,9 +597,9 @@ public class DirectoryService {
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
         List<DirectoryElementInfos> directoryElementInfosList = directoryElementInfosService.searchElements(userInput, userId);
         directoryElementInfosList.forEach(e -> {
-            Map<UUID, String> path = getPathAndExtractNames(e.getId(), userId);
-            e.setPathUuid(new ArrayList<>(path.keySet()));
-            e.setPathName(new ArrayList<>(path.values()));
+            Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(getPath(e.getId(), userId));
+            e.setPathUuid(uuidsAndNames.getFirst());
+            e.setPathName(uuidsAndNames.getSecond());
         });
         return directoryElementInfosList;
     }

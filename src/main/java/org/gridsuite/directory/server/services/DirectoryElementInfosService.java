@@ -6,8 +6,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 package org.gridsuite.directory.server.services;
 
-import co.elastic.clients.elasticsearch._types.query_dsl.*;
-import com.google.common.collect.Lists;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -16,8 +16,10 @@ import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.stereotype.Service;
-import lombok.NonNull;
+
 import java.util.List;
+
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -29,37 +31,37 @@ public class DirectoryElementInfosService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
-    static final String ELEMENT_NAME = "name";
+    private static final String ELEMENT_NAME = "name.fullascii";
+    static final String ELEMENT_TYPE = "type.keyword";
+    static final String ELEMENT_OWNER = "owner.keyword";
+    static final String ELEMENT_PRIVATE_STATUS = "isPrivate";
 
     public DirectoryElementInfosService(ElasticsearchOperations elasticsearchOperations) {
         this.elasticsearchOperations = elasticsearchOperations;
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
-        WildcardQuery elementSearchQuery = Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*");
-        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
-        boolQueryBuilder.mustNot(Queries.termQuery("type", "directory")._toQuery());
         BoolQuery isOwnerQuery = new BoolQuery.Builder()
-                .filter(Queries.termQuery("isprivate", "true")._toQuery())
-                .must(Queries.termQuery("owner", userId)._toQuery())
+                .must(Queries.termQuery(ELEMENT_PRIVATE_STATUS, Boolean.TRUE.toString())._toQuery())
+                .must(Queries.termQuery(ELEMENT_OWNER, userId)._toQuery())
                 .build();
 
         BoolQuery isPublicQuery = new BoolQuery.Builder()
-                .filter(Queries.termQuery("isprivate", "false")._toQuery())
+                .mustNot(Queries.termQuery(ELEMENT_PRIVATE_STATUS, Boolean.TRUE.toString())._toQuery())
                 .build();
 
-        boolQueryBuilder.should(isOwnerQuery._toQuery());
-        boolQueryBuilder.should(isPublicQuery._toQuery());
-        boolQueryBuilder.filter(elementSearchQuery._toQuery());
-        BoolQuery finalQuery = boolQueryBuilder.build();
+        BoolQuery query = new BoolQuery.Builder()
+                .mustNot(Queries.termQuery(ELEMENT_TYPE, DIRECTORY)._toQuery())
+                .must(Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*")._toQuery())
+                .must(new BoolQuery.Builder().should(isOwnerQuery._toQuery()).should(isPublicQuery._toQuery()).build()._toQuery())
+                .build();
 
         NativeQuery nativeQuery = new NativeQueryBuilder()
-                .withQuery(finalQuery._toQuery())
+                .withQuery(query._toQuery())
                 .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
                 .build();
 
-        return Lists.newArrayList(elasticsearchOperations.search(nativeQuery, DirectoryElementInfos.class)
-                .map(SearchHit::getContent));
+        return elasticsearchOperations.search(nativeQuery, DirectoryElementInfos.class).stream().map(SearchHit::getContent) .toList();
     }
 
     public static String escapeLucene(String s) {

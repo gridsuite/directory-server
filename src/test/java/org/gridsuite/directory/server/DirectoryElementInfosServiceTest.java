@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -79,21 +80,31 @@ class DirectoryElementInfosServiceTest {
 
     @Test
     void searchElementInfos() {
-        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type("DIRECTORY").owner("admin").parentId(UUID.randomUUID()).isPrivate(false).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
-        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type("FILTER").owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
-        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type("STUDY").owner("admin1").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
-        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type("CONTINGENCY_LIST").owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).isPrivate(false).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type(STUDY).owner("admin1").parentId(UUID.randomUUID()).isPrivate(false).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var caseInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aCase").type(CASE).owner("admin1").parentId(UUID.randomUUID()).isPrivate(null).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type(FILTER).owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type(CONTINGENCY_LIST).owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
 
-        List<DirectoryElementInfos> infos = List.of(directoryInfos, filterInfos, studyInfos, contingencyListInfos);
+        List<DirectoryElementInfos> infos = List.of(directoryInfos, filterInfos, studyInfos, caseInfos, contingencyListInfos);
         repositoryService.saveElementsInfos(infos);
 
         Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", "admin"));
-        assertEquals(3, hits.size());
+        assertEquals(4, hits.size());
+        assertTrue(hits.contains(studyInfos));
+        assertTrue(hits.contains(caseInfos));
         assertTrue(hits.contains(filterInfos));
         assertTrue(hits.contains(contingencyListInfos));
-        assertTrue(hits.contains(studyInfos));
 
         hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory", "admin"));
+        assertEquals(0, hits.size());
+
+        hits = new HashSet<>(directoryElementInfosService.searchElements("a", "admin1"));
+        assertEquals(2, hits.size());
+        assertTrue(hits.contains(studyInfos));
+        assertTrue(hits.contains(caseInfos));
+
+        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory", "admin1"));
         assertEquals(0, hits.size());
     }
 }
