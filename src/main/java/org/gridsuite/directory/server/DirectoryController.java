@@ -235,7 +235,6 @@ public class DirectoryController {
         return ResponseEntity.ok().build();
     }
 
-    // TODO : Remove this endpoint when the copy/paste in gridexplore don't use it anymore
     @GetMapping(value = "/directories/{directoryUuid}/{elementName}/newNameCandidate")
     @Operation(summary = "Get a free name in directory based on the one given and it's type")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the element exists or not")})
