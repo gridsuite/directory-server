@@ -12,6 +12,9 @@ package org.gridsuite.directory.server.services;
  */
 public enum ElementType {
     CASE,
+    LOADFLOW_PARAMETERS,
+    SECURITY_ANALYSIS_PARAMETERS,
+    VOLTAGE_INIT_PARAMETERS,
     STUDY,
     CONTINGENCY_LIST,
     FILTER,
