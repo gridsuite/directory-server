@@ -4,7 +4,6 @@ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosReposit
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +40,7 @@ class DirectoryUnitTest {
     DirectoryElementEntity filter1 = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "filter1", "FILTER", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", false, null);
     DirectoryElementEntity study1 = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "study1", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", false, null);
     DirectoryElementEntity study2 = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "study2", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", false, null);
+    DirectoryElementEntity studyFromOtherDir = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "studyFromOtherDir", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", false, null);
 
     DirectoryElementEntity privateDir = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "dir2", "DIRECTORY", true, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user1", false, null);
 
@@ -48,20 +48,29 @@ class DirectoryUnitTest {
         dir1,
         filter1,
         study1,
-        study2
+        study2,
+        studyFromOtherDir
     );
 
     @Test
-    void testDeleteMultipleElements() {
+    void testDeleteMultipleElementsFromOneDirectory() {
         List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(e -> e.getId()).toList();
-        // directory elements should not be delete with this method
-        List<UUID> elementExpectedToDeleteUuids = elementsToDelete.stream().filter(e -> !"DIRECTORY".equals(e.getType())).map(e -> e.getId()).toList();
+        // following elements should not be deleted with this call
+        // - elements with type DIRECTORY
+        // - elements having a parent directory different from the one passed as parameter
+        List<UUID> elementExpectedToDeleteUuids = elementsToDelete.stream()
+            .filter(e -> !"DIRECTORY".equals(e.getType()))
+            .filter(e -> e.getParentId().equals(parentDirectoryUuid))
+            .map(DirectoryElementEntity::getId)
+            .toList();
 
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
         when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(elementsToDelete);
 
+        // acutal service call
         directoryService.deleteElements(elementToDeleteUuids, parentDirectoryUuid, "user1");
 
+        // check elements are actually deleted
         verify(directoryElementRepository, times(1)).deleteAllById(elementExpectedToDeleteUuids);
         verify(directoryElementInfosRepository, times(1)).deleteAllById(elementExpectedToDeleteUuids);
 
@@ -80,7 +89,6 @@ class DirectoryUnitTest {
         List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(e -> e.getId()).toList();
         UUID privateDirUuid = privateDir.getId();
         when(directoryElementRepository.findById(privateDir.getId())).thenReturn(Optional.of(privateDir));
-
 
         DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, privateDirUuid, "user1"));
         assertEquals(DirectoryException.Type.NOT_ALLOWED.name(), exception.getMessage());
