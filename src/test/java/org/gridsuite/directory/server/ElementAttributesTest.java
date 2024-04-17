@@ -170,6 +170,9 @@ public class ElementAttributesTest {
             DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
             return String.format("\"%s\":\"%s\"", key, ((ZonedDateTime) value).format(formatter));
         }
+        if (value instanceof Enum) {
+            return String.format("\"%s\":\"%s\"", key, value);
+        }
         return String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
     }
 }

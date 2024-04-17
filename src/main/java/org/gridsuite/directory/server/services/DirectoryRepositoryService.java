@@ -57,7 +57,7 @@ public class DirectoryRepositoryService {
         return !directoryElementRepository.findRootDirectoriesByName(rootName).isEmpty();
     }
 
-    public boolean isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
+    public boolean isElementExists(UUID parentDirectoryUuid, String elementName, ElementType type) {
         return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
     }
 
@@ -110,11 +110,11 @@ public class DirectoryRepositoryService {
                 .orElse(null);
     }
 
-    public List<DirectoryElementRepository.SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes) {
+    public List<DirectoryElementRepository.SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<ElementType> elementTypes) {
         return directoryElementRepository.getSubdirectoriesCounts(subDirectories, elementTypes);
     }
 
-    public List<DirectoryElementRepository.SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes, String owner) {
+    public List<DirectoryElementRepository.SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<ElementType> elementTypes, String owner) {
         return directoryElementRepository.getSubdirectoriesCounts(subDirectories, elementTypes, owner);
     }
 
@@ -142,7 +142,7 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.findDirectoriesByNameAndParentId(name, parentId);
     }
 
-    public List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name) {
+    public List<String> getNameByTypeAndParentIdAndNameStartWith(ElementType type, UUID parentId, String name) {
         return directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(type, parentId, name);
     }
 

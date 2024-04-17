@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.gridsuite.directory.server.services.ElementType;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -133,7 +134,7 @@ public class DirectoryController {
     @Operation(summary = "Get root directories")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The root directories"))
     public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestHeader(name = "userId") String userId,
-                                                                      @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
+                                                                      @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<ElementType> types) {
         return ResponseEntity.ok().body(service.getRootDirectories(userId, types));
     }
 
@@ -153,7 +154,7 @@ public class DirectoryController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
     public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                         @RequestHeader("userId") String userId,
-                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
+                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<ElementType> types,
                                                                         @RequestParam(value = "stashed", required = false, defaultValue = "false") boolean stashed) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, types, stashed));
     }
@@ -175,7 +176,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "At least one item was not found"),
     })
     public ResponseEntity<List<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
-                                                               @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
+                                                               @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<ElementType> types,
                                                                @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
         return ResponseEntity.ok().body(service.getElements(ids, strictMode, types));
     }
@@ -227,7 +228,7 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "If the element exists or not")})
     public ResponseEntity<String> elementNameCandidate(@PathVariable("directoryUuid") UUID directoryUuid,
                                                              @PathVariable("elementName") String elementName,
-                                                             @RequestParam("type") String type,
+                                                             @RequestParam("type") ElementType type,
                                                              @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type, userId));
     }
@@ -252,7 +253,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
     public ResponseEntity<Void> elementExists(@PathVariable("directoryUuid") UUID directoryUuid,
                                                     @PathVariable("elementName") String elementName,
-                                                    @PathVariable("type") String type) {
+                                                    @PathVariable("type") ElementType type) {
         HttpStatus status = repositoryService.isElementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }

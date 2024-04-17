@@ -1644,7 +1644,7 @@ public class DirectoryTest {
                         .andExpect(status().isNoContent());
     }
 
-    private String candidateName(UUID directoryUUid, String originalName, String type) throws Exception {
+    private String candidateName(UUID directoryUUid, String originalName, ElementType type) throws Exception {
         return mockMvc.perform(get("/v1/directories/" + directoryUUid + "/" + originalName + "/newNameCandidate?type=" + type)
                                .header("userId", "userId"))
                       .andReturn().getResponse().getContentAsString();
@@ -1662,16 +1662,16 @@ public class DirectoryTest {
 
         var name = "newStudy";
         // check when no elements is corresponding (empty folder
-        assertEquals("newStudy", candidateName(directoryId, name, ElementType.STUDY.name()));
+        assertEquals("newStudy", candidateName(directoryId, name, ElementType.STUDY));
         var element = toElementAttributes(UUID.randomUUID(), name, ElementType.STUDY, null, "userId");
         insertAndCheckSubElement(directoryId, true, element);
-        var newCandidateName = candidateName(directoryId, name, ElementType.STUDY.name());
+        var newCandidateName = candidateName(directoryId, name, ElementType.STUDY);
         assertEquals("newStudy(1)", newCandidateName);
         element.setElementName(newCandidateName);
         element.setElementUuid(UUID.randomUUID());
         insertAndCheckSubElement(directoryId, true, element);
-        assertEquals("newStudy(2)", candidateName(directoryId, name, ElementType.STUDY.name()));
-        assertEquals("newStudy", candidateName(directoryId, name, ElementType.CONTINGENCY_LIST.name()));
+        assertEquals("newStudy(2)", candidateName(directoryId, name, ElementType.STUDY));
+        assertEquals("newStudy", candidateName(directoryId, name, ElementType.CONTINGENCY_LIST));
     }
 
     @Test
@@ -1705,7 +1705,7 @@ public class DirectoryTest {
         UUID dir2Uuid = dir2.getId();
 
         DirectoryElementEntity insertedCaseElement = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getName().equals("caseName")).findFirst().orElseThrow();
-        assertEquals("CASE", insertedCaseElement.getType());
+        assertEquals(ElementType.CASE, insertedCaseElement.getType());
         //the element is in dir2
         assertEquals(dir2Uuid, insertedCaseElement.getParentId());
 

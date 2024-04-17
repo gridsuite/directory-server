@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server.repository;
 
+import org.gridsuite.directory.server.services.ElementType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -49,7 +50,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     List<DirectoryElementEntity> findDirectoriesByNameAndParentId(String name, UUID parentId);
 
     @Query("SELECT name FROM DirectoryElementEntity WHERE parentId=:parentId AND type=:type AND name like :name% and stashed = false ")
-    List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
+    List<String> getNameByTypeAndParentIdAndNameStartWith(ElementType type, UUID parentId, String name);
 
     boolean existsByIdAndOwnerOrIsPrivateAndId(UUID id, String owner, boolean isPrivate, UUID id2);
 
@@ -60,15 +61,15 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     }
 
     @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND d.stashed = FALSE GROUP BY d.parentId")
-    List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes);
+    List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<ElementType> elementTypes);
 
     @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND (d.isPrivate=false or d.owner=:owner) AND d.stashed = FALSE GROUP BY d.parentId")
-    List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes, String owner);
+    List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<ElementType> elementTypes, String owner);
 
     @Transactional
     void deleteById(UUID id);
 
-    List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
+    List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, ElementType type, boolean stashed);
 
     @Query("SELECT e FROM DirectoryElementEntity e " +
             "WHERE e.id IN :uuids " +

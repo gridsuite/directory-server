@@ -9,6 +9,7 @@ package org.gridsuite.directory.server.dto.elasticsearch;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.directory.server.services.ElementType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.*;
@@ -44,7 +45,7 @@ public class DirectoryElementInfos {
 
     private UUID parentId;
 
-    private String type;
+    private ElementType type;
 
     private String owner;
 
