@@ -60,11 +60,16 @@ public class DirectoryService {
 
     private final DirectoryRepositoryService repositoryService;
 
+    private final DirectoryElementRepository directoryElementRepository;
+
     public DirectoryService(DirectoryRepositoryService repositoryService,
-                            StudyService studyService, NotificationService notificationService) {
+                            StudyService studyService,
+                            NotificationService notificationService,
+                            DirectoryElementRepository directoryElementRepository) {
         this.repositoryService = repositoryService;
         this.studyService = studyService;
         this.notificationService = notificationService;
+        this.directoryElementRepository = directoryElementRepository;
     }
 
     /* notifications */
@@ -120,6 +125,37 @@ public class DirectoryService {
                 NotificationType.UPDATE_DIRECTORY
         );
 
+        return toElementAttributes(elementEntity);
+    }
+
+    public ElementAttributes duplicateElement(UUID elementId, UUID newElementId, UUID targetDirectoryId, String userId) {
+        ElementAttributes elementAttributes = new ElementAttributes();
+        DirectoryElementEntity directoryElementEntity = directoryElementRepository.findById(elementId).orElseThrow(() -> new DirectoryException(NOT_FOUND));
+
+        String elementType = directoryElementEntity.getType();
+        UUID parentDirectoryUuid = targetDirectoryId != null ? targetDirectoryId : directoryElementEntity.getParentId();
+        String newElementName = getDuplicateNameCandidate(parentDirectoryUuid, directoryElementEntity.getName(), elementType, userId);
+
+        elementAttributes.setType(elementType);
+        elementAttributes.setElementUuid(newElementId);
+        elementAttributes.setOwner(userId);
+        elementAttributes.setDescription(directoryElementEntity.getDescription());
+
+        elementAttributes.setElementName(newElementName);
+        assertElementNotExist(parentDirectoryUuid, newElementName, elementType);
+        assertAccessibleDirectory(parentDirectoryUuid, userId);
+        DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
+        var isCurrentElementPrivate = elementAttributes.getType().equals(DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null;
+
+        notificationService.emitDirectoryChanged(
+                parentDirectoryUuid,
+                elementAttributes.getElementName(),
+                userId,
+                null,
+                isPrivateForNotification(parentDirectoryUuid, isCurrentElementPrivate),
+                false,
+                NotificationType.UPDATE_DIRECTORY
+        );
         return toElementAttributes(elementEntity);
     }
 
