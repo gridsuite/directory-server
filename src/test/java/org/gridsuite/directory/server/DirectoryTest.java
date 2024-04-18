@@ -18,6 +18,7 @@ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosReposit
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.ElementType;
+import org.gridsuite.directory.server.services.StudyService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
 import org.junit.After;
@@ -27,6 +28,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -90,6 +92,9 @@ public class DirectoryTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockBean
+    private StudyService studyService;
+
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
 
@@ -137,8 +142,8 @@ public class DirectoryTest {
         insertAndCheckSubElement(uuidNewDirectory, false, subEltAttributes);
         checkDirectoryContent(uuidNewDirectory, "userId", List.of(subDirAttributes, subEltAttributes));
 
-        checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", ElementType.STUDY, HttpStatus.OK);
-        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", ElementType.STUDY, HttpStatus.NO_CONTENT);
+        checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", ElementType.STUDY.name(), HttpStatus.OK);
+        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", ElementType.STUDY.name(), HttpStatus.NO_CONTENT);
 
         // Delete the sub-directory newSubDir
         deleteElement(subDirAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false, false, 0);
@@ -204,7 +209,7 @@ public class DirectoryTest {
         //Check if all element's parents are retrieved in the right order
         assertEquals(
                 path.stream()
-                    .map(ElementAttributes::getElementUuid)
+                    .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
         );
@@ -235,7 +240,7 @@ public class DirectoryTest {
         //Check if all element's parents are retrieved in the right order
         assertEquals(
                 path.stream()
-                    .map(ElementAttributes::getElementUuid)
+                    .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
         );
@@ -281,7 +286,7 @@ public class DirectoryTest {
 
         assertEquals(
                 path.stream()
-                    .map(ElementAttributes::getElementUuid)
+                    .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(rootDirUuid)
         );
@@ -375,7 +380,7 @@ public class DirectoryTest {
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
-        checkElementNameExistInDirectory(rootDir10Uuid, "filter", ElementType.FILTER, HttpStatus.OK);
+        checkElementNameExistInDirectory(rootDir10Uuid, "filter", ElementType.FILTER.name(), HttpStatus.OK);
     }
 
     @Test
@@ -436,7 +441,7 @@ public class DirectoryTest {
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
-        checkElementNameExistInDirectory(rootDir10Uuid, "filter", ElementType.FILTER, HttpStatus.OK);
+        checkElementNameExistInDirectory(rootDir10Uuid, "filter", ElementType.FILTER.name(), HttpStatus.OK);
     }
 
     @Test
@@ -1010,7 +1015,7 @@ public class DirectoryTest {
         org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(newContingency, newFilter, newScript)));
 
         ElementAttributes directory = retrieveInsertAndCheckRootDirectory("testDir", false, "user1");
-        List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(ElementType.FILTER), 200);
+        List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(ElementType.FILTER.name()), 200);
         assertEquals(2, result.size());
         result.sort(Comparator.comparing(ElementAttributes::getElementName));
 
@@ -1196,7 +1201,7 @@ public class DirectoryTest {
         ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", ElementType.STUDY, null, "userId", "descr study");
         insertAndCheckSubElement(rootDirectoryUuid, false, subEltAttributes);
         checkDirectoryContent(rootDirectoryUuid, "userId", List.of(subDirAttributes1, subDirAttributes4, subEltAttributes));
-        checkElementNameExistInDirectory(rootDirectoryUuid, "newStudy", ElementType.STUDY, HttpStatus.OK);
+        checkElementNameExistInDirectory(rootDirectoryUuid, "newStudy", ElementType.STUDY.name(), HttpStatus.OK);
 
         assertNbElementsInRepositories(6, 6);
 
@@ -1309,7 +1314,7 @@ public class DirectoryTest {
     }
 
     private void checkRootDirectoriesList(String userId, List<String> elementTypes, List<ElementAttributes> list) throws Exception {
-        var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + String.join(",", elementTypes) : "";
+        var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
         String response = mockMvc.perform(get("/v1/root-directories" + types).header("userId", userId))
                              .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                              .andReturn()
@@ -1384,9 +1389,9 @@ public class DirectoryTest {
         return getElements(elementUuids, userId, strictMode, null, httpCodeExpected);
     }
 
-    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, List<ElementType> elementTypes, int httpCodeExpected) throws Exception {
+    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, List<String> elementTypes, int httpCodeExpected) throws Exception {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().map(ElementType::name).collect(Collectors.joining(",")) : "";
+        var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
 
         // get sub-elements list
         if (httpCodeExpected == 200) {
@@ -1560,7 +1565,7 @@ public class DirectoryTest {
     }
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, List<ElementAttributes> list) throws Exception {
-        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + String.join(",", types) : "";
+        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + types.stream().collect(Collectors.joining(",")) : "";
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + elementTypes)
                 .header("userId", userId))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
@@ -1578,7 +1583,7 @@ public class DirectoryTest {
                         .andExpect(status().isNotFound());
     }
 
-    private void checkElementNameExistInDirectory(UUID parentDirectoryUuid, String elementName, ElementType type, HttpStatus expectedStatus) throws Exception {
+    private void checkElementNameExistInDirectory(UUID parentDirectoryUuid, String elementName, String type, HttpStatus expectedStatus) throws Exception {
         mockMvc.perform(head(String.format("/v1/directories/%s/elements/%s/types/%s", parentDirectoryUuid, elementName, type)))
                         .andExpect(status().is(expectedStatus.value()));
     }
