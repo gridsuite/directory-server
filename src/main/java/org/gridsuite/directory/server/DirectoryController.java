@@ -266,7 +266,7 @@ public class DirectoryController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/elements/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/elements/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search elements in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})
     public ResponseEntity<List<DirectoryElementInfos>> searchElements(

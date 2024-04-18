@@ -1787,7 +1787,7 @@ public class DirectoryTest {
         String resultAsString;
 
         mvcResult = mockMvc
-                .perform(get("/v1/elements/search?userInput={request}", "r").header("userId", "user"))
+                .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header("userId", "user"))
                 .andExpectAll(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<Object> result = objectMapper.readValue(resultAsString, new TypeReference<>() { });
