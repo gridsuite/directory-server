@@ -1015,7 +1015,7 @@ public class DirectoryTest {
         org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(newContingency, newFilter, newScript)));
 
         ElementAttributes directory = retrieveInsertAndCheckRootDirectory("testDir", false, "user1");
-        List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(ElementType.FILTER.name()), 200);
+        List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(ElementType.FILTER), 200);
         assertEquals(2, result.size());
         result.sort(Comparator.comparing(ElementAttributes::getElementName));
 
@@ -1389,9 +1389,9 @@ public class DirectoryTest {
         return getElements(elementUuids, userId, strictMode, null, httpCodeExpected);
     }
 
-    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, List<String> elementTypes, int httpCodeExpected) throws Exception {
+    private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, List<ElementType> elementTypes, int httpCodeExpected) throws Exception {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
+        var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().map(ElementType::name).collect(Collectors.joining(",")) : "";
 
         // get sub-elements list
         if (httpCodeExpected == 200) {
