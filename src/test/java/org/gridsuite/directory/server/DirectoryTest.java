@@ -18,6 +18,7 @@ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosReposit
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.ElementType;
+import org.gridsuite.directory.server.services.StudyService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
 import org.junit.After;
@@ -27,6 +28,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -89,6 +91,9 @@ public class DirectoryTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private StudyService studyService;
 
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
@@ -204,7 +209,7 @@ public class DirectoryTest {
         //Check if all element's parents are retrieved in the right order
         assertEquals(
                 path.stream()
-                    .map(ElementAttributes::getElementUuid)
+                    .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
         );
@@ -235,7 +240,7 @@ public class DirectoryTest {
         //Check if all element's parents are retrieved in the right order
         assertEquals(
                 path.stream()
-                    .map(ElementAttributes::getElementUuid)
+                    .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
         );
@@ -281,7 +286,7 @@ public class DirectoryTest {
 
         assertEquals(
                 path.stream()
-                    .map(ElementAttributes::getElementUuid)
+                    .map(parent -> parent.getElementUuid())
                     .collect(Collectors.toList()),
                 Arrays.asList(rootDirUuid)
         );
@@ -1395,7 +1400,7 @@ public class DirectoryTest {
                     .andExpectAll(status().isOk(),
                             content().contentType(MediaType.APPLICATION_JSON))
                     .andReturn();
-            return objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            return objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<List<ElementAttributes>>() {
             });
         } else if (httpCodeExpected == 404) {
             mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids + typesPath)
