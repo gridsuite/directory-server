@@ -48,7 +48,7 @@ class SupervisionTest {
     @Test
     void testGetStashedElements() {
         when(directoryElementRepository.findAllByStashed(true)).thenReturn(expectedElements);
-        assertEquals(3, supervisionService.getStashedElements().size());
+        assertEquals(3, supervisionService.getStashedElementsAttributes().size());
 
         verify(directoryElementRepository, times(1)).findAllByStashed(true);
     }

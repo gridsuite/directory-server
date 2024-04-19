@@ -30,6 +30,8 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids);
 
+    List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNotAndStashed(List<UUID> uuids, UUID parentUuid, String type, boolean stashed);
+
     @Modifying
     @Transactional
     @Query("DELETE FROM DirectoryElementEntity d WHERE d.id IN :elementsUuids")

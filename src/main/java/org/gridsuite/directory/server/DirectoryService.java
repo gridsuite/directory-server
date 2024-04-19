@@ -438,10 +438,8 @@ public class DirectoryService {
         }
 
         // getting elements by "elementUuids", filtered if they don't belong to parentDirectoryUuid, or if they are directories
-        List<ElementAttributes> elementsAttributesToDelete = repositoryService.getElementEntities(elementsUuids).stream()
-            .filter(element -> parentDirectoryUuid.equals(element.getParentId()))
+        List<ElementAttributes> elementsAttributesToDelete = repositoryService.getElementEntities(elementsUuids, parentDirectoryUuid).stream()
             .map(ElementAttributes::toElementAttributes)
-            .filter(element -> !DIRECTORY.equals(element.getType()))
             .toList();
 
         // deleting all elements

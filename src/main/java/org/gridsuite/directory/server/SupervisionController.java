@@ -36,7 +36,7 @@ public class SupervisionController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "the list of elements in the trash")})
     public ResponseEntity<List<ElementAttributes>> getStashedElements() {
-        return ResponseEntity.ok().body(service.getStashedElements());
+        return ResponseEntity.ok().body(service.getStashedElementsAttributes());
     }
 
     @DeleteMapping(value = "/elements")

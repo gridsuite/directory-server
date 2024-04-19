@@ -14,12 +14,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @DisableElasticsearch
-class DirectoryUnitTest {
+class DirectoryServiceTest {
     @Autowired
     DirectoryService directoryService;
 
@@ -32,17 +34,16 @@ class DirectoryUnitTest {
     @MockBean
     NotificationService notificationService;
 
-    UUID parentDirectoryUuid = UUID.randomUUID();
+    DirectoryElementEntity parentDirectory = createRootElement("root", "DIRECTORY", false, "user1");
+    UUID parentDirectoryUuid = parentDirectory.getId();
 
-    DirectoryElementEntity parentDirectory = new DirectoryElementEntity(parentDirectoryUuid, null, "root", "DIRECTORY", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", false, null);
+    DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", "DIRECTORY", false, "user1");
+    DirectoryElementEntity filter1 = createElement(parentDirectoryUuid, "filter1", "FILTER", false, "user1");
+    DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", "STUDY", false, "user2");
+    DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", "STUDY", false, "user2");
+    DirectoryElementEntity studyFromOtherDir = createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", false, "user2");
 
-    DirectoryElementEntity dir1 = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "dir1", "DIRECTORY", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", false, null);
-    DirectoryElementEntity filter1 = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "filter1", "FILTER", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", false, null);
-    DirectoryElementEntity study1 = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "study1", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", false, null);
-    DirectoryElementEntity study2 = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "study2", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", false, null);
-    DirectoryElementEntity studyFromOtherDir = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "studyFromOtherDir", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", false, null);
-
-    DirectoryElementEntity privateDir = new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, "dir2", "DIRECTORY", true, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user1", false, null);
+    DirectoryElementEntity privateDir = createElement(parentDirectoryUuid, "dir2", "DIRECTORY", true, "user2");
 
     List<DirectoryElementEntity> elementsToDelete = List.of(
         dir1,
@@ -58,14 +59,17 @@ class DirectoryUnitTest {
         // following elements should not be deleted with this call
         // - elements with type DIRECTORY
         // - elements having a parent directory different from the one passed as parameter
-        List<UUID> elementExpectedToDeleteUuids = elementsToDelete.stream()
+
+        List<DirectoryElementEntity> elementsExpectedToDelete = elementsToDelete.stream()
             .filter(e -> !"DIRECTORY".equals(e.getType()))
             .filter(e -> e.getParentId().equals(parentDirectoryUuid))
-            .map(DirectoryElementEntity::getId)
             .toList();
 
+        List<UUID> elementExpectedToDeleteUuids = elementsExpectedToDelete.stream().map(e -> e.getId()).toList();
+
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
-        when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(elementsToDelete);
+        when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(elementToDeleteUuids, parentDirectoryUuid, "DIRECTORY", false))
+            .thenReturn(elementsExpectedToDelete);
 
         // acutal service call
         directoryService.deleteElements(elementToDeleteUuids, parentDirectoryUuid, "user1");
