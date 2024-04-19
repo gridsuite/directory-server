@@ -446,8 +446,9 @@ public class DirectoryService {
         repositoryService.deleteElements(elementsAttributesToDelete.stream().map(ElementAttributes::getElementUuid).toList());
 
         // extracting studyUuids from this list, to send specific notifications
-        List<UUID> studyToDeleteUuids = elementsAttributesToDelete.stream().filter(element -> STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid).toList();
-        studyToDeleteUuids.forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));
+        elementsAttributesToDelete.stream()
+            .filter(element -> STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid)
+            .forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));
 
         // sending directory update notification
         boolean isPrivate = repositoryService.isPrivateDirectory(parentDirectoryUuid);

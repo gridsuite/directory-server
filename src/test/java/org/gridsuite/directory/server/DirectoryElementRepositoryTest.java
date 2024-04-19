@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2024, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.directory.server;
 
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -13,9 +19,12 @@ import java.util.UUID;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.*;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-public class DirectoryElementRepositoryTest {
+class DirectoryElementRepositoryTest {
     @Autowired
     DirectoryElementRepository directoryElementRepository;
 
