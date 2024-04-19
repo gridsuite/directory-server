@@ -154,8 +154,8 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.findAllDescendants(elementId, userId);
     }
 
-    public List<DirectoryElementEntity> findAllAscendants(UUID elementId, String userId) {
-        return directoryElementRepository.findAllAscendants(elementId, userId);
+    public List<DirectoryElementEntity> findAllAscendants(UUID elementId) {
+        return directoryElementRepository.findAllAscendants(elementId);
     }
 
     public List<DirectoryElementEntity> getElementsStashed(String userId) {

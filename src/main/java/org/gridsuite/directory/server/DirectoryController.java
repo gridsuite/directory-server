@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
+
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -79,7 +81,12 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The searched element was not found")})
     public ResponseEntity<List<ElementAttributes>> getPath(@PathVariable("elementUuid") UUID elementUuid,
                                                                         @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
+
+        List<ElementAttributes> path = service.getPath(elementUuid);
+        if (!service.isPathAccessible(userId, path)) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(path);
     }
 
     @PostMapping(value = "/elements/stash")

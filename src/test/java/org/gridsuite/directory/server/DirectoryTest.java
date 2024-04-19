@@ -210,7 +210,7 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
         SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(study1UUID, "Doe");
-        assertRequestsCount(2, 0, 0, 0);
+        assertRequestsCount(1, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
@@ -242,7 +242,7 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory2UUID, false, study1Attributes);
         SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(filter1UUID, "Doe");
-        assertRequestsCount(2, 0, 0, 0);
+        assertRequestsCount(1, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
@@ -270,8 +270,8 @@ public class DirectoryTest {
 
         // Insert a filter in the directory2
         UUID filter1UUID = UUID.randomUUID();
-        ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
-        insertAndCheckSubElement(directory2UUID, true, study1Attributes);
+        ElementAttributes filter1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
+        insertAndCheckSubElement(directory2UUID, true, filter1Attributes);
 
         // Trying to get path of forbidden element
         mockMvc.perform(get("/v1/elements/" + filter1UUID + "/path")

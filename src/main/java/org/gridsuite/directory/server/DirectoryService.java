@@ -444,23 +444,14 @@ public class DirectoryService {
     /***
      * Retrieve path of an element
      * @param elementUuid element uuid
-     * @param userId owner
      * @return ElementAttributes of element and all it's parents up to root directory
      */
-    public List<ElementAttributes> getPath(UUID elementUuid, String userId) {
+    public List<ElementAttributes> getPath(UUID elementUuid) {
         DirectoryElementEntity currentElement = repositoryService.getElementEntity(elementUuid)
                 .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
 
-        boolean allowed = (Objects.equals(currentElement.getType(), DIRECTORY)) ?
-                toElementAttributes(currentElement).isAllowed(userId) :
-                getParentElement(elementUuid).isAllowed(userId);
-
-        if (!allowed) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
-
         List<ElementAttributes> path = new ArrayList<>(List.of(toElementAttributes(currentElement)));
-        path.addAll(repositoryService.findAllAscendants(elementUuid, userId).stream().map(ElementAttributes::toElementAttributes).toList());
+        path.addAll(repositoryService.findAllAscendants(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList());
 
         return path;
     }
@@ -558,6 +549,10 @@ public class DirectoryService {
                 });
     }
 
+    public boolean isPathAccessible(String userId, List<ElementAttributes> pathElements) {
+        return pathElements.stream().allMatch(e -> !DIRECTORY.equals(e.getType()) || e.isAllowed(userId));
+    }
+
     private String nameCandidate(String elementName, int n) {
         return elementName + '(' + n + ')';
     }
@@ -595,13 +590,22 @@ public class DirectoryService {
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
-        List<DirectoryElementInfos> directoryElementInfosList = directoryElementInfosService.searchElements(userInput, userId);
-        directoryElementInfosList.forEach(e -> {
-            Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(getPath(e.getId(), userId));
-            e.setPathUuid(uuidsAndNames.getFirst());
-            e.setPathName(uuidsAndNames.getSecond());
-        });
-        return directoryElementInfosList;
+        return directoryElementInfosService.searchElements(userInput, userId)
+                .stream()
+                .map(e -> {
+                    Optional<DirectoryElementInfos> elementAccessible = Optional.empty();
+                    List<ElementAttributes> path = getPath(e.getParentId());
+                    boolean isPathAccessible = isPathAccessible(userId, path);
+                    if (isPathAccessible) {
+                        Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(path);
+                        e.setPathUuid(uuidsAndNames.getFirst());
+                        e.setPathName(uuidsAndNames.getSecond());
+                        elementAccessible = Optional.of(e);
+                    }
+                    return elementAccessible;
+                })
+                .flatMap(Optional::stream)
+                .collect(Collectors.toList());
     }
 
     private List<DirectoryElementEntity> getEntitiesToRestore(List<DirectoryElementEntity> entities,
