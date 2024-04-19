@@ -17,7 +17,6 @@ import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.gridsuite.directory.server.services.StudyService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
 import org.junit.After;
@@ -27,7 +26,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -76,14 +74,12 @@ public class DirectoryTest {
     private static final UUID STUDY_RENAME_UUID = UUID.randomUUID();
     private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
-    private static final UUID STUDY_UPDATE_ACCESS_RIGHT_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID FILTER_UUID = UUID.randomUUID();
     private static final UUID CONTINGENCY_LIST_UUID = UUID.randomUUID();
 
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
-
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
 
@@ -92,9 +88,6 @@ public class DirectoryTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @MockBean
-    private StudyService studyService;
 
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
@@ -1713,6 +1706,43 @@ public class DirectoryTest {
         assertNbElementsInRepositories(3);
 
         //we don't care about message
+        output.clear();
+    }
+
+    @Test
+    @SneakyThrows
+    public void testDuplicateElementInDirectory() {
+        String userId = "user";
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "caseName", "CASE",
+                false, "user", null, now, now, userId);
+        String requestBody = objectMapper.writeValueAsString(caseElement);
+        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        checkRootDirectoryExists("dir1");
+        List<DirectoryElementEntity> directoryElementList = directoryElementRepository.findAll();
+        //there should be 3 elements, the 2 directories created and the one element inside
+        assertEquals(3, directoryElementList.size());
+        // duplicate the element
+        UUID newElementUuid = UUID.randomUUID();
+        UUID parentUUID = directoryElementList.get(2).getParentId();
+        UUID elementUUID = directoryElementList.get(2).getId();
+        String response = mockMvc.perform(post("/v1/elements/" + elementUUID + "/duplicate")
+                        .queryParam("newElementUuid", newElementUuid.toString())
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        ElementAttributes duplicatedElementId = objectMapper.readValue(response, ElementAttributes.class);
+
+        directoryElementList = directoryElementRepository.findAll();
+        //there should be 4 elements, the 2 directories created and the two elements inside
+        assertEquals(4, directoryElementList.size());
+        assertEquals("caseName(1)", duplicatedElementId.getElementName());
+        assertEquals(newElementUuid, duplicatedElementId.getElementUuid());
         output.clear();
     }
 
