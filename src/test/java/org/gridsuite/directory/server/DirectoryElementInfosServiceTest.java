@@ -12,6 +12,7 @@ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class DirectoryElementInfosServiceTest {
-
     @Autowired
     DirectoryRepositoryService repositoryService;
 
@@ -89,22 +89,44 @@ class DirectoryElementInfosServiceTest {
         List<DirectoryElementInfos> infos = List.of(directoryInfos, filterInfos, studyInfos, caseInfos, contingencyListInfos);
         repositoryService.saveElementsInfos(infos);
 
-        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", "admin"));
+        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a"));
         assertEquals(4, hits.size());
         assertTrue(hits.contains(studyInfos));
         assertTrue(hits.contains(caseInfos));
         assertTrue(hits.contains(filterInfos));
         assertTrue(hits.contains(contingencyListInfos));
 
-        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory", "admin"));
+        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory"));
         assertEquals(0, hits.size());
+    }
 
-        hits = new HashSet<>(directoryElementInfosService.searchElements("a", "admin1"));
-        assertEquals(2, hits.size());
-        assertTrue(hits.contains(studyInfos));
-        assertTrue(hits.contains(caseInfos));
+    @Test
+    public void searchSpecialChars() {
+        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("s+Ss+ss'sp&pn(n n)ne{e e}et<t t>te|eh-ht.th/hl\\lk[k k]k")
+                .type(STUDY).owner("admin1").parentId(UUID.randomUUID()).isPrivate(false)
+                .subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+        repositoryService.saveElementsInfos(List.of(studyInfos));
 
-        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory", "admin1"));
-        assertEquals(0, hits.size());
+        testNameFullAscii("s+S");
+        testNameFullAscii("s+s");
+        testNameFullAscii("h-h");
+        testNameFullAscii("t.t");
+        testNameFullAscii("h/h");
+        testNameFullAscii("l\\l");
+        testNameFullAscii("p&p");
+        testNameFullAscii("n(n");
+        testNameFullAscii("n)n");
+        testNameFullAscii("k[k");
+        testNameFullAscii("k]k");
+        testNameFullAscii("e{e");
+        testNameFullAscii("e}e");
+        testNameFullAscii("t<t");
+        testNameFullAscii("t>t");
+        testNameFullAscii("s's");
+        testNameFullAscii("e|e");
+    }
+
+    private void testNameFullAscii(String pat) {
+        Assert.assertEquals(1, directoryElementInfosService.searchElements(pat).size());
     }
 }

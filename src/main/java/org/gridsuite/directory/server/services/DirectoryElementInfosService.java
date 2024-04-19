@@ -40,20 +40,10 @@ public class DirectoryElementInfosService {
         this.elasticsearchOperations = elasticsearchOperations;
     }
 
-    public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
-        BoolQuery isOwnerQuery = new BoolQuery.Builder()
-                .must(Queries.termQuery(ELEMENT_PRIVATE_STATUS, Boolean.TRUE.toString())._toQuery())
-                .must(Queries.termQuery(ELEMENT_OWNER, userId)._toQuery())
-                .build();
-
-        BoolQuery isPublicQuery = new BoolQuery.Builder()
-                .mustNot(Queries.termQuery(ELEMENT_PRIVATE_STATUS, Boolean.TRUE.toString())._toQuery())
-                .build();
-
+    public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
         BoolQuery query = new BoolQuery.Builder()
                 .mustNot(Queries.termQuery(ELEMENT_TYPE, DIRECTORY)._toQuery())
                 .must(Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*")._toQuery())
-                .must(new BoolQuery.Builder().should(isOwnerQuery._toQuery()).should(isPublicQuery._toQuery()).build()._toQuery())
                 .build();
 
         NativeQuery nativeQuery = new NativeQueryBuilder()
@@ -61,7 +51,7 @@ public class DirectoryElementInfosService {
                 .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
                 .build();
 
-        return elasticsearchOperations.search(nativeQuery, DirectoryElementInfos.class).stream().map(SearchHit::getContent) .toList();
+        return elasticsearchOperations.search(nativeQuery, DirectoryElementInfos.class).stream().map(SearchHit::getContent).toList();
     }
 
     public static String escapeLucene(String s) {

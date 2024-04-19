@@ -1773,25 +1773,93 @@ public class DirectoryTest {
 
     @Test
     public void testSearch() throws Exception {
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-        ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "recollement", "STUDY",
-                false, "user", null, now, now, "user");
-        String requestBody = objectMapper.writeValueAsString(caseElement);
-        mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
-                        .header("userId", "user")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isOk());
+        // Insert a root directory
+        ElementAttributes rootDirectory = retrieveInsertAndCheckRootDirectory("directory", false, "userId2");
+        UUID rootDirectoryUuid = rootDirectory.getElementUuid();
+
+        // Insert a private sub-elements of type DIRECTORY
+        UUID subDirUuid1 = UUID.randomUUID();
+        ElementAttributes subDirAttributes1 = toElementAttributes(subDirUuid1, "newSubDir1", DIRECTORY, true, "userId1");
+
+        // Insert a public sub-elements of type DIRECTORY
+        UUID subDirUuid2 = UUID.randomUUID();
+        ElementAttributes subDirAttributes2 = toElementAttributes(subDirUuid2, "newSubDir2", DIRECTORY, false, "userId2");
+
+        // Insert a public sub-elements of type DIRECTORY
+        UUID subDirUuid3 = UUID.randomUUID();
+        ElementAttributes subDirAttributes3 = toElementAttributes(subDirUuid3, "newSubDir3", DIRECTORY, false, "userId3");
+
+        // Insert a public sub-elements of type DIRECTORY
+        UUID subDirUuid4 = UUID.randomUUID();
+        ElementAttributes subDirAttributes4 = toElementAttributes(subDirUuid4, "newSubDir4", DIRECTORY, false, "userId1");
+
+        // Insert a public sub-elements of type DIRECTORY
+        UUID subDirUuid5 = UUID.randomUUID();
+        ElementAttributes subDirAttributes5 = toElementAttributes(subDirUuid5, "newSubDir5", DIRECTORY, true, "userId3");
+
+        //            root
+        //         /   |   \
+        //       dir1  dir2  dir3
+        //        |           |
+        //       dir4        dir5
+
+        insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes1);
+        insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes2);
+        insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes3);
+        insertAndCheckSubElement(subDirUuid1, true, subDirAttributes4);
+        insertAndCheckSubElement(subDirUuid3, false, subDirAttributes5);
+
+        checkDirectoryContent(rootDirectoryUuid, "userId2", List.of(subDirAttributes2, subDirAttributes3));
+        checkDirectoryContent(subDirUuid1, "userId1", List.of(subDirAttributes4));
+        checkDirectoryContent(subDirUuid3, "userId3", List.of(subDirAttributes5));
+
+        // Insert a sub-element of type STUDY
+        ElementAttributes subElt1Attributes = toElementAttributes(UUID.randomUUID(), "recollement", STUDY, null, "userId1", "");
+        insertAndCheckSubElement(subDirUuid1, true, subElt1Attributes);
+
+        // Insert a sub-element of type STUDY
+        ElementAttributes subElt2Attributes = toElementAttributes(UUID.randomUUID(), "recollement", STUDY, null, "userId2", "");
+        insertAndCheckSubElement(subDirUuid2, false, subElt2Attributes);
+
+        // Insert a sub-element of type STUDY
+        ElementAttributes subElt3Attributes = toElementAttributes(UUID.randomUUID(), "recollement", STUDY, null, "userId3", "");
+        insertAndCheckSubElement(subDirUuid3, false, subElt3Attributes);
+
+        // Insert a sub-element of type STUDY
+        ElementAttributes subElt4Attributes = toElementAttributes(UUID.randomUUID(), "recollement", STUDY, null, "userId1", "");
+        insertAndCheckSubElement(subDirUuid4, false, subElt4Attributes);
+
+        // Insert a sub-element of type STUDY
+        ElementAttributes subElt5Attributes = toElementAttributes(UUID.randomUUID(), "recollement", STUDY, null, "userId3", "");
+        insertAndCheckSubElement(subDirUuid5, true, subElt5Attributes);
+
+        assertNbElementsInRepositories(11, 11);
 
         MvcResult mvcResult;
         String resultAsString;
 
         mvcResult = mockMvc
-                .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header("userId", "user"))
+                .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header("userId", "useId1"))
                 .andExpectAll(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<Object> result = objectMapper.readValue(resultAsString, new TypeReference<>() { });
-        assertEquals(1, result.size());
+        assertEquals(2, result.size());
+        output.clear();
+
+        mvcResult = mockMvc
+                .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header("userId", "userId2"))
+                .andExpectAll(status().isOk()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        result = objectMapper.readValue(resultAsString, new TypeReference<>() { });
+        assertEquals(2, result.size());
+        output.clear();
+
+        mvcResult = mockMvc
+                .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header("userId", "userId3"))
+                .andExpectAll(status().isOk()).andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        result = objectMapper.readValue(resultAsString, new TypeReference<>() { });
+        assertEquals(3, result.size());
         output.clear();
     }
 

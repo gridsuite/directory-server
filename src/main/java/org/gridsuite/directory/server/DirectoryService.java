@@ -590,7 +590,7 @@ public class DirectoryService {
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
-        return directoryElementInfosService.searchElements(userInput, userId)
+        return directoryElementInfosService.searchElements(userInput)
                 .stream()
                 .map(e -> {
                     Optional<DirectoryElementInfos> elementAccessible = Optional.empty();
