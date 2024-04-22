@@ -14,7 +14,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
-import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -94,33 +93,6 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
     }
 
-    @PostMapping(value = "/elements/stash")
-    @Operation(summary = "Stash elements")
-        @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were stashed")})
-    public ResponseEntity<Void> stashElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
-                                              @RequestHeader("userId") String userId) {
-        service.stashElements(elementsUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/elements/{parentUuid}/restore")
-    @Operation(summary = "Restore elements")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were restored ")})
-    public ResponseEntity<Void> restoreElements(@RequestBody List<UUID> elementsUuid,
-                                                @PathVariable("parentUuid") UUID parentUuid,
-                                                @RequestHeader("userId") String userId) {
-        service.restoreElements(elementsUuid, parentUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/elements/stash")
-    @Operation(summary = "Get the list of elements in the trash")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "the list of elements in the trash")})
-    public ResponseEntity<List<Pair<ElementAttributes, Long>>> getStashedElements(@RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().body(service.getStashedElements(userId));
-    }
-
     @DeleteMapping(value = "/elements/{elementUuid}")
     @Operation(summary = "Remove directory/element")
     @ApiResponses(value = {
@@ -137,8 +109,9 @@ public class DirectoryController {
     @Operation(summary = "Remove directories/elements")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "Directory/element was successfully removed"))
     public ResponseEntity<Void> deleteElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
+                                               @Parameter(description = "parent directory UUID of elements to delete") @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
                                                @RequestHeader("userId") String userId) {
-        service.deleteElements(elementsUuid, userId);
+        service.deleteElements(elementsUuid, parentDirectoryUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -166,9 +139,8 @@ public class DirectoryController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
     public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                         @RequestHeader("userId") String userId,
-                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
-                                                                        @RequestParam(value = "stashed", required = false, defaultValue = "false") boolean stashed) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, types, stashed));
+                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, types));
     }
 
     @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
