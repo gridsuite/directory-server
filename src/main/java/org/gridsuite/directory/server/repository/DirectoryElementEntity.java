@@ -14,6 +14,7 @@ import jakarta.persistence.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -80,6 +81,9 @@ public class DirectoryElementEntity {
             this.description = newElementAttributes.getDescription();
         }
 
+        if (Objects.nonNull(newElementAttributes.getLastModificationDate())) {
+            this.lastModificationDate = LocalDateTime.now(ZoneOffset.UTC);
+        }
         return this;
     }
 
