@@ -9,6 +9,7 @@ package org.gridsuite.directory.server.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,4 +70,16 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     void deleteById(UUID id);
 
     List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
+
+    @Query(nativeQuery = true, value =
+            "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id) AS ( " +
+                    "  SELECT id AS element_id, parent_id AS parent_element_id FROM element WHERE id = :elementId " +
+                    "  UNION ALL " +
+                    "  SELECT e.id AS element_id, e.parent_id AS parent_element_id " +
+                    "  FROM element e " +
+                    "  INNER JOIN ElementHierarchy ON ElementHierarchy.parent_element_id = e.id WHERE e.parent_id IS NOT NULL) " +
+                    "SELECT * FROM element e " +
+                    "JOIN ElementHierarchy eh ON e.id = eh.parent_element_id " +
+                    "WHERE e.stashed = false ")
+    List<DirectoryElementEntity> findAllAscendants(@Param("elementId") UUID elementId);
 }

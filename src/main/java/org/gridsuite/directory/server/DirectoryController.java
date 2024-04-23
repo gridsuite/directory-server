@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -77,7 +80,12 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The searched element was not found")})
     public ResponseEntity<List<ElementAttributes>> getPath(@PathVariable("elementUuid") UUID elementUuid,
                                                                         @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
+
+        List<ElementAttributes> path = service.getPath(elementUuid);
+        if (!service.isPathAccessible(userId, path)) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(path);
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")
@@ -235,5 +243,15 @@ public class DirectoryController {
     public ResponseEntity<Void> reindexAllElements() {
         service.reindexAllElements();
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/elements/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search elements in elasticsearch")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})
+    public ResponseEntity<List<DirectoryElementInfos>> searchElements(
+            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
+            @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(service.searchElements(userInput, userId));
     }
 }
