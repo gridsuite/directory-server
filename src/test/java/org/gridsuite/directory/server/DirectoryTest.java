@@ -18,6 +18,7 @@ import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.StudyService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
 import org.junit.After;
@@ -27,11 +28,13 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
@@ -56,6 +59,8 @@ import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -95,6 +100,9 @@ public class DirectoryTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private StudyService studyService;
 
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
@@ -578,6 +586,7 @@ public class DirectoryTest {
 
     @Test
     public void testMoveStudy() throws Exception {
+        when(studyService.notifyStudyUpdate(any(), any())).thenReturn(ResponseEntity.of(Optional.empty()));
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", false, "Doe");
 
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", false, "Doe");
@@ -818,6 +827,7 @@ public class DirectoryTest {
 
     @Test
     public void testRenameStudy() throws Exception {
+        when(studyService.notifyStudyUpdate(any(), any())).thenReturn(ResponseEntity.of(Optional.empty()));
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
@@ -837,6 +847,7 @@ public class DirectoryTest {
 
     @Test
     public void testRenameStudyToSameName() throws Exception {
+        when(studyService.notifyStudyUpdate(any(), any())).thenReturn(ResponseEntity.of(Optional.empty()));
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a public root directory user1
