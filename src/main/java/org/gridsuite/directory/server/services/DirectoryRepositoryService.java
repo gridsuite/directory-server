@@ -15,7 +15,6 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +41,10 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.findById(elementUuid);
     }
 
+    public List<DirectoryElementEntity> getElementEntities(List<UUID> uuids, UUID parentUuid) {
+        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, "DIRECTORY", false);
+    }
+
     public boolean isRootDirectory(UUID directoryUuid) {
         return getParentUuid(directoryUuid) == null;
     }
@@ -59,16 +62,6 @@ public class DirectoryRepositoryService {
 
     public boolean isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
         return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
-    }
-
-    public void saveStashedElements(@NonNull List<DirectoryElementEntity> directoryElementEntities) {
-        directoryElementRepository.saveAll(directoryElementEntities);
-        directoryElementInfosRepository.deleteAllById(directoryElementEntities.stream().map(DirectoryElementEntity::getId).toList());
-    }
-
-    public void saveRestoredElements(@NonNull List<DirectoryElementEntity> directoryElementEntities) {
-        directoryElementRepository.saveAll(directoryElementEntities);
-        saveElementsInfos(directoryElementEntities.stream().map(DirectoryElementEntity::toDirectoryElementInfos).toList());
     }
 
     public void saveElementsInfos(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
@@ -118,16 +111,12 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getSubdirectoriesCounts(subDirectories, elementTypes, owner);
     }
 
-    public List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed) {
-        return directoryElementRepository.findAllByIdInAndStashed(uuids, stashed);
+    public List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids) {
+        return directoryElementRepository.findAllByIdInAndStashed(uuids, false);
     }
 
-    public List<DirectoryElementEntity> findAllDescendantsWithSameStashDate(UUID elementId, String userId) {
-        return directoryElementRepository.findAllDescendantsWithSameStashDate(elementId, userId);
-    }
-
-    public List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, LocalDateTime stashDate) {
-        return directoryElementRepository.findAllByParentIdAndStashedAndStashDate(parentId, stashed, stashDate);
+    public List<DirectoryElementEntity> findAllByParentId(UUID parentId) {
+        return directoryElementRepository.findAllByParentIdAndStashed(parentId, false);
     }
 
     public List<DirectoryElementEntity> findRootDirectoriesByUserId(String owner) {
@@ -146,23 +135,7 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(type, parentId, name);
     }
 
-    public List<DirectoryElementEntity> findAllStashedElements(List<UUID> uuids, boolean stashed, String userId) {
-        return directoryElementRepository.findAllStashedElements(uuids, stashed, userId);
-    }
-
-    public List<DirectoryElementEntity> findAllDescendants(UUID elementId, String userId) {
-        return directoryElementRepository.findAllDescendants(elementId, userId);
-    }
-
     public List<DirectoryElementEntity> findAllAscendants(UUID elementId) {
         return directoryElementRepository.findAllAscendants(elementId);
-    }
-
-    public List<DirectoryElementEntity> getElementsStashed(String userId) {
-        return directoryElementRepository.getElementsStashed(userId);
-    }
-
-    public Long countDescendants(UUID elementId, String userId) {
-        return directoryElementRepository.countDescendants(elementId, userId);
     }
 }
