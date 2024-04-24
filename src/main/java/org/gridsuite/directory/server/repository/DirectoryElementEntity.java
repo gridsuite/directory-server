@@ -84,6 +84,10 @@ public class DirectoryElementEntity {
         if (Objects.nonNull(newElementAttributes.getLastModificationDate())) {
             this.lastModificationDate = LocalDateTime.now(ZoneOffset.UTC);
         }
+
+        if (Objects.nonNull(newElementAttributes.getLastModifiedBy())) {
+            this.lastModifiedBy = newElementAttributes.getLastModifiedBy();
+        }
         return this;
     }
 
