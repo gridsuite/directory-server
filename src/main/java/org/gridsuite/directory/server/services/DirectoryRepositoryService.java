@@ -134,4 +134,8 @@ public class DirectoryRepositoryService {
     public List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name) {
         return directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(type, parentId, name);
     }
+
+    public List<DirectoryElementEntity> findAllAscendants(UUID elementId) {
+        return directoryElementRepository.findAllAscendants(elementId);
+    }
 }
