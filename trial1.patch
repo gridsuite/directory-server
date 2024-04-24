@@ -1,0 +1,506 @@
+diff --git a/src/main/java/org/gridsuite/directory/server/DirectoryService.java b/src/main/java/org/gridsuite/directory/server/DirectoryService.java
+index 62a2d39..a6550fa 100644
+--- a/src/main/java/org/gridsuite/directory/server/DirectoryService.java
++++ b/src/main/java/org/gridsuite/directory/server/DirectoryService.java
+@@ -23,9 +23,8 @@ import org.springframework.messaging.Message;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Transactional;
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
+ import java.time.ZoneOffset;
+-import java.time.ZonedDateTime;
+ import java.time.temporal.ChronoUnit;
+ import java.util.*;
+ import java.util.function.Consumer;
+@@ -144,7 +143,7 @@ public class DirectoryService {
+     /* methods */
+     private DirectoryElementEntity insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
+         //We need to limit the precision to avoid database precision storage limit issue (postgres has a precision of 6 digits while h2 can go to 9)
+-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
++        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+         return repositoryService.saveElement(
+                 new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
+                         parentDirectoryUuid,
+@@ -185,7 +184,7 @@ public class DirectoryService {
+ 
+     public void createElementInDirectoryPath(String directoryPath, ElementAttributes elementAttributes, String userId) {
+         String[] directoryPathSplit = directoryPath.split("/");
+-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
++        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+         UUID currentDirectoryUuid;
+         UUID parentDirectoryUuid = null;
+ 
+@@ -261,7 +260,7 @@ public class DirectoryService {
+     }
+ 
+     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId, boolean stashed) {
+-        LocalDateTime stashDate = stashed ? getDirectoryElementEntity(directoryUuid).getStashDate() : null;
++        OffsetDateTime stashDate = stashed ? getDirectoryElementEntity(directoryUuid).getStashDate() : null;
+         List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentIdAndStashedAndStashDate(directoryUuid, stashed, stashDate);
+         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
+         return directoryElements
+@@ -314,7 +313,7 @@ public class DirectoryService {
+     }
+ 
+     @Transactional
+-    public void updateElementLastModifiedAttributes(UUID elementUuid, LocalDateTime lastModificationDate, String lastModifiedBy) {
++    public void updateElementLastModifiedAttributes(UUID elementUuid, OffsetDateTime lastModificationDate, String lastModifiedBy) {
+         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
+         elementToUpdate.setLastModificationDate(lastModificationDate);
+         elementToUpdate.setLastModifiedBy(lastModifiedBy);
+@@ -664,7 +663,7 @@ public class DirectoryService {
+ 
+     public void stashElements(List<UUID> elementsUuid, String userId) {
+         // we add the same stash date to all the elements that are deleted together
+-        LocalDateTime stashDate = LocalDateTime.now();
++        OffsetDateTime stashDate = OffsetDateTime.now();
+         List<DirectoryElementEntity> entities = repositoryService.findAllByIdInAndStashed(elementsUuid, false);
+         List<DirectoryElementEntity> notUpdatableEntities = new ArrayList<>();
+         List<DirectoryElementEntity> updatableEntities = getEntitiesCreatedBySameUser(entities, notUpdatableEntities, userId);
+diff --git a/src/main/java/org/gridsuite/directory/server/dto/ElementAttributes.java b/src/main/java/org/gridsuite/directory/server/dto/ElementAttributes.java
+index bf57476..2df151f 100644
+--- a/src/main/java/org/gridsuite/directory/server/dto/ElementAttributes.java
++++ b/src/main/java/org/gridsuite/directory/server/dto/ElementAttributes.java
+@@ -12,8 +12,8 @@ import lombok.experimental.SuperBuilder;
+ import org.gridsuite.directory.server.DirectoryException;
+ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+ 
++import java.time.OffsetDateTime;
+ import java.time.ZoneOffset;
+-import java.time.ZonedDateTime;
+ import java.util.UUID;
+ 
+ import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
+@@ -45,9 +45,9 @@ public class ElementAttributes {
+ 
+     private String description;
+ 
+-    private ZonedDateTime creationDate;
++    private OffsetDateTime creationDate;
+ 
+-    private ZonedDateTime lastModificationDate;
++    private OffsetDateTime lastModificationDate;
+ 
+     private String lastModifiedBy;
+ 
+@@ -63,7 +63,7 @@ public class ElementAttributes {
+     }
+ 
+     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
+-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription(), ZonedDateTime.ofInstant(entity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), ZonedDateTime.ofInstant(entity.getLastModificationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), entity.getLastModifiedBy());
++        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription(), OffsetDateTime.ofInstant(entity.getCreationDate().toInstant(), ZoneOffset.UTC), OffsetDateTime.ofInstant(entity.getLastModificationDate().toInstant(), ZoneOffset.UTC), entity.getLastModifiedBy());
+     }
+ 
+     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
+@@ -80,13 +80,13 @@ public class ElementAttributes {
+     }
+ 
+     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+-                                                        Boolean isPrivate, @NonNull String userId, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
++                                                        Boolean isPrivate, @NonNull String userId, String elementDescription, OffsetDateTime creationDate, OffsetDateTime lastModificationDate, String lastModifiedBy) {
+         return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
+     }
+ 
+     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+                                                         @NonNull AccessRightsAttributes accessRights, @NonNull String userId,
+-                                                        long subdirectoriesCount, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
++                                                        long subdirectoriesCount, String elementDescription, OffsetDateTime creationDate, OffsetDateTime lastModificationDate, String lastModifiedBy) {
+         return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
+             .type(elementType).accessRights(accessRights).owner(userId).creationDate(creationDate)
+             .subdirectoriesCount(subdirectoriesCount).description(elementDescription)
+diff --git a/src/main/java/org/gridsuite/directory/server/dto/RootDirectoryAttributes.java b/src/main/java/org/gridsuite/directory/server/dto/RootDirectoryAttributes.java
+index 11e6b99..567c77d 100644
+--- a/src/main/java/org/gridsuite/directory/server/dto/RootDirectoryAttributes.java
++++ b/src/main/java/org/gridsuite/directory/server/dto/RootDirectoryAttributes.java
+@@ -10,7 +10,7 @@ import lombok.AllArgsConstructor;
+ import lombok.Getter;
+ import lombok.NoArgsConstructor;
+ 
+-import java.time.ZonedDateTime;
++import java.time.OffsetDateTime;
+ 
+ /**
+  * @author Nicolas Noir <nicolas.noir at rte-france.com>
+@@ -27,9 +27,9 @@ public class RootDirectoryAttributes {
+ 
+     private String description;
+ 
+-    private ZonedDateTime creationDate;
++    private OffsetDateTime creationDate;
+ 
+-    private ZonedDateTime lastModificationDate;
++    private OffsetDateTime lastModificationDate;
+ 
+     private String lastModifiedBy;
+ }
+diff --git a/src/main/java/org/gridsuite/directory/server/dto/elasticsearch/DirectoryElementInfos.java b/src/main/java/org/gridsuite/directory/server/dto/elasticsearch/DirectoryElementInfos.java
+index d3f7919..a4d0828 100644
+--- a/src/main/java/org/gridsuite/directory/server/dto/elasticsearch/DirectoryElementInfos.java
++++ b/src/main/java/org/gridsuite/directory/server/dto/elasticsearch/DirectoryElementInfos.java
+@@ -13,7 +13,7 @@ import org.springframework.data.annotation.Id;
+ import org.springframework.data.annotation.TypeAlias;
+ import org.springframework.data.elasticsearch.annotations.*;
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
+ import java.util.UUID;
+ 
+ /**
+@@ -51,8 +51,8 @@ public class DirectoryElementInfos {
+     @Field(type = FieldType.Long)
+     private long subdirectoriesCount;
+ 
+-    @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
+-    LocalDateTime lastModificationDate;
++    @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis, pattern = "yyyy-MM-dd'T'HH:mm:ssz")
++    OffsetDateTime lastModificationDate;
+ 
+     @Field(type = FieldType.Boolean)
+     private Boolean isPrivate;
+diff --git a/src/main/java/org/gridsuite/directory/server/repository/DirectoryElementEntity.java b/src/main/java/org/gridsuite/directory/server/repository/DirectoryElementEntity.java
+index f838d11..6fb6b1f 100644
+--- a/src/main/java/org/gridsuite/directory/server/repository/DirectoryElementEntity.java
++++ b/src/main/java/org/gridsuite/directory/server/repository/DirectoryElementEntity.java
+@@ -13,7 +13,9 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
+ import jakarta.persistence.*;
+ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
++import java.time.ZoneOffset;
++import java.time.temporal.ChronoUnit;
+ import java.util.Objects;
+ import java.util.UUID;
+ 
+@@ -52,11 +54,11 @@ public class DirectoryElementEntity {
+     @Column(name = "description", columnDefinition = "CLOB")
+     private String description;
+ 
+-    @Column(name = "creationDate")
+-    private LocalDateTime creationDate;
++    @Column(name = "creationDate", columnDefinition = "TIMESTAMP WITH TIME ZONE")
++    private OffsetDateTime creationDate;
+ 
+-    @Column(name = "lastModificationDate")
+-    private LocalDateTime lastModificationDate;
++    @Column(name = "lastModificationDate", columnDefinition = "TIMESTAMP WITH TIME ZONE")
++    private OffsetDateTime lastModificationDate;
+ 
+     @Column(name = "lastModifiedBy")
+     private String lastModifiedBy;
+@@ -65,7 +67,7 @@ public class DirectoryElementEntity {
+     private boolean stashed;
+ 
+     @Column(name = "stash_date")
+-    private LocalDateTime stashDate;
++    private OffsetDateTime stashDate;
+ 
+     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
+         if (StringUtils.isNotBlank(newElementAttributes.getElementName())) {
+@@ -79,6 +81,8 @@ public class DirectoryElementEntity {
+         if (Objects.nonNull(newElementAttributes.getDescription())) {
+             this.description = newElementAttributes.getDescription();
+         }
++        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
++        this.lastModificationDate = now;
+ 
+         return this;
+     }
+@@ -99,7 +103,7 @@ public class DirectoryElementEntity {
+             Objects.isNull(newElementAttributes.getLastModifiedBy());
+     }
+ 
+-    public DirectoryElementEntity stashElement(boolean stashed, LocalDateTime stashDate) {
++    public DirectoryElementEntity stashElement(boolean stashed, OffsetDateTime stashDate) {
+         this.stashDate = stashDate;
+         this.stashed = stashed;
+         return this;
+diff --git a/src/main/java/org/gridsuite/directory/server/repository/DirectoryElementRepository.java b/src/main/java/org/gridsuite/directory/server/repository/DirectoryElementRepository.java
+index d9fc189..41d73c4 100644
+--- a/src/main/java/org/gridsuite/directory/server/repository/DirectoryElementRepository.java
++++ b/src/main/java/org/gridsuite/directory/server/repository/DirectoryElementRepository.java
+@@ -13,7 +13,7 @@ import org.springframework.data.repository.query.Param;
+ import org.springframework.stereotype.Repository;
+ import org.springframework.transaction.annotation.Transactional;
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
+ import java.util.List;
+ import java.util.UUID;
+ 
+@@ -26,7 +26,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
+ 
+     List<DirectoryElementEntity> findAllByStashed(boolean stashed);
+ 
+-    List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, LocalDateTime stashDate);
++    List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, OffsetDateTime stashDate);
+ 
+     List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed);
+ 
+diff --git a/src/main/java/org/gridsuite/directory/server/services/ConsumerService.java b/src/main/java/org/gridsuite/directory/server/services/ConsumerService.java
+index fd0909c..0abb159 100644
+--- a/src/main/java/org/gridsuite/directory/server/services/ConsumerService.java
++++ b/src/main/java/org/gridsuite/directory/server/services/ConsumerService.java
+@@ -11,7 +11,7 @@ package org.gridsuite.directory.server.services;
+  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+  */
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
+ import java.util.UUID;
+ import java.util.function.Consumer;
+ 
+@@ -43,7 +43,7 @@ public class ConsumerService {
+             String modificationDateStr = message.getHeaders().get(HEADER_MODIFICATION_DATE, String.class);
+ 
+             UUID elementUpdatedUuid = UUID.fromString(elementUpdatedUuidStr);
+-            LocalDateTime modificationDate = LocalDateTime.parse(modificationDateStr);
++            OffsetDateTime modificationDate = OffsetDateTime.parse(modificationDateStr);
+ 
+             directoryService.updateElementLastModifiedAttributes(elementUpdatedUuid, modificationDate, modifiedBy);
+         };
+diff --git a/src/main/java/org/gridsuite/directory/server/services/DirectoryRepositoryService.java b/src/main/java/org/gridsuite/directory/server/services/DirectoryRepositoryService.java
+index 8c74fc6..b15ac9e 100644
+--- a/src/main/java/org/gridsuite/directory/server/services/DirectoryRepositoryService.java
++++ b/src/main/java/org/gridsuite/directory/server/services/DirectoryRepositoryService.java
+@@ -15,7 +15,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+ import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.stereotype.Service;
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.UUID;
+@@ -126,7 +126,7 @@ public class DirectoryRepositoryService {
+         return directoryElementRepository.findAllDescendantsWithSameStashDate(elementId, userId);
+     }
+ 
+-    public List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, LocalDateTime stashDate) {
++    public List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, OffsetDateTime stashDate) {
+         return directoryElementRepository.findAllByParentIdAndStashedAndStashDate(parentId, stashed, stashDate);
+     }
+ 
+diff --git a/src/main/resources/db/changelog/db.changelog-master.yaml b/src/main/resources/db/changelog/db.changelog-master.yaml
+index 2075d6e..24e641a 100644
+--- a/src/main/resources/db/changelog/db.changelog-master.yaml
++++ b/src/main/resources/db/changelog/db.changelog-master.yaml
+@@ -34,3 +34,7 @@ databaseChangeLog:
+   - include:
+       file: changesets/changelog_20240130T102632Z.xml
+       relativeToChangelogFile: true
++
++  - include:
++      file: changesets/changelog_20240421T212420Z.xml
++      relativeToChangelogFile: true
+diff --git a/src/test/java/org/gridsuite/directory/server/DirectoryElementInfosServiceTest.java b/src/test/java/org/gridsuite/directory/server/DirectoryElementInfosServiceTest.java
+index 38c92d3..db8b3b9 100644
+--- a/src/test/java/org/gridsuite/directory/server/DirectoryElementInfosServiceTest.java
++++ b/src/test/java/org/gridsuite/directory/server/DirectoryElementInfosServiceTest.java
+@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.boot.test.context.SpringBootTest;
+ import org.springframework.test.context.junit.jupiter.SpringExtension;
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
+ import java.util.List;
+ import java.util.UUID;
+ 
+@@ -48,10 +48,10 @@ class DirectoryElementInfosServiceTest {
+ 
+     @Test
+     void testAddDeleteElementInfos() {
+-        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type("STUDY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+-        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type("FILTER").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+-        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type("DIRECTORY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
+-        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type("CONTINGENCY_LIST").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(LocalDateTime.now().withNano(0)).build();
++        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type("STUDY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now().withNano(0)).build();
++        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type("FILTER").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now().withNano(0)).build();
++        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type("DIRECTORY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now().withNano(0)).build();
++        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type("CONTINGENCY_LIST").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now().withNano(0)).build();
+ 
+         // Add
+         List<DirectoryElementInfos> infos = List.of(studyInfos, filterInfos, directoryInfos, contingencyListInfos);
+diff --git a/src/test/java/org/gridsuite/directory/server/DirectoryTest.java b/src/test/java/org/gridsuite/directory/server/DirectoryTest.java
+index 321c5f8..4d85877 100644
+--- a/src/test/java/org/gridsuite/directory/server/DirectoryTest.java
++++ b/src/test/java/org/gridsuite/directory/server/DirectoryTest.java
+@@ -43,9 +43,8 @@ import org.springframework.test.web.servlet.MockMvc;
+ import org.springframework.test.web.servlet.MvcResult;
+ import org.springframework.util.CollectionUtils;
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
+ import java.time.ZoneOffset;
+-import java.time.ZonedDateTime;
+ import java.time.temporal.ChronoUnit;
+ import java.util.*;
+ import java.util.stream.Collectors;
+@@ -131,7 +130,7 @@ public class DirectoryTest {
+         // Insert a root directory
+         ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", false, "userId");
+         UUID uuidNewDirectory = newDirectory.getElementUuid();
+-        ZonedDateTime creationDateNewDirectory = newDirectory.getCreationDate();
++        OffsetDateTime creationDateNewDirectory = newDirectory.getCreationDate();
+ 
+         // Insert a sub-element of type DIRECTORY
+         ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, true, "userId");
+@@ -669,11 +668,11 @@ public class DirectoryTest {
+         // Insert a root directory user1
+         ElementAttributes rootDir1 = retrieveInsertAndCheckRootDirectory("rootDir1", true, "user1");
+         UUID rootDir1Uuid = rootDir1.getElementUuid();
+-        ZonedDateTime rootDir1CreationDate = rootDir1.getCreationDate();
++        OffsetDateTime rootDir1CreationDate = rootDir1.getCreationDate();
+         // Insert a root directory user2
+         ElementAttributes rootDir2 = retrieveInsertAndCheckRootDirectory("rootDir2", true, "user2");
+         UUID rootDir2Uuid = rootDir2.getElementUuid();
+-        ZonedDateTime rootDir2CreationDate = rootDir2.getCreationDate();
++        OffsetDateTime rootDir2CreationDate = rootDir2.getCreationDate();
+ 
+         checkRootDirectoriesList("user1", List.of(toElementAttributes(rootDir1Uuid, "rootDir1", DIRECTORY, true, "user1", null, rootDir1CreationDate, rootDir1CreationDate, "user1")));
+ 
+@@ -889,7 +888,7 @@ public class DirectoryTest {
+         // Insert a public root directory user1
+         ElementAttributes rootDir = retrieveInsertAndCheckRootDirectory("rootDir1", true, "Doe");
+         UUID rootDirUuid = rootDir.getElementUuid();
+-        ZonedDateTime rootDirCreationDate = rootDir.getCreationDate();
++        OffsetDateTime rootDirCreationDate = rootDir.getCreationDate();
+ 
+         assertNbElementsInRepositories(1);
+ 
+@@ -923,7 +922,7 @@ public class DirectoryTest {
+         // Insert a public root directory user1
+         ElementAttributes rootDir = retrieveInsertAndCheckRootDirectory("rootDir1", false, "Doe");
+         UUID rootDirUuid = rootDir.getElementUuid();
+-        ZonedDateTime rootDirCreationDate = rootDir.getCreationDate();
++        OffsetDateTime rootDirCreationDate = rootDir.getCreationDate();
+ 
+         //set directory to private
+         updateAccessRights(rootDirUuid, rootDirUuid, "Doe", true, true, false);
+@@ -1145,7 +1144,7 @@ public class DirectoryTest {
+         ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, null, "userId", "descr study");
+         insertAndCheckSubElement(uuidNewDirectory, false, subEltAttributes);
+ 
+-        LocalDateTime newModificationDate = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
++        OffsetDateTime newModificationDate = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
+ 
+         String userMakingModification = "newUser";
+ 
+@@ -1162,7 +1161,7 @@ public class DirectoryTest {
+ 
+         ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
+ 
+-        assertEquals(newModificationDate, updatedElement.getLastModificationDate().toLocalDateTime());
++        assertEquals(newModificationDate, updatedElement.getLastModificationDate());
+         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
+     }
+ 
+@@ -1338,7 +1337,7 @@ public class DirectoryTest {
+                 .getContentAsString();
+ 
+         UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getElementUuid();
+-        ZonedDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
++        OffsetDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
+ 
+         ElementAttributes newDirectoryAttributes = toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, isPrivate, userId, null, creationDateNewDirectory, creationDateNewDirectory, userId);
+         assertElementIsProperlyInserted(newDirectoryAttributes);
+@@ -1368,7 +1367,7 @@ public class DirectoryTest {
+                 .getContentAsString();
+ 
+         UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getElementUuid();
+-        ZonedDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
++        OffsetDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
+ 
+         assertElementIsProperlyInserted(toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, isPrivate, userId, null, creationDateNewDirectory, creationDateNewDirectory, userId));
+ 
+@@ -1424,7 +1423,7 @@ public class DirectoryTest {
+ 
+         UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class)
+                 .getElementUuid();
+-        ZonedDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class).getCreationDate();
++        OffsetDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class).getCreationDate();
+         String lastModifiedBy = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class).getLastModifiedBy();
+ 
+         subElementAttributes.setElementUuid(uuidNewDirectory);
+@@ -1679,7 +1678,7 @@ public class DirectoryTest {
+     @SneakyThrows
+     public void testCreateElementInDirectory() {
+         String userId = "user";
+-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
++        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+         ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "caseName", "CASE",
+                 false, "user", null, now, now, userId);
+         String requestBody = objectMapper.writeValueAsString(caseElement);
+@@ -1742,7 +1741,7 @@ public class DirectoryTest {
+     @Test
+     @SneakyThrows
+     public void testReindexAll() {
+-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
++        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).withNano(0);
+         DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
+         DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", STUDY, true, "userId", "description", now, now, "userId", false, null);
+ 
+diff --git a/src/test/java/org/gridsuite/directory/server/ElementAttributesTest.java b/src/test/java/org/gridsuite/directory/server/ElementAttributesTest.java
+index 5db6418..e9c12f7 100644
+--- a/src/test/java/org/gridsuite/directory/server/ElementAttributesTest.java
++++ b/src/test/java/org/gridsuite/directory/server/ElementAttributesTest.java
+@@ -20,9 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.boot.test.context.SpringBootTest;
+ import org.springframework.test.context.junit4.SpringRunner;
+ 
+-import java.time.LocalDateTime;
++import java.time.OffsetDateTime;
+ import java.time.ZoneOffset;
+-import java.time.ZonedDateTime;
+ import java.time.format.DateTimeFormatter;
+ import java.util.*;
+ import java.util.stream.Collector;
+@@ -57,7 +56,7 @@ public class ElementAttributesTest {
+ 
+     @Test
+     public void testElementEntityUpdate() {
+-        LocalDateTime localCreationDate = LocalDateTime.now(ZoneOffset.UTC);
++        OffsetDateTime localCreationDate = OffsetDateTime.now(ZoneOffset.UTC);
+ 
+         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
+         DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", STUDY, true, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
+@@ -75,14 +74,14 @@ public class ElementAttributesTest {
+         assertFalse(elementEntity2.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId"));
+ 
+         elementEntity.update(ElementAttributes.builder().elementName("newName").accessRights(new AccessRightsAttributes(false)).build());
+-        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description", ZonedDateTime.ofInstant(elementEntity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), ZonedDateTime.ofInstant(elementEntity.getLastModificationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
++        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description", OffsetDateTime.ofInstant(elementEntity.getCreationDate().toInstant(), ZoneOffset.UTC), OffsetDateTime.ofInstant(elementEntity.getLastModificationDate().toInstant(), ZoneOffset.UTC), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
+     }
+ 
+     @Test
+     public void testElementAttributesCreation() {
+         AccessRightsAttributes accessRightsAttributes = new AccessRightsAttributes(true);
+-        ZonedDateTime zonedCreationDate = ZonedDateTime.now(ZoneOffset.UTC);
+-        LocalDateTime localCreationDate = LocalDateTime.now(ZoneOffset.UTC);
++        OffsetDateTime zonedCreationDate = OffsetDateTime.now(ZoneOffset.UTC);
++        OffsetDateTime localCreationDate = OffsetDateTime.now(ZoneOffset.UTC);
+ 
+         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
+         verifyElementAttributes(toElementAttributes(null, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
+@@ -125,7 +124,7 @@ public class ElementAttributesTest {
+ 
+     @Test
+     public void testJsonString() {
+-        ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
++        OffsetDateTime creationDate = OffsetDateTime.now(ZoneOffset.UTC);
+         DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+         String formattedCreationDate = creationDate.format(formatter);
+ 
+@@ -167,9 +166,9 @@ public class ElementAttributesTest {
+         if (value == null) {
+             return (String) value;
+         }
+-        if (value instanceof ZonedDateTime) {
++        if (value instanceof OffsetDateTime) {
+             DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+-            return String.format("\"%s\":\"%s\"", key, ((ZonedDateTime) value).format(formatter));
++            return String.format("\"%s\":\"%s\"", key, ((OffsetDateTime) value).format(formatter));
+         }
+         return String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
+     }

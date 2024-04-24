@@ -1,0 +1,956 @@
+diff --cc src/main/java/org/gridsuite/directory/server/DirectoryController.java
+index 6e3a53d,7da428e..0000000
+--- a/src/main/java/org/gridsuite/directory/server/DirectoryController.java
++++ b/src/main/java/org/gridsuite/directory/server/DirectoryController.java
+@@@ -13,9 -13,8 +13,9 @@@ import io.swagger.v3.oas.annotations.re
+  import io.swagger.v3.oas.annotations.tags.Tag;
+  import org.gridsuite.directory.server.dto.ElementAttributes;
+  import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
++ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+  import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+ +import org.gridsuite.directory.server.services.ElementType;
+- import org.springframework.data.util.Pair;
+  import org.springframework.http.HttpStatus;
+  import org.springframework.http.MediaType;
+  import org.springframework.http.ResponseEntity;
+@@@ -46,7 -47,7 +48,7 @@@ public class DirectoryController 
+      @Operation(summary = "Create root directory")
+      @ApiResponses(@ApiResponse(responseCode = "200", description = "The created root directory"))
+      public ResponseEntity<ElementAttributes> createRootDirectory(@RequestBody RootDirectoryAttributes rootDirectoryAttributes,
+--                                                                       @RequestHeader("userId") String userId) {
+++                                                                 @RequestHeader("userId") String userId) {
+          return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createRootDirectory(rootDirectoryAttributes, userId));
+      }
+  
+@@@ -55,9 -56,9 +57,9 @@@
+      @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
+          @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
+      public ResponseEntity<ElementAttributes> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
+--                                             @Parameter(description = "if element already exists a new incremental name is provided") @RequestParam(value = "allowNewName", required = false, defaultValue = "false") Boolean allowNewName,
+--                                             @RequestBody ElementAttributes elementAttributes,
+--                                             @RequestHeader("userId") String userId) {
+++                                                           @Parameter(description = "if element already exists a new incremental name is provided") @RequestParam(value = "allowNewName", required = false, defaultValue = "false") Boolean allowNewName,
+++                                                           @RequestBody ElementAttributes elementAttributes,
+++                                                           @RequestHeader("userId") String userId) {
+          return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId, allowNewName));
+      }
+  
+@@@ -78,35 -79,13 +80,13 @@@
+          @ApiResponse(responseCode = "403", description = "Access forbidden for the element"),
+          @ApiResponse(responseCode = "404", description = "The searched element was not found")})
+      public ResponseEntity<List<ElementAttributes>> getPath(@PathVariable("elementUuid") UUID elementUuid,
+--                                                                        @RequestHeader("userId") String userId) {
+-         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
+-     }
+- 
+-     @PostMapping(value = "/elements/stash")
+-     @Operation(summary = "Stash elements")
+-         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were stashed")})
+-     public ResponseEntity<Void> stashElements(@Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuid,
+-                                               @RequestHeader("userId") String userId) {
+-         service.stashElements(elementsUuid, userId);
+-         return ResponseEntity.ok().build();
+-     }
+++                                                           @RequestHeader("userId") String userId) {
+  
+-     @PostMapping(value = "/elements/{parentUuid}/restore")
+-     @Operation(summary = "Restore elements")
+-     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "elements were restored ")})
+-     public ResponseEntity<Void> restoreElements(@RequestBody List<UUID> elementsUuid,
+-                                                 @PathVariable("parentUuid") UUID parentUuid,
+-                                                 @RequestHeader("userId") String userId) {
+-         service.restoreElements(elementsUuid, parentUuid, userId);
+-         return ResponseEntity.ok().build();
+-     }
+- 
+-     @GetMapping(value = "/elements/stash")
+-     @Operation(summary = "Get the list of elements in the trash")
+-     @ApiResponses(value = {
+-         @ApiResponse(responseCode = "200", description = "the list of elements in the trash")})
+-     public ResponseEntity<List<Pair<ElementAttributes, Long>>> getStashedElements(@RequestHeader("userId") String userId) {
+-         return ResponseEntity.ok().body(service.getStashedElements(userId));
++         List<ElementAttributes> path = service.getPath(elementUuid);
++         if (!service.isPathAccessible(userId, path)) {
++             throw new DirectoryException(NOT_ALLOWED);
++         }
++         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(path);
+      }
+  
+      @DeleteMapping(value = "/elements/{elementUuid}")
+@@@ -154,9 -134,8 +135,8 @@@
+      @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
+      public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                                          @RequestHeader("userId") String userId,
+-                                                                         @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<ElementType> types,
+-                                                                         @RequestParam(value = "stashed", required = false, defaultValue = "false") boolean stashed) {
+-         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, types, stashed));
+ -                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
+++                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<ElementType> types) {
++         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, types));
+      }
+  
+      @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+@@@ -189,7 -168,7 +169,7 @@@
+          @ApiResponse(responseCode = "403", description = "Access forbidden for at least one element")
+      })
+      public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
+--                                                            @RequestHeader("userId") String userId) {
+++                                                      @RequestHeader("userId") String userId) {
+          service.areElementsAccessible(userId, elementUuids);
+          return ResponseEntity.ok().build();
+      }
+diff --cc src/main/java/org/gridsuite/directory/server/DirectoryService.java
+index 6d4b4e0,da5e7d1..0000000
+--- a/src/main/java/org/gridsuite/directory/server/DirectoryService.java
++++ b/src/main/java/org/gridsuite/directory/server/DirectoryService.java
+@@@ -11,10 -11,11 +11,12 @@@ import org.apache.commons.lang3.StringU
+  import org.gridsuite.directory.server.dto.AccessRightsAttributes;
+  import org.gridsuite.directory.server.dto.ElementAttributes;
+  import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
++ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+  import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+  import org.gridsuite.directory.server.repository.DirectoryElementRepository;
++ import org.gridsuite.directory.server.services.DirectoryElementInfosService;
+  import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+ +import org.gridsuite.directory.server.services.ElementType;
+  import org.gridsuite.directory.server.services.StudyService;
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+@@@ -229,35 -241,26 +236,26 @@@ public class DirectoryService 
+          return subdirectoriesCountsMap;
+      }
+  
+-     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<ElementType> types, boolean stashed) {
+ -    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<String> types) {
+++    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<ElementType> types) {
+          ElementAttributes elementAttributes = getElement(directoryUuid);
+          if (elementAttributes == null) {
+ -            throw DirectoryException.createElementNotFound(DIRECTORY, directoryUuid);
+ +            throw DirectoryException.createElementNotFound(ElementType.DIRECTORY.name(), directoryUuid);
+          }
+  
+          if (!elementAttributes.isAllowed(userId)) {
+              return List.of();
+          }
+  
+-         return getDirectoryElementsStream(directoryUuid, userId, types, stashed).toList();
++         return getDirectoryElementsStream(directoryUuid, userId, types).collect(Collectors.toList());
+      }
+  
+ -    private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types) {
+ +    private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<ElementType> types) {
+-         return getDirectoryElementsStream(directoryUuid, userId, types, false);
+-     }
+- 
+-     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<ElementType> types, boolean stashed) {
+-         return getAllDirectoryElementsStream(directoryUuid, types, userId, stashed)
++         return getAllDirectoryElementsStream(directoryUuid, types, userId)
+ -                .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) || elementAttributes.isAllowed(userId));
+ +                .filter(elementAttributes -> !elementAttributes.getType().equals(ElementType.DIRECTORY) || elementAttributes.isAllowed(userId));
+      }
+  
+ -    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
+ +    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<ElementType> types, String userId) {
+-         return getAllDirectoryElementsStream(directoryUuid, types, userId, false);
+-     }
+- 
+-     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<ElementType> types, String userId, boolean stashed) {
+-         LocalDateTime stashDate = stashed ? getDirectoryElementEntity(directoryUuid).getStashDate() : null;
+-         List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentIdAndStashedAndStashDate(directoryUuid, stashed, stashDate);
++         List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentId(directoryUuid);
+          Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
+          return directoryElements
+                  .stream()
+@@@ -284,9 -287,9 +282,9 @@@
+      public void updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
+          DirectoryElementEntity directoryElement = getDirectoryElementEntity(elementUuid);
+          if (!isElementUpdatable(toElementAttributes(directoryElement), userId, false) ||
+--            !directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
+--            !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
+--             directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType())) {
+++                !directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
+++                !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
+++                        directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType())) {
+              throw new DirectoryException(NOT_ALLOWED);
+          }
+  
+@@@ -374,20 -377,20 +372,20 @@@
+          }
+      }
+  
+ -    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String userId, String elementName, String elementType) {
+ +    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String userId, String elementName, ElementType elementType) {
+          return getDirectoryElementsStream(directoryUUID, userId, List.of(elementType))
+--            .anyMatch(
+--                e -> e.getElementName().equals(elementName)
+--            );
+++                .anyMatch(
+++                        e -> e.getElementName().equals(elementName)
+++                );
+      }
+  
+      private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {
+ -        if (element.getType().equals(DIRECTORY)) {
+ +        if (element.getType().equals(ElementType.DIRECTORY)) {
+              return element.isAllowed(userId) &&
+--                (!forDeletion || getDirectoryElementsStream(element.getElementUuid(), userId, List.of())
+-                     .filter(e -> e.getType().equals(ElementType.DIRECTORY))
+ -                    .filter(e -> e.getType().equals(DIRECTORY))
+--                    .allMatch(e -> isElementUpdatable(e, userId, true))
+--                );
+++                    (!forDeletion || getDirectoryElementsStream(element.getElementUuid(), userId, List.of())
+++                            .filter(e -> e.getType().equals(ElementType.DIRECTORY))
+++                            .allMatch(e -> isElementUpdatable(e, userId, true))
+++                    );
+          } else {
+              return getParentElement(element.getElementUuid()).isAllowed(userId);
+          }
+@@@ -429,38 -432,56 +427,56 @@@
+          getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
+      }
+  
+-     /***
+-      * Retrieve path of an element
+-      * @param elementUuid element uuid
+-      * @param userId owner
+-      * @return ElementAttributes of element and all it's parents up to root directory
++     /**
++      * Method to delete multiple elements within a single repository - DIRECTORIES can't be deleted this way
++      * @param elementsUuids list of elements uuids to delete
++      * @param parentDirectoryUuid expected parent uuid of each element - element with another parent UUID won't be deleted
++      * @param userId user making the deletion
+       */
+-     public List<ElementAttributes> getPath(UUID elementUuid, String userId) {
+-         Optional<DirectoryElementEntity> currentElementOpt = repositoryService.getElementEntity(elementUuid);
+-         ArrayList<ElementAttributes> path = new ArrayList<>();
+-         boolean allowed;
+-         if (currentElementOpt.isEmpty()) {
+-             throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
++     public void deleteElements(List<UUID> elementsUuids, UUID parentDirectoryUuid, String userId) {
++         ElementAttributes parentDirectory = getElement(parentDirectoryUuid);
++         // checking if parent uuid can be updated by user
++         if (!parentDirectory.isAllowed(userId)) {
++             throw new DirectoryException(NOT_ALLOWED);
+          }
+-         DirectoryElementEntity currentElement = currentElementOpt.get();
+  
+-         if (currentElement.getType().equals(ElementType.DIRECTORY)) {
+-             allowed = toElementAttributes(currentElement).isAllowed(userId);
+-         } else {
+-             allowed = toElementAttributes(repositoryService.getElementEntity(currentElement.getParentId()).orElseThrow()).isAllowed(userId);
+-         }
++         // getting elements by "elementUuids", filtered if they don't belong to parentDirectoryUuid, or if they are directories
++         List<ElementAttributes> elementsAttributesToDelete = repositoryService.getElementEntities(elementsUuids, parentDirectoryUuid).stream()
+ -            .map(ElementAttributes::toElementAttributes)
+ -            .toList();
+++                .map(ElementAttributes::toElementAttributes)
+++                .toList();
+  
+-         if (!allowed) {
+-             throw new DirectoryException(NOT_ALLOWED);
+-         }
++         // deleting all elements
++         repositoryService.deleteElements(elementsAttributesToDelete.stream().map(ElementAttributes::getElementUuid).toList());
+  
+-         path.add(toElementAttributes(currentElement));
++         // extracting studyUuids from this list, to send specific notifications
++         elementsAttributesToDelete.stream()
+ -            .filter(element -> STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid)
+ -            .forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));
+++                .filter(element -> ElementType.STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid)
+++                .forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));
+  
+-         while (currentElement.getParentId() != null) {
+-             currentElement = repositoryService.getElementEntity(currentElement.getParentId()).orElseThrow();
+-             ElementAttributes currentElementAttributes = toElementAttributes(currentElement);
+-             path.add(currentElementAttributes);
+-         }
++         // sending directory update notification
++         boolean isPrivate = repositoryService.isPrivateDirectory(parentDirectoryUuid);
++         notificationService.emitDirectoryChanged(
+ -            parentDirectoryUuid,
+ -            null,
+ -            userId,
+ -            null,
+ -            isPrivate,
+ -            false,
+ -            NotificationType.UPDATE_DIRECTORY
+++                parentDirectoryUuid,
+++                null,
+++                userId,
+++                null,
+++                isPrivate,
+++                false,
+++                NotificationType.UPDATE_DIRECTORY
++         );
++     }
++ 
++     /***
++      * Retrieve path of an element
++      * @param elementUuid element uuid
++      * @return ElementAttributes of element and all it's parents up to root directory
++      */
++     public List<ElementAttributes> getPath(UUID elementUuid) {
++         DirectoryElementEntity currentElement = repositoryService.getElementEntity(elementUuid)
++                 .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
++ 
++         List<ElementAttributes> path = new ArrayList<>(List.of(toElementAttributes(currentElement)));
++         path.addAll(repositoryService.findAllAscendants(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList());
+  
+          return path;
+      }
+@@@ -474,14 -495,9 +490,9 @@@
+      }
+  
+      private ElementAttributes getParentElement(UUID elementUuid) {
+-         return Stream.of(repositoryService.getParentUuid(elementUuid))
+-             .filter(Objects::nonNull)
+-             .map(repositoryService::getElementEntity)
+-             .filter(Optional::isPresent)
+-             .map(Optional::get)
+-             .map(ElementAttributes::toElementAttributes)
+-             .findFirst()
+-             .orElseThrow(() -> DirectoryException.createElementNotFound("Parent of", elementUuid));
++         return repositoryService.getElementEntity(repositoryService.getParentUuid(elementUuid))
++                 .map(ElementAttributes::toElementAttributes)
+ -                .orElseThrow(() -> DirectoryException.createElementNotFound(DIRECTORY, elementUuid));
+++                .orElseThrow(() -> DirectoryException.createElementNotFound(ElementType.DIRECTORY.name(), elementUuid));
+      }
+  
+      private boolean isPrivateForNotification(UUID parentDirectoryUuid, Boolean isCurrentElementPrivate) {
+@@@ -506,8 -522,8 +517,8 @@@
+          return null;
+      }
+  
+ -    public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types) {
+ +    public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<ElementType> types) {
+-         List<DirectoryElementEntity> elementEntities = repositoryService.findAllByIdInAndStashed(ids, false);
++         List<DirectoryElementEntity> elementEntities = repositoryService.findAllByIdIn(ids);
+  
+          if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
+              throw new DirectoryException(NOT_FOUND);
+@@@ -563,6 -579,10 +574,10 @@@
+                  });
+      }
+  
++     public boolean isPathAccessible(String userId, List<ElementAttributes> pathElements) {
+ -        return pathElements.stream().allMatch(e -> !DIRECTORY.equals(e.getType()) || e.isAllowed(userId));
+++        return pathElements.stream().allMatch(e -> !ElementType.DIRECTORY.equals(e.getType()) || e.isAllowed(userId));
++     }
++ 
+      private String nameCandidate(String elementName, int n) {
+          return elementName + '(' + n + ')';
+      }
+@@@ -582,6 -602,18 +597,18 @@@
+          return nameCandidate(elementName, i);
+      }
+  
++     private Pair<List<UUID>, List<String>> getUuidsAndNamesFromPath(List<ElementAttributes> elementAttributesList) {
++         List<UUID> uuids = new ArrayList<>(elementAttributesList.size());
++         List<String> names = new ArrayList<>(elementAttributesList.size());
++         elementAttributesList.stream()
+ -                .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), DIRECTORY))
+++                .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), ElementType.DIRECTORY))
++                 .forEach(e -> {
++                     uuids.add(e.getElementUuid());
++                     names.add(e.getElementName());
++                 });
++         return Pair.of(uuids, names);
++     }
++ 
+      @Transactional
+      public void reindexAllElements() {
+          repositoryService.reindexAllElements();
+diff --cc src/test/java/org/gridsuite/directory/server/DirectoryElementInfosServiceTest.java
+index b2a8461,13e01d8..0000000
+--- a/src/test/java/org/gridsuite/directory/server/DirectoryElementInfosServiceTest.java
++++ b/src/test/java/org/gridsuite/directory/server/DirectoryElementInfosServiceTest.java
+diff --cc src/test/java/org/gridsuite/directory/server/DirectoryTest.java
+index 1e4b163,91b316a..0000000
+--- a/src/test/java/org/gridsuite/directory/server/DirectoryTest.java
++++ b/src/test/java/org/gridsuite/directory/server/DirectoryTest.java
+@@@ -186,7 -196,7 +195,7 @@@ public class DirectoryTest 
+  
+      @Test
+      public void testGetPathOfStudy() throws Exception {
+--     // Insert a public root directory
+++        // Insert a public root directory
+          UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+  
+          // Insert a subDirectory1 in the root directory
+@@@ -201,23 -211,24 +210,24 @@@
+  
+          // Insert a study in the directory2
+          UUID study1UUID = UUID.randomUUID();
+-         ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", ElementType.STUDY, null, "Doe");
+ -        ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", STUDY, null, "Doe");
+++        ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", ElementType.DIRECTORY, null, "Doe");
+          insertAndCheckSubElement(directory2UUID, false, study1Attributes);
+- 
++         SQLStatementCountValidator.reset();
+          List<ElementAttributes> path = getPath(study1UUID, "Doe");
++         assertRequestsCount(1, 0, 0, 0);
+  
+          //Check if all element's parents are retrieved in the right order
+          assertEquals(
+                  path.stream()
+-                     .map(parent -> parent.getElementUuid())
+ -                    .map(ElementAttributes::getElementUuid)
+--                    .collect(Collectors.toList()),
+++                        .map(ElementAttributes::getElementUuid)
+++                        .collect(Collectors.toList()),
+                  Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
+          );
+      }
+  
+      @Test
+      public void testGetPathOfFilter() throws Exception {
+--     // Insert a public root directory
+++        // Insert a public root directory
+          UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+  
+          // Insert a subDirectory1 in the root directory
+@@@ -232,23 -243,24 +242,24 @@@
+  
+          // Insert a filter in the directory2
+          UUID filter1UUID = UUID.randomUUID();
+ -        ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
+ +        ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", ElementType.FILTER, null, "Doe");
+          insertAndCheckSubElement(directory2UUID, false, study1Attributes);
+- 
++         SQLStatementCountValidator.reset();
+          List<ElementAttributes> path = getPath(filter1UUID, "Doe");
++         assertRequestsCount(1, 0, 0, 0);
+  
+          //Check if all element's parents are retrieved in the right order
+          assertEquals(
+                  path.stream()
+-                     .map(parent -> parent.getElementUuid())
+ -                    .map(ElementAttributes::getElementUuid)
+--                    .collect(Collectors.toList()),
+++                        .map(ElementAttributes::getElementUuid)
+++                        .collect(Collectors.toList()),
+                  Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
+          );
+      }
+  
+      @Test
+      public void testGetPathOfNotAllowed() throws Exception {
+--     // Insert a public root directory
+++        // Insert a public root directory
+          UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+  
+          // Insert a subDirectory1 in the root directory
+@@@ -263,31 -275,32 +274,32 @@@
+  
+          // Insert a filter in the directory2
+          UUID filter1UUID = UUID.randomUUID();
+-         ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", ElementType.FILTER, null, "Doe");
+-         insertAndCheckSubElement(directory2UUID, true, study1Attributes);
+ -        ElementAttributes filter1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, null, "Doe");
+++        ElementAttributes filter1Attributes = toElementAttributes(filter1UUID, "filter1", ElementType.FILTER, null, "Doe");
++         insertAndCheckSubElement(directory2UUID, true, filter1Attributes);
+  
+          // Trying to get path of forbidden element
+          mockMvc.perform(get("/v1/elements/" + filter1UUID + "/path")
+--                   .header("userId", "Unallowed User"))
+--            .andExpect(status().isForbidden());
+++                        .header("userId", "Unallowed User"))
+++                .andExpect(status().isForbidden());
+  
+          // Trying to get path of forbidden element
+          mockMvc.perform(get("/v1/elements/" + directory2UUID + "/path")
+--                   .header("userId", "Unallowed User"))
+--            .andExpect(status().isForbidden());
+++                        .header("userId", "Unallowed User"))
+++                .andExpect(status().isForbidden());
+      }
+  
+      @Test
+      public void testGetPathOfRootDir() throws Exception {
+--     // Insert a public root directory
+++        // Insert a public root directory
+          UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", false, "Doe");
+- 
++         SQLStatementCountValidator.reset();
+          List<ElementAttributes> path = getPath(rootDirUuid, "Doe");
++         assertRequestsCount(1, 0, 0, 0);
+  
+          assertEquals(
+                  path.stream()
+-                     .map(parent -> parent.getElementUuid())
+ -                    .map(ElementAttributes::getElementUuid)
+--                    .collect(Collectors.toList()),
+++                        .map(ElementAttributes::getElementUuid)
+++                        .collect(Collectors.toList()),
+                  Arrays.asList(rootDirUuid)
+          );
+      }
+@@@ -313,17 -324,17 +323,17 @@@
+          ElementAttributes rootDir2 = retrieveInsertAndCheckRootDirectory("rootDir2", false, "user2");
+  
+          checkRootDirectoriesList("user1",
+--            List.of(
+-                 toElementAttributes(rootDir1.getElementUuid(), "rootDir1", ElementType.DIRECTORY, false, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+-                 toElementAttributes(rootDir2.getElementUuid(), "rootDir2", ElementType.DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+ -                toElementAttributes(rootDir1.getElementUuid(), "rootDir1", DIRECTORY, false, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+ -                toElementAttributes(rootDir2.getElementUuid(), "rootDir2", DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+--            )
+++                List.of(
+++                        toElementAttributes(rootDir1.getElementUuid(), "rootDir1", ElementType.DIRECTORY, false, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+++                        toElementAttributes(rootDir2.getElementUuid(), "rootDir2", ElementType.DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+++                )
+          );
+  
+          checkRootDirectoriesList("user2",
+--            List.of(
+-                 toElementAttributes(rootDir1.getElementUuid(), "rootDir1", ElementType.DIRECTORY, false, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+-                 toElementAttributes(rootDir2.getElementUuid(), "rootDir2", ElementType.DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+ -                toElementAttributes(rootDir1.getElementUuid(), "rootDir1", DIRECTORY, false, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+ -                toElementAttributes(rootDir2.getElementUuid(), "rootDir2", DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+--            )
+++                List.of(
+++                        toElementAttributes(rootDir1.getElementUuid(), "rootDir1", ElementType.DIRECTORY, false, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+++                        toElementAttributes(rootDir2.getElementUuid(), "rootDir2", ElementType.DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+++                )
+          );
+  
+          //Cleaning Test
+@@@ -465,8 -476,8 +475,8 @@@
+  
+          mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
+                          .header("userId", "Unallowed User")
+--                .contentType(MediaType.APPLICATION_JSON)
+--                .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+++                        .contentType(MediaType.APPLICATION_JSON)
+++                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+                  .andExpect(status().isForbidden());
+  
+          assertNbElementsInRepositories(4);
+@@@ -648,13 -660,13 +659,13 @@@
+          ElementAttributes rootDir2 = retrieveInsertAndCheckRootDirectory("rootDir2", false, "user2");
+  
+          checkRootDirectoriesList("user1",
+--            List.of(
+-                 toElementAttributes(rootDir1.getElementUuid(), "rootDir1", ElementType.DIRECTORY, true, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+-                 toElementAttributes(rootDir2.getElementUuid(), "rootDir2", ElementType.DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+ -                toElementAttributes(rootDir1.getElementUuid(), "rootDir1", DIRECTORY, true, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+ -                toElementAttributes(rootDir2.getElementUuid(), "rootDir2", DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+--            )
+++                List.of(
+++                        toElementAttributes(rootDir1.getElementUuid(), "rootDir1", ElementType.DIRECTORY, true, "user1", null, rootDir1.getCreationDate(), rootDir1.getLastModificationDate(), "user1"),
+++                        toElementAttributes(rootDir2.getElementUuid(), "rootDir2", ElementType.DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")
+++                )
+          );
+  
+ -        checkRootDirectoriesList("user2", List.of(toElementAttributes(rootDir2.getElementUuid(), "rootDir2", DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")));
+ +        checkRootDirectoriesList("user2", List.of(toElementAttributes(rootDir2.getElementUuid(), "rootDir2", ElementType.DIRECTORY, false, "user2", null, rootDir2.getCreationDate(), rootDir2.getLastModificationDate(), "user2")));
+  
+          //Cleaning Test
+          deleteElement(rootDir1.getElementUuid(), rootDir1.getElementUuid(), "user1", true, true, false, 0);
+@@@ -1075,11 -1089,11 +1088,11 @@@
+  
+          res.sort(Comparator.comparing(ElementAttributes::getElementName));
+          org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
+--            List.of(
+-                 toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", ElementType.CONTINGENCY_LIST, null, "user1", null, contingencyAttributes.getCreationDate(), contingencyAttributes.getLastModificationDate(), "user1"),
+-                 toElementAttributes(filterAttributes.getElementUuid(), "newFilter", ElementType.FILTER, null, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
+-                 toElementAttributes(scriptAttributes.getElementUuid(), "newScript", ElementType.FILTER, null, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1")
+ -                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, null, "user1", null, contingencyAttributes.getCreationDate(), contingencyAttributes.getLastModificationDate(), "user1"),
+ -                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, null, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
+ -                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1")
+--            ))
+++                List.of(
+++                        toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", ElementType.CONTINGENCY_LIST, null, "user1", null, contingencyAttributes.getCreationDate(), contingencyAttributes.getLastModificationDate(), "user1"),
+++                        toElementAttributes(filterAttributes.getElementUuid(), "newFilter", ElementType.FILTER, null, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
+++                        toElementAttributes(scriptAttributes.getElementUuid(), "newScript", ElementType.FILTER, null, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1")
+++                ))
+          );
+      }
+  
+@@@ -1120,15 -1134,15 +1133,15 @@@
+  
+      @Test
+      public void testCreateElementWithEmptyName() throws Exception {
+--     // Insert a public root directory user1
+++        // Insert a public root directory user1
+          UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", false, "user1");
+  
+          // Insert a study with empty name in the root directory and expect a 403
+ -        ElementAttributes studyWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", STUDY, null, "user1");
+ +        ElementAttributes studyWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", ElementType.STUDY, null, "user1");
+          insertExpectFail(rootDirUuid, studyWithoutNameAttributes);
+  
+--     // Insert a filter with empty name in the root directory and expect a 403
+ -        ElementAttributes filterWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", FILTER, null, "user1");
+++        // Insert a filter with empty name in the root directory and expect a 403
+ +        ElementAttributes filterWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", ElementType.FILTER, null, "user1");
+          insertExpectFail(rootDirUuid, filterWithoutNameAttributes);
+  
+          assertNbElementsInRepositories(1);
+@@@ -1149,15 -1163,15 +1162,15 @@@
+          String userMakingModification = "newUser";
+  
+          input.send(MessageBuilder.withPayload("")
+--            .setHeader(HEADER_MODIFIED_BY, userMakingModification)
+--            .setHeader(HEADER_MODIFICATION_DATE, newModificationDate.toString())
+--            .setHeader(HEADER_ELEMENT_UUID, subEltAttributes.getElementUuid().toString())
+--            .build(), elementUpdateDestination);
+++                .setHeader(HEADER_MODIFIED_BY, userMakingModification)
+++                .setHeader(HEADER_MODIFICATION_DATE, newModificationDate.toString())
+++                .setHeader(HEADER_ELEMENT_UUID, subEltAttributes.getElementUuid().toString())
+++                .build(), elementUpdateDestination);
+  
+          MvcResult result = mockMvc.perform(get("/v1/elements/" + subEltAttributes.getElementUuid()))
+--            .andExpectAll(status().isOk(),
+--                    content().contentType(MediaType.APPLICATION_JSON))
+--            .andReturn();
+++                .andExpectAll(status().isOk(),
+++                        content().contentType(MediaType.APPLICATION_JSON))
+++                .andReturn();
+  
+          ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
+  
+@@@ -1313,13 -1195,13 +1194,13 @@@
+          checkRootDirectoriesList(userId, List.of(), list);
+      }
+  
+ -    private void checkRootDirectoriesList(String userId, List<String> elementTypes, List<ElementAttributes> list) throws Exception {
+ -        var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
+ +    private void checkRootDirectoriesList(String userId, List<ElementType> elementTypes, List<ElementAttributes> list) throws Exception {
+ +        var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().map(ElementType::name).collect(Collectors.joining(",")) : "";
+          String response = mockMvc.perform(get("/v1/root-directories" + types).header("userId", userId))
+--                             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+--                             .andReturn()
+--                            .getResponse()
+--                            .getContentAsString();
+++                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+++                .andReturn()
+++                .getResponse()
+++                .getContentAsString();
+  
+          List<ElementAttributes> elementAttributes = objectMapper.readValue(response, new TypeReference<>() {
+          });
+@@@ -1358,9 -1240,9 +1239,9 @@@
+  
+      private UUID insertAndCheckRootDirectory(String rootDirectoryName, boolean isPrivate, String userId) throws Exception {
+          String response = mockMvc.perform(post("/v1/root-directories")
+--                .header("userId", userId)
+--                .contentType(MediaType.APPLICATION_JSON)
+--                .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null, null, null, null))))
+++                        .header("userId", userId)
+++                        .contentType(MediaType.APPLICATION_JSON)
+++                        .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null, null, null, null))))
+                  .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                  .andReturn()
+                  .getResponse()
+@@@ -1396,7 -1278,7 +1277,7 @@@
+          // get sub-elements list
+          if (httpCodeExpected == 200) {
+              MvcResult result = mockMvc.perform(get("/v1/elements?strictMode=" + (strictMode ? "true" : "false") + "&ids=" + ids + typesPath)
+--                    .header("userId", userId))
+++                            .header("userId", userId))
+                      .andExpectAll(status().isOk(),
+                              content().contentType(MediaType.APPLICATION_JSON))
+                      .andReturn();
+@@@ -1451,18 -1333,18 +1332,18 @@@
+      private void insertExpectFail(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
+          // Insert a sub-element of type DIRECTORY and expect 403 forbidden
+          mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
+--                .header("userId", subElementAttributes.getOwner())
+--                .contentType(MediaType.APPLICATION_JSON)
+--                .content(objectMapper.writeValueAsString(subElementAttributes)))
+--            .andExpect(status().isForbidden());
+++                        .header("userId", subElementAttributes.getOwner())
+++                        .contentType(MediaType.APPLICATION_JSON)
+++                        .content(objectMapper.writeValueAsString(subElementAttributes)))
+++                .andExpect(status().isForbidden());
+      }
+  
+      private void renameElement(UUID elementUuidToRename, UUID elementUuidHeader, String userId, String newName, boolean isRoot, boolean isPrivate) throws Exception {
+          mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToRename))
+--                .header("userId", userId)
+--                .contentType(MediaType.APPLICATION_JSON)
+--                .content(objectMapper.writeValueAsString(ElementAttributes.builder().elementName(newName).build())))
+--            .andExpect(status().isOk());
+++                        .header("userId", userId)
+++                        .contentType(MediaType.APPLICATION_JSON)
+++                        .content(objectMapper.writeValueAsString(ElementAttributes.builder().elementName(newName).build())))
+++                .andExpect(status().isOk());
+  
+          // assert that the broker message has been sent a notif for rename
+          Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+@@@ -1479,10 -1361,10 +1360,10 @@@
+      private void renameElementExpectFail(UUID elementUuidToRename, String userId, String newName, int httpCodeExpected) throws Exception {
+          if (httpCodeExpected == 403) {
+              mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToRename))
+--                    .header("userId", userId)
+--                    .contentType(MediaType.APPLICATION_JSON)
+--                    .content(objectMapper.writeValueAsString(ElementAttributes.builder().elementName(newName).build())))
+--                .andExpect(status().isForbidden());
+++                            .header("userId", userId)
+++                            .contentType(MediaType.APPLICATION_JSON)
+++                            .content(objectMapper.writeValueAsString(ElementAttributes.builder().elementName(newName).build())))
+++                    .andExpect(status().isForbidden());
+          } else if (httpCodeExpected == 404) {
+              mockMvc.perform(put(String.format("/v1/elements/%s", elementUuidToRename))
+                              .header("userId", userId)
+@@@ -1564,10 -1453,10 +1452,10 @@@
+          checkDirectoryContent(parentDirectoryUuid, userId, List.of(), list);
+      }
+  
+ -    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, List<ElementAttributes> list) throws Exception {
+ -        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + types.stream().collect(Collectors.joining(",")) : "";
+ +    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementType> types, List<ElementAttributes> list) throws Exception {
+ +        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + types.stream().map(ElementType::name).collect(Collectors.joining(",")) : "";
+          String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + elementTypes)
+--                .header("userId", userId))
+++                        .header("userId", userId))
+                  .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+                  .andReturn()
+                  .getResponse()
+@@@ -1656,9 -1535,9 +1534,8 @@@
+  
+          var directoryId = insertAndCheckRootDirectory("newDir", true, "userId");
+  
+-         mockMvc.perform(get("/v1/directories/" + directoryId + "/" + "pouet" + "/newNameCandidate?type=" + ElementType.STUDY)
+ -        mockMvc.perform(get("/v1/directories/" + directoryId + "/" + "pouet" + "/newNameCandidate?type=" + STUDY)
+--                .header("userId", "youplaboum"))
+--            .andExpect(status().isForbidden());
+++        mockMvc.perform(get("/v1/directories/" + directoryId + "/" + "pouet" + "/newNameCandidate?type=" + ElementType.STUDY).header("userId", "youplaboum"))
+++                .andExpect(status().isForbidden());
+  
+          var name = "newStudy";
+          // check when no elements is corresponding (empty folder
+@@@ -1756,6 -1635,73 +1633,73 @@@
+          output.clear();
+      }
+  
++     @Test
++     public void testSearch() throws Exception {
++ 
++         //                          root (userId2, public)
++         //         /                             |                              \
++         //       dir1 (userId1, private)      dir2 (userId2, public)          dir3 (userId3, public)
++         //        |                                                            |
++         //       dir4 (userId1, public)                                       dir5 (userId3, private)
++ 
++         ElementAttributes rootDirectory = retrieveInsertAndCheckRootDirectory("directory", false, USERID_2);
++         UUID rootDirectoryUuid = rootDirectory.getElementUuid();
++ 
++         UUID subDirUuid1 = UUID.randomUUID();
+ -        ElementAttributes subDirAttributes1 = toElementAttributes(subDirUuid1, "newSubDir1", DIRECTORY, true, USERID_1);
+++        ElementAttributes subDirAttributes1 = toElementAttributes(subDirUuid1, "newSubDir1", ElementType.DIRECTORY, true, USERID_1);
++ 
++         UUID subDirUuid2 = UUID.randomUUID();
+ -        ElementAttributes subDirAttributes2 = toElementAttributes(subDirUuid2, "newSubDir2", DIRECTORY, false, USERID_2);
+++        ElementAttributes subDirAttributes2 = toElementAttributes(subDirUuid2, "newSubDir2", ElementType.DIRECTORY, false, USERID_2);
++ 
++         UUID subDirUuid3 = UUID.randomUUID();
+ -        ElementAttributes subDirAttributes3 = toElementAttributes(subDirUuid3, "newSubDir3", DIRECTORY, false, USERID_3);
+++        ElementAttributes subDirAttributes3 = toElementAttributes(subDirUuid3, "newSubDir3", ElementType.DIRECTORY, false, USERID_3);
++ 
++         UUID subDirUuid4 = UUID.randomUUID();
+ -        ElementAttributes subDirAttributes4 = toElementAttributes(subDirUuid4, "newSubDir4", DIRECTORY, false, USERID_1);
+++        ElementAttributes subDirAttributes4 = toElementAttributes(subDirUuid4, "newSubDir4", ElementType.DIRECTORY, false, USERID_1);
++ 
++         UUID subDirUuid5 = UUID.randomUUID();
+ -        ElementAttributes subDirAttributes5 = toElementAttributes(subDirUuid5, "newSubDir5", DIRECTORY, true, USERID_3);
+++        ElementAttributes subDirAttributes5 = toElementAttributes(subDirUuid5, "newSubDir5", ElementType.DIRECTORY, true, USERID_3);
++ 
++         insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes1);
++         insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes2);
++         insertAndCheckSubElement(rootDirectoryUuid, false, subDirAttributes3);
++         insertAndCheckSubElement(subDirUuid1, true, subDirAttributes4);
++         insertAndCheckSubElement(subDirUuid3, false, subDirAttributes5);
++ 
+ -        insertAndCheckSubElement(subDirUuid1, true, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, null, USERID_1, ""));
+++        insertAndCheckSubElement(subDirUuid1, true, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, ElementType.STUDY, null, USERID_1, ""));
++ 
+ -        insertAndCheckSubElement(subDirUuid2, false, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, null, USERID_2, ""));
+++        insertAndCheckSubElement(subDirUuid2, false, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, ElementType.STUDY, null, USERID_2, ""));
++ 
+ -        insertAndCheckSubElement(subDirUuid3, false, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, null, USERID_3, ""));
+++        insertAndCheckSubElement(subDirUuid3, false, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, ElementType.STUDY, null, USERID_3, ""));
++ 
+ -        insertAndCheckSubElement(subDirUuid4, false, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, null, USERID_1, ""));
+++        insertAndCheckSubElement(subDirUuid4, false, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, ElementType.STUDY, null, USERID_1, ""));
++ 
+ -        insertAndCheckSubElement(subDirUuid5, true, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, null, USERID_3, ""));
+++        insertAndCheckSubElement(subDirUuid5, true, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, ElementType.STUDY, null, USERID_3, ""));
++ 
++         MvcResult mvcResult;
++ 
++         mvcResult = mockMvc
++                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
++                 .andExpectAll(status().isOk()).andReturn();
++         List<Object> result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
++         assertEquals(4, result.size());
++         output.clear();
++ 
++         mvcResult = mockMvc
++                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_2))
++                 .andExpectAll(status().isOk()).andReturn();
++         result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
++         assertEquals(2, result.size());
++         output.clear();
++ 
++         mvcResult = mockMvc
++                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_3))
++                 .andExpectAll(status().isOk()).andReturn();
++         result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
++         assertEquals(3, result.size());
++         output.clear();
++     }
++ 
+      private void assertQueuesEmptyThenClear(List<String> destinations) {
+          try {
+              destinations.forEach(destination -> assertNull("Should not be any messages in queue " + destination + " : ", output.receive(100, destination)));
+diff --git a/src/main/java/org/gridsuite/directory/server/services/DirectoryElementInfosService.java b/src/main/java/org/gridsuite/directory/server/services/DirectoryElementInfosService.java
+index 2d37ab6..82e6c03 100644
+--- a/src/main/java/org/gridsuite/directory/server/services/DirectoryElementInfosService.java
++++ b/src/main/java/org/gridsuite/directory/server/services/DirectoryElementInfosService.java
+@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
+ 
+ import java.util.List;
+ 
+-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+ 
+ /**
+  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+@@ -42,7 +41,7 @@ public class DirectoryElementInfosService {
+ 
+     public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
+         BoolQuery query = new BoolQuery.Builder()
+-                .mustNot(Queries.termQuery(ELEMENT_TYPE, DIRECTORY)._toQuery())
++                .mustNot(Queries.termQuery(ELEMENT_TYPE, ElementType.DIRECTORY.name())._toQuery())
+                 .must(Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*")._toQuery())
+                 .build();
+ 
+diff --git a/src/test/java/org/gridsuite/directory/server/DirectoryElementRepositoryTest.java b/src/test/java/org/gridsuite/directory/server/DirectoryElementRepositoryTest.java
+index 3bc699c..1bb62c3 100644
+--- a/src/test/java/org/gridsuite/directory/server/DirectoryElementRepositoryTest.java
++++ b/src/test/java/org/gridsuite/directory/server/DirectoryElementRepositoryTest.java
+@@ -8,6 +8,7 @@ package org.gridsuite.directory.server;
+ 
+ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
++import org.gridsuite.directory.server.services.ElementType;
+ import org.junit.jupiter.api.Test;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+@@ -31,20 +32,20 @@ class DirectoryElementRepositoryTest {
+     @Test
+     void testFindAllByIdInAndParentIdAndTypeNot() {
+         DirectoryElementEntity parentDirectory = directoryElementRepository.save(
+-            createRootElement("root", "DIRECTORY", false, "user1")
++            createRootElement("root", ElementType.DIRECTORY, false, "user1")
+         );
+         UUID parentDirectoryUuid = parentDirectory.getId();
+ 
+         List<DirectoryElementEntity> insertedElement = directoryElementRepository.saveAll(List.of(
+-            createElement(parentDirectoryUuid, "dir1", "DIRECTORY", false, "user1"),
+-            createElement(parentDirectoryUuid, "filter1", "FILTER", false, "user1"),
+-            createElement(parentDirectoryUuid, "study1", "STUDY", false, "user2"),
+-            createElement(parentDirectoryUuid, "study2", "STUDY", false, "user2"),
+-            createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", false, "user2")
++            createElement(parentDirectoryUuid, "dir1", ElementType.DIRECTORY, false, "user1"),
++            createElement(parentDirectoryUuid, "filter1", ElementType.FILTER, false, "user1"),
++            createElement(parentDirectoryUuid, "study1", ElementType.STUDY, false, "user2"),
++            createElement(parentDirectoryUuid, "study2", ElementType.STUDY, false, "user2"),
++            createElement(UUID.randomUUID(), "studyFromOtherDir", ElementType.STUDY, false, "user2")
+         ));
+ 
+         List<DirectoryElementEntity> expectedResult = insertedElement.stream()
+-            .filter(e -> !"DIRECTORY".equals(e.getType()))
++            .filter(e -> !ElementType.DIRECTORY.equals(e.getType()))
+             .filter(e -> parentDirectoryUuid.equals(e.getParentId()))
+             .filter(e -> !e.isStashed())
+             .toList();
+diff --git a/src/test/java/org/gridsuite/directory/server/DirectoryServiceTest.java b/src/test/java/org/gridsuite/directory/server/DirectoryServiceTest.java
+index c7d3481..1c341a2 100644
+--- a/src/test/java/org/gridsuite/directory/server/DirectoryServiceTest.java
++++ b/src/test/java/org/gridsuite/directory/server/DirectoryServiceTest.java
+@@ -3,6 +3,7 @@ package org.gridsuite.directory.server;
+ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
+ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
++import org.gridsuite.directory.server.services.ElementType;
+ import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
+ import org.junit.jupiter.api.Test;
+ import org.springframework.beans.factory.annotation.Autowired;
+@@ -33,16 +34,16 @@ class DirectoryServiceTest {
+     @MockBean
+     NotificationService notificationService;
+ 
+-    DirectoryElementEntity parentDirectory = createRootElement("root", "DIRECTORY", false, "user1");
++    DirectoryElementEntity parentDirectory = createRootElement("root", ElementType.DIRECTORY, false, "user1");
+     UUID parentDirectoryUuid = parentDirectory.getId();
+ 
+-    DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", "DIRECTORY", false, "user1");
+-    DirectoryElementEntity filter1 = createElement(parentDirectoryUuid, "filter1", "FILTER", false, "user1");
+-    DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", "STUDY", false, "user2");
+-    DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", "STUDY", false, "user2");
+-    DirectoryElementEntity studyFromOtherDir = createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", false, "user2");
++    DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", ElementType.DIRECTORY, false, "user1");
++    DirectoryElementEntity filter1 = createElement(parentDirectoryUuid, "filter1", ElementType.FILTER, false, "user1");
++    DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", ElementType.STUDY, false, "user2");
++    DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", ElementType.STUDY, false, "user2");
++    DirectoryElementEntity studyFromOtherDir = createElement(UUID.randomUUID(), "studyFromOtherDir", ElementType.STUDY, false, "user2");
+ 
+-    DirectoryElementEntity privateDir = createElement(parentDirectoryUuid, "dir2", "DIRECTORY", true, "user2");
++    DirectoryElementEntity privateDir = createElement(parentDirectoryUuid, "dir2", ElementType.DIRECTORY, true, "user2");
+ 
+     List<DirectoryElementEntity> elementsToDelete = List.of(
+         dir1,
+diff --git a/src/test/java/org/gridsuite/directory/server/SupervisionTest.java b/src/test/java/org/gridsuite/directory/server/SupervisionTest.java
+index 3ca0c81..6b8cc64 100644
+--- a/src/test/java/org/gridsuite/directory/server/SupervisionTest.java
++++ b/src/test/java/org/gridsuite/directory/server/SupervisionTest.java
+@@ -9,6 +9,7 @@ package org.gridsuite.directory.server;
+ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
+ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
++import org.gridsuite.directory.server.services.ElementType;
+ import org.gridsuite.directory.server.services.SupervisionService;
+ import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
+ import org.junit.jupiter.api.AfterEach;
+@@ -40,9 +41,9 @@ class SupervisionTest {
+     DirectoryElementInfosRepository directoryElementInfosRepository;
+ 
+     List<DirectoryElementEntity> expectedElements = List.of(
+-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
+-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
+-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", true, LocalDateTime.now())
++        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", ElementType.DIRECTORY, false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
++        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", ElementType.FILTER, false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
++        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", ElementType.STUDY, false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", true, LocalDateTime.now())
+     );
+ 
+     @Test
+diff --git a/src/test/java/org/gridsuite/directory/server/utils/DirectoryTestUtils.java b/src/test/java/org/gridsuite/directory/server/utils/DirectoryTestUtils.java
+index 9f67f8a..8acb1d2 100644
+--- a/src/test/java/org/gridsuite/directory/server/utils/DirectoryTestUtils.java
++++ b/src/test/java/org/gridsuite/directory/server/utils/DirectoryTestUtils.java
+@@ -7,6 +7,7 @@
+ package org.gridsuite.directory.server.utils;
+ 
+ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
++import org.gridsuite.directory.server.services.ElementType;
+ 
+ import java.time.LocalDateTime;
+ import java.util.UUID;
+@@ -19,11 +20,11 @@ public final class DirectoryTestUtils {
+         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+     }
+ 
+-    public static DirectoryElementEntity createRootElement(String elementName, String type, boolean isPrivate, String userId) {
++    public static DirectoryElementEntity createRootElement(String elementName, ElementType type, boolean isPrivate, String userId) {
+         return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, isPrivate, userId, null, LocalDateTime.now(), LocalDateTime.now(), userId, false, null);
+     }
+ 
+-    public static DirectoryElementEntity createElement(UUID parentDirectoryUuid, String elementName, String type, boolean isPrivate, String userId) {
++    public static DirectoryElementEntity createElement(UUID parentDirectoryUuid, String elementName, ElementType type, boolean isPrivate, String userId) {
+         return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, isPrivate, userId, null, LocalDateTime.now(), LocalDateTime.now(), userId, false, null);
+     }
+ }

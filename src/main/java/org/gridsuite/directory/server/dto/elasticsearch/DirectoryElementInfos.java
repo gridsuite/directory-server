@@ -7,6 +7,7 @@
 package org.gridsuite.directory.server.dto.elasticsearch;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.Transient;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.services.ElementType;
@@ -15,6 +16,7 @@ import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -57,4 +59,11 @@ public class DirectoryElementInfos {
 
     @Field(type = FieldType.Boolean)
     private Boolean isPrivate;
+
+    @Transient
+    private List<String> pathName;
+
+    @Transient
+    private List<UUID> pathUuid;
+
 }
