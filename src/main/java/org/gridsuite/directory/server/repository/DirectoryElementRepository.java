@@ -13,7 +13,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,9 +25,11 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findAllByStashed(boolean stashed);
 
-    List<DirectoryElementEntity> findAllByParentIdAndStashedAndStashDate(UUID parentId, boolean stashed, LocalDateTime stashDate);
+    List<DirectoryElementEntity> findAllByParentIdAndStashed(UUID parentId, boolean stashed);
 
     List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed);
+
+    List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNotAndStashed(List<UUID> uuids, UUID parentUuid, String type, boolean stashed);
 
     @Modifying
     @Transactional
@@ -70,63 +71,15 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
 
-    @Query("SELECT e FROM DirectoryElementEntity e " +
-            "WHERE e.id IN :uuids " +
-            "AND e.stashed = :stashed " +
-            "AND (e.owner = :userId OR e.isPrivate = false OR (e.isPrivate IS NULL AND NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.isPrivate = true)))")
-    List<DirectoryElementEntity> findAllStashedElements(@Param("uuids") List<UUID> uuids,
-                                                        @Param("stashed") boolean stashed,
-                                                        @Param("userId") String userId);
-
-    // We select all stashed elements that do not have a parent, or have a parent that is not deleted, or a parent that is deleted in different operation
-    @Query("SELECT e FROM DirectoryElementEntity e " +
-            "WHERE e.stashed = true AND " +
-            "(e.isPrivate = false or e.owner = :userId or (e.isPrivate IS NULL AND NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.isPrivate = true))) " +
-            "AND (" +
-            "      e.parentId IS NULL OR " + // Element has no parent
-            "      NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.stashed = true) OR " + // Parent is not stashed
-            "      NOT EXISTS (SELECT 1 FROM DirectoryElementEntity parent WHERE parent.id = e.parentId AND parent.stashDate = e.stashDate)" + // Parent has different stash date
-            ")")
-    List<DirectoryElementEntity> getElementsStashed(String userId);
-
-    // This query to count all the deleted descendants of each element
-    // It uses CTE (Common Table Expression) which is temporary result set that we use to count all descendents of an element
-    @Query(nativeQuery = true, value =
-            "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id) AS (" +
-                    "   SELECT id AS element_id, parent_id AS parent_element_id FROM element WHERE id = :elementId " +
-                    "   UNION ALL " +
-                    "   SELECT e_child.id AS element_id, e_child.parent_id AS parent_element_id FROM element e_child " +
-                    "   INNER JOIN ElementHierarchy e_parent ON e_parent.element_id = e_child.parent_id WHERE e_child.parent_id IS NOT NULL) " +
-                    "SELECT COUNT(e.element_id) " +
-                    "FROM ElementHierarchy e " +
-                    "INNER JOIN element el ON e.element_id = el.id " +
-                    "WHERE (el.is_private = false OR el.owner = :userId OR (el.is_private IS NULL AND NOT EXISTS (SELECT 1 FROM element WHERE id = e.parent_element_id AND is_private = true))) AND el.stashed = true")
-    Long countDescendants(@Param("elementId") UUID elementId, @Param("userId") String userId);
-
-    @Query(nativeQuery = true, value =
-            "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id) AS ( " +
-                    "  SELECT id AS element_id, parent_id AS parent_element_id FROM element WHERE id = :elementId " +
-                    "  UNION ALL " +
-                    "  SELECT e.id, e.parent_id FROM element e " +
-                    "  INNER JOIN ElementHierarchy ON ElementHierarchy.parent_element_id = e.id WHERE e.parent_id IS NOT NULL) " +
-                    "SELECT * FROM element e " +
-                    "WHERE e.id IN (SELECT id FROM ElementHierarchy) " +
-                    "AND e.stashed = true " +
-                    "AND (e.is_private = false OR e.owner = :userId OR (e.is_private IS NULL AND NOT EXISTS (SELECT 1 FROM element WHERE id = e.parent_id AND is_private = true))) " +
-                    "AND e.id != :elementId " +
-                    "AND e.stash_date = (SELECT stash_date FROM element WHERE id = :elementId)")
-    List<DirectoryElementEntity> findAllDescendantsWithSameStashDate(@Param("elementId") UUID elementId, @Param("userId")String userId);
-
     @Query(nativeQuery = true, value =
             "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id) AS ( " +
                     "  SELECT id AS element_id, parent_id AS parent_element_id FROM element WHERE id = :elementId " +
                     "  UNION ALL " +
                     "  SELECT e.id AS element_id, e.parent_id AS parent_element_id " +
                     "  FROM element e " +
-                    "  INNER JOIN ElementHierarchy ON ElementHierarchy.element_id = e.parent_id WHERE e.parent_id IS NOT NULL) " +
+                    "  INNER JOIN ElementHierarchy ON ElementHierarchy.parent_element_id = e.id WHERE e.parent_id IS NOT NULL) " +
                     "SELECT * FROM element e " +
-                    "JOIN ElementHierarchy eh ON e.parent_id = eh.element_id " +
-                    "WHERE e.stashed = false " +
-                    "AND (e.is_private = false OR e.owner = :userId OR (e.is_private IS NULL AND NOT EXISTS (SELECT 1 FROM element WHERE id = eh.parent_element_id AND is_private = true)))")
-    List<DirectoryElementEntity> findAllDescendants(@Param("elementId") UUID elementId, @Param("userId") String userId);
+                    "JOIN ElementHierarchy eh ON e.id = eh.parent_element_id " +
+                    "WHERE e.stashed = false ")
+    List<DirectoryElementEntity> findAllAscendants(@Param("elementId") UUID elementId);
 }
