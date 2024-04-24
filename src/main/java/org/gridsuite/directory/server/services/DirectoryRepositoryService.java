@@ -42,7 +42,7 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> getElementEntities(List<UUID> uuids, UUID parentUuid) {
-        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, "DIRECTORY", false);
+        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, ElementType.DIRECTORY, false);
     }
 
     public boolean isRootDirectory(UUID directoryUuid) {

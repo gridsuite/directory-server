@@ -61,14 +61,14 @@ class DirectoryServiceTest {
         // - elements having a parent directory different from the one passed as parameter
 
         List<DirectoryElementEntity> elementsExpectedToDelete = elementsToDelete.stream()
-            .filter(e -> !"DIRECTORY".equals(e.getType()))
+            .filter(e -> ElementType.DIRECTORY != e.getType())
             .filter(e -> e.getParentId().equals(parentDirectoryUuid))
             .toList();
 
         List<UUID> elementExpectedToDeleteUuids = elementsExpectedToDelete.stream().map(e -> e.getId()).toList();
 
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
-        when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(elementToDeleteUuids, parentDirectoryUuid, "DIRECTORY", false))
+        when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(elementToDeleteUuids, parentDirectoryUuid, ElementType.DIRECTORY, false))
             .thenReturn(elementsExpectedToDelete);
 
         // acutal service call

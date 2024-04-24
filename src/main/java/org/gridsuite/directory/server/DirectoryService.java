@@ -110,7 +110,7 @@ public class DirectoryService {
         assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
         assertAccessibleDirectory(parentDirectoryUuid, userId);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
-        var isCurrentElementPrivate = elementAttributes.getType().equals(ElementType.DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null;
+        var isCurrentElementPrivate = elementAttributes.getType() == ElementType.DIRECTORY ? elementAttributes.getAccessRights().getIsPrivate() : null;
 
         notificationService.emitDirectoryChanged(
                 parentDirectoryUuid,
@@ -152,7 +152,7 @@ public class DirectoryService {
                         parentDirectoryUuid,
                         elementAttributes.getElementName(),
                         elementAttributes.getType(),
-                        elementAttributes.getType().equals(ElementType.DIRECTORY) ? elementAttributes.getAccessRights().getIsPrivate() : null,
+                        elementAttributes.getType() == ElementType.DIRECTORY ? elementAttributes.getAccessRights().getIsPrivate() : null,
                         elementAttributes.getOwner(),
                         elementAttributes.getDescription(),
                         now,
@@ -251,7 +251,7 @@ public class DirectoryService {
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<ElementType> types) {
         return getAllDirectoryElementsStream(directoryUuid, types, userId)
-                .filter(elementAttributes -> !elementAttributes.getType().equals(ElementType.DIRECTORY) || elementAttributes.isAllowed(userId));
+                .filter(elementAttributes -> elementAttributes.getType() != ElementType.DIRECTORY || elementAttributes.isAllowed(userId));
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<ElementType> types, String userId) {
@@ -259,7 +259,7 @@ public class DirectoryService {
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
         return directoryElements
                 .stream()
-                .filter(e -> e.getType().equals(ElementType.DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
+                .filter(e -> e.getType() == ElementType.DIRECTORY || types.isEmpty() || types.contains(e.getType()))
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
@@ -301,7 +301,7 @@ public class DirectoryService {
         );
 
         //true if we updated a study name
-        if (elementEntity.getType().equals(ElementType.STUDY) && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
+        if (elementEntity.getType() == ElementType.STUDY && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
             studyService.notifyStudyUpdate(elementUuid, userId);
         }
     }
@@ -337,7 +337,7 @@ public class DirectoryService {
     }
 
     private void validateElementForUpdate(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
-        if (element.getType().equals(ElementType.DIRECTORY)) {
+        if (element.getType() == ElementType.DIRECTORY) {
             throw new DirectoryException(IS_DIRECTORY);
         }
         if (!isElementUpdatable(toElementAttributes(element), userId, false) ||
@@ -358,7 +358,7 @@ public class DirectoryService {
     }
 
     private void notifyStudyUpdateIfApplicable(DirectoryElementEntity element, String userId) {
-        if (element.getType().equals(ElementType.STUDY)) {
+        if (element.getType() == ElementType.STUDY) {
             studyService.notifyStudyUpdate(element.getId(), userId);
         }
     }
@@ -367,7 +367,7 @@ public class DirectoryService {
         DirectoryElementEntity newDirectory = repositoryService.getElementEntity(newDirectoryUuid)
                 .orElseThrow(() -> DirectoryException.createElementNotFound(ElementType.DIRECTORY.name(), newDirectoryUuid));
 
-        if (!newDirectory.getType().equals(ElementType.DIRECTORY)) {
+        if (newDirectory.getType() != ElementType.DIRECTORY) {
             throw new DirectoryException(NOT_DIRECTORY);
         }
     }
@@ -380,10 +380,10 @@ public class DirectoryService {
     }
 
     private boolean isElementUpdatable(ElementAttributes element, String userId, boolean forDeletion) {
-        if (element.getType().equals(ElementType.DIRECTORY)) {
+        if (element.getType() == ElementType.DIRECTORY) {
             return element.isAllowed(userId) &&
                     (!forDeletion || getDirectoryElementsStream(element.getElementUuid(), userId, List.of())
-                            .filter(e -> e.getType().equals(ElementType.DIRECTORY))
+                            .filter(e -> e.getType() == ElementType.DIRECTORY)
                             .allMatch(e -> isElementUpdatable(e, userId, true))
                     );
         } else {
@@ -414,11 +414,11 @@ public class DirectoryService {
     }
 
     private void deleteElement(ElementAttributes elementAttributes, String userId) {
-        if (elementAttributes.getType().equals(ElementType.DIRECTORY)) {
+        if (elementAttributes.getType() == ElementType.DIRECTORY) {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
         repositoryService.deleteElement(elementAttributes.getElementUuid());
-        if (ElementType.STUDY.equals(elementAttributes.getType())) {
+        if (ElementType.STUDY == elementAttributes.getType()) {
             notificationService.emitDeletedStudy(elementAttributes.getElementUuid(), userId);
         }
     }
@@ -450,7 +450,7 @@ public class DirectoryService {
 
         // extracting studyUuids from this list, to send specific notifications
         elementsAttributesToDelete.stream()
-                .filter(element -> ElementType.STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid)
+                .filter(element -> ElementType.STUDY == element.getType()).map(ElementAttributes::getElementUuid)
                 .forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));
 
         // sending directory update notification
@@ -566,7 +566,7 @@ public class DirectoryService {
 
     public void areElementsAccessible(@NonNull String userId, @NonNull List<UUID> elementUuids) {
         getElements(elementUuids, true, List.of()).stream()
-                .map(e -> e.getType().equals(ElementType.DIRECTORY) ? e : getParentElement(e.getElementUuid()))
+                .map(e -> e.getType() == ElementType.DIRECTORY ? e : getParentElement(e.getElementUuid()))
                 .forEach(e -> {
                     if (!e.isAllowed(userId)) {
                         throw new DirectoryException(NOT_ALLOWED);
@@ -575,7 +575,7 @@ public class DirectoryService {
     }
 
     public boolean isPathAccessible(String userId, List<ElementAttributes> pathElements) {
-        return pathElements.stream().allMatch(e -> !ElementType.DIRECTORY.equals(e.getType()) || e.isAllowed(userId));
+        return pathElements.stream().allMatch(e -> ElementType.DIRECTORY != e.getType() || e.isAllowed(userId));
     }
 
     private String nameCandidate(String elementName, int n) {

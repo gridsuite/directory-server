@@ -30,7 +30,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed);
 
-    List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNotAndStashed(List<UUID> uuids, UUID parentUuid, String type, boolean stashed);
+    List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNotAndStashed(List<UUID> uuids, UUID parentUuid, ElementType type, boolean stashed);
 
     @Modifying
     @Transactional

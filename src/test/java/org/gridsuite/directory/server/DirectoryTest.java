@@ -52,7 +52,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
+import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;

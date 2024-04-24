@@ -52,7 +52,7 @@ public class ElementAttributes {
     private String lastModifiedBy;
 
     public boolean isAllowed(@NonNull String userId) {
-        if (!type.equals(ElementType.DIRECTORY)) {
+        if (type != ElementType.DIRECTORY) {
             throw new DirectoryException(NOT_DIRECTORY);
         }
         return owner.equals(userId) || !accessRights.isPrivate();
