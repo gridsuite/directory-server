@@ -62,12 +62,12 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId, allowNewName));
     }
 
-    @PostMapping(value = "/elements/{elementUuid}/duplicate", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element in a directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
         @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<ElementAttributes> duplicateElement(
-                                                           @PathVariable("elementUuid") UUID elementUuid,
+                                                           @RequestParam("duplicateFrom") UUID elementUuid,
                                                            @Parameter(description = "ID of the new element") @RequestParam("newElementUuid") UUID newElementUuid,
                                                            @Parameter(description = "Optional UUID of the target directory where the new element will be placed. Defaults to the same directory as the original element if not specified.")
                                                            @RequestParam(name = "targetDirectoryId", required = false) UUID targetDirectoryId,
