@@ -31,7 +31,6 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
@@ -251,7 +250,7 @@ public class DirectoryService {
             return List.of();
         }
 
-        return getDirectoryElementsStream(directoryUuid, userId, types).collect(Collectors.toList());
+        return getDirectoryElementsStream(directoryUuid, userId, types).toList();
     }
 
     private Stream<ElementAttributes> getDirectoryElementsStream(UUID directoryUuid, String userId, List<String> types) {
@@ -529,11 +528,11 @@ public class DirectoryService {
             throw new DirectoryException(NOT_FOUND);
         }
 
-        Map<UUID, Long> subElementsCount = getSubElementsCount(elementEntities.stream().map(DirectoryElementEntity::getId).collect(Collectors.toList()), types);
+        Map<UUID, Long> subElementsCount = getSubElementsCount(elementEntities.stream().map(DirectoryElementEntity::getId).toList(), types);
 
         return elementEntities.stream()
                 .map(attribute -> toElementAttributes(attribute, subElementsCount.getOrDefault(attribute.getId(), 0L)))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public void notify(@NonNull String notificationName, @NonNull UUID elementUuid, @NonNull String userId) {
@@ -635,6 +634,6 @@ public class DirectoryService {
                     return elementAccessible;
                 })
                 .flatMap(Optional::stream)
-                .collect(Collectors.toList());
+                .toList();
     }
 }

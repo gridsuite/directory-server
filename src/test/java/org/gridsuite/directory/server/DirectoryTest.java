@@ -1251,7 +1251,7 @@ public class DirectoryTest {
 
     private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, List<String> elementTypes, int httpCodeExpected) throws Exception {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
+        var typesPath = elementTypes != null ? "&elementTypes=" + String.join(",", elementTypes) : "";
 
         // get sub-elements list
         if (httpCodeExpected == 200) {
@@ -1432,7 +1432,7 @@ public class DirectoryTest {
     }
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, List<ElementAttributes> list) throws Exception {
-        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + types.stream().collect(Collectors.joining(",")) : "";
+        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + String.join(",", types) : "";
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + elementTypes)
                 .header("userId", userId))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))

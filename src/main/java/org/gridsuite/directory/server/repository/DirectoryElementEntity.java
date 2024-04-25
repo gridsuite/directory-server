@@ -112,12 +112,6 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getLastModifiedBy());
     }
 
-    public DirectoryElementEntity stashElement(boolean stashed, LocalDateTime stashDate) {
-        this.stashDate = stashDate;
-        this.stashed = stashed;
-        return this;
-    }
-
     public DirectoryElementInfos toDirectoryElementInfos() {
         return DirectoryElementInfos.builder()
                 .id(getId())
