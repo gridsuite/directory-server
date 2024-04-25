@@ -69,7 +69,8 @@ public class DirectoryElementEntity {
     private LocalDateTime stashDate;
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
-        if (StringUtils.isNotBlank(newElementAttributes.getElementName())) {
+        boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
+        if (isElementNameUpdated) {
             this.name = newElementAttributes.getElementName();
         }
 
@@ -77,18 +78,22 @@ public class DirectoryElementEntity {
             this.isPrivate = newElementAttributes.getAccessRights().isPrivate();
         }
 
-        if (Objects.nonNull(newElementAttributes.getDescription())) {
+        boolean isDescriptionUpdated = Objects.nonNull(newElementAttributes.getDescription());
+        if (isDescriptionUpdated) {
             this.description = newElementAttributes.getDescription();
         }
-
-        if (Objects.nonNull(newElementAttributes.getLastModificationDate())) {
-            this.lastModificationDate = LocalDateTime.now(ZoneOffset.UTC);
-        }
-
-        if (Objects.nonNull(newElementAttributes.getLastModifiedBy())) {
-            this.lastModifiedBy = newElementAttributes.getLastModifiedBy();
+        if (isDescriptionUpdated || isElementNameUpdated) {
+            updateModificationAttributes(lastModifiedBy, LocalDateTime.now(ZoneOffset.UTC));
         }
         return this;
+    }
+
+    public void updateModificationAttributes(String lastModifiedBy,
+                                             LocalDateTime lastModificationDate) {
+        this.setLastModificationDate(lastModificationDate);
+        if (Objects.nonNull(lastModifiedBy)) {
+            this.setLastModifiedBy(lastModifiedBy);
+        }
     }
 
     public boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes, String userId) {

@@ -314,8 +314,8 @@ public class DirectoryService {
     @Transactional
     public void updateElementLastModifiedAttributes(UUID elementUuid, LocalDateTime lastModificationDate, String lastModifiedBy) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
-        elementToUpdate.setLastModificationDate(lastModificationDate);
-        elementToUpdate.setLastModifiedBy(lastModifiedBy);
+        elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
+
     }
 
     public void updateElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
