@@ -52,7 +52,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT name FROM DirectoryElementEntity WHERE parentId=:parentId AND type=:type AND name like :name% and stashed = false ")
     List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
 
-    boolean existsByIdAndOwnerOrIsPrivate(UUID id, String owner, boolean isPrivate);
+    boolean existsByIdAndOwnerOrIsPrivateAndId(UUID id, String owner, boolean isPrivate, UUID id2);
 
     interface SubDirectoryCount {
         UUID getId();

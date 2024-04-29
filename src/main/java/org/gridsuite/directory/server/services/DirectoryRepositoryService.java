@@ -87,7 +87,7 @@ public class DirectoryRepositoryService {
     }
 
     public boolean canRead(UUID id, String userId) {
-        return directoryElementRepository.existsByIdAndOwnerOrIsPrivate(id, userId, false);
+        return directoryElementRepository.existsByIdAndOwnerOrIsPrivateAndId(id, userId, false, id);
     }
 
     public void reindexAllElements() {
