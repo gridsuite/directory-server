@@ -63,7 +63,7 @@ public class DirectoryController {
     }
 
     @PostMapping(value = "/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Create an element in a directory")
+    @Operation(summary = "Duplicate an element in a directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
         @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<ElementAttributes> duplicateElement(
