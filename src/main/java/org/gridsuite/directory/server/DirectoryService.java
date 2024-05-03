@@ -648,11 +648,6 @@ public class DirectoryService {
         return Pair.of(uuids, names);
     }
 
-    @Transactional
-    public void reindexAllElements() {
-        repositoryService.reindexAllElements();
-    }
-
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String userId) {
         return directoryElementInfosService.searchElements(userInput)
                 .stream()

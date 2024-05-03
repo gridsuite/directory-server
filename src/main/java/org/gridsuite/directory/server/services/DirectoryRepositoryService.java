@@ -8,12 +8,16 @@ package org.gridsuite.directory.server.services;
 
 import com.google.common.collect.Lists;
 import lombok.NonNull;
+
+import org.gridsuite.directory.server.DirectoryException;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
 
 import java.util.List;
 import java.util.Optional;
@@ -90,10 +94,20 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.existsByIdAndOwnerOrIsPrivateAndId(id, userId, false, id);
     }
 
-    public void reindexAllElements() {
-        saveElementsInfos(directoryElementRepository.findAllByStashed(false).stream()
+    public void reindexElements(UUID directoryUuid) {
+        Optional<DirectoryElementEntity> dir = directoryElementRepository.findById(directoryUuid);
+        if (dir.isPresent()) {
+            // if root dir then reindex it otherwise continue
+            if (dir.get().getParentId() == null) {
+                saveElementsInfos(List.of(dir.get().toDirectoryElementInfos()));
+            }
+            // then reindex children
+            saveElementsInfos(directoryElementRepository.findAllByParentId(directoryUuid).stream()
                 .map(DirectoryElementEntity::toDirectoryElementInfos)
                 .toList());
+        } else {
+            throw new DirectoryException(NOT_FOUND);
+        }
     }
 
     public UUID getParentUuid(UUID elementUuid) {
@@ -137,5 +151,9 @@ public class DirectoryRepositoryService {
 
     public List<DirectoryElementEntity> findAllAscendants(UUID elementId) {
         return directoryElementRepository.findAllAscendants(elementId);
+    }
+
+    public List<DirectoryElementEntity> getDirectories() {
+        return directoryElementRepository.findAllByType("DIRECTORY");
     }
 }

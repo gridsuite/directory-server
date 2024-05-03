@@ -250,14 +250,6 @@ public class DirectoryController {
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
     }
 
-    @PostMapping(value = "/elements/reindex-all")
-    @Operation(summary = "reindex the element")
-    @ApiResponse(responseCode = "200", description = "Elements reindexed")
-    public ResponseEntity<Void> reindexAllElements() {
-        service.reindexAllElements();
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/elements/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search elements in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})

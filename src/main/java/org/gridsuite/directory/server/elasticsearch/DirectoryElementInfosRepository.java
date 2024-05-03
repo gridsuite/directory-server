@@ -8,6 +8,7 @@ package org.gridsuite.directory.server.elasticsearch;
 
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
+import org.springframework.lang.NonNull;
 
 import java.util.UUID;
 
@@ -15,4 +16,8 @@ import java.util.UUID;
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 public interface DirectoryElementInfosRepository extends ElasticsearchRepository<DirectoryElementInfos, UUID> {
+
+    long countByParentId(@NonNull UUID parentId);
+
+    void deleteAllByParentId(@NonNull UUID parentId);
 }

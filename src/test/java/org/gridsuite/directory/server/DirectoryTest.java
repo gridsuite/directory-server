@@ -1647,24 +1647,6 @@ public class DirectoryTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testReindexAll() {
-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
-        DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
-        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", STUDY, true, "userId", "description", now, now, "userId", false, null);
-
-        directoryElementRepository.saveAll(List.of(dirEntity, studyEntity));
-
-        assertNbElementsInRepositories(2, 0);
-
-        mockMvc.perform(post("/v1/elements/reindex-all")).andExpect(status().isOk());
-
-        assertNbElementsInRepositories(2, 2);
-
-        output.clear();
-    }
-
-    @Test
     public void testSearch() throws Exception {
 
         //                          root (userId2, public)

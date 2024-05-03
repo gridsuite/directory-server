@@ -10,14 +10,17 @@ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosReposit
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.SupervisionService;
-import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
+// import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import com.google.common.collect.Iterables;
+
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,7 +31,7 @@ import static org.mockito.Mockito.*;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @SpringBootTest
-@DisableElasticsearch
+// @DisableElasticsearch
 class SupervisionTest {
     @Autowired
     SupervisionService supervisionService;
@@ -62,9 +65,58 @@ class SupervisionTest {
         verify(directoryElementInfosRepository, times(1)).deleteAllById(uuidsToDelete);
     }
 
+    @Test
+    void testGetElementInfosCount() {
+        supervisionService.getIndexedDirectoryElementsCount();
+        verify(directoryElementInfosRepository, times(1)).count();
+
+        UUID parentId = UUID.randomUUID();
+        supervisionService.getIndexedDirectoryElementsCount(parentId);
+        verify(directoryElementInfosRepository, times(1)).countByParentId(parentId);
+    }
+
+    @Test
+    void testDeleteElementInfos() {
+        UUID parentId = UUID.randomUUID();
+        supervisionService.deleteIndexedDirectoryElements(parentId);
+
+        verify(directoryElementInfosRepository, times(1)).countByParentId(parentId);
+        verify(directoryElementInfosRepository, times(1)).deleteAllByParentId(parentId);
+    }
+
+    @Test
+    void testReindexElements() {
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
+        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", "DIRECTORY", true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "DIRECTORY", true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", "DIRECTORY", true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "STUDY", true, "userId", "description", now, now, "userId", false, null);
+
+        directoryElementRepository.saveAll(List.of(rootDir, dirEntity, subdirEntity, studyEntity));
+
+        assertNbElementsInRepositories(4, 0);
+
+        supervisionService.reindexElements(subdirEntity.getId());
+
+        assertNbElementsInRepositories(4, 0);
+
+        supervisionService.reindexElements(dirEntity.getId());
+
+        assertNbElementsInRepositories(4, 1);
+
+        supervisionService.reindexElements(rootDir.getId());
+
+        assertNbElementsInRepositories(4, 4);
+    }
+
     @AfterEach
     public void verifyNoMoreInteractionsMocks() {
         verifyNoMoreInteractions(directoryElementRepository);
         verifyNoMoreInteractions(directoryElementInfosRepository);
+    }
+
+    private void assertNbElementsInRepositories(int nbEntities, int nbElementsInfos) {
+        assertEquals(nbEntities, directoryElementRepository.findAll().size());
+        assertEquals(nbElementsInfos, Iterables.size(directoryElementInfosRepository.findAll()));
     }
 }
