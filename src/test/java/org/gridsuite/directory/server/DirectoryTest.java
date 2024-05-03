@@ -173,6 +173,30 @@ public class DirectoryTest {
 
         checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, false, "userId", null, creationDateNewDirectory, modificationDateNewDirectory, "userId")));
 
+        // Change root directory access rights public => private
+        // change access of a root directory from public to private => we should receive a notification with isPrivate= false to notify all clients
+        updateAccessRights(uuidNewDirectory, uuidNewDirectory, "userId", true, true, false);
+
+        checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, true, "userId", null, creationDateNewDirectory, creationDateNewDirectory, "userId")));
+
+        // Add another sub-directory
+        ElementAttributes newSubDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, true, "userId", "descr newSubDir");
+        insertAndCheckSubElement(uuidNewDirectory, true, newSubDirAttributes);
+        checkDirectoryContent(uuidNewDirectory, "userId", List.of(newSubDirAttributes));
+
+        // Add another sub-directory
+        ElementAttributes newSubSubDirAttributes = toElementAttributes(null, "newSubSubDir", DIRECTORY, true, "userId");
+        insertAndCheckSubElement(newSubDirAttributes.getElementUuid(), true, newSubSubDirAttributes);
+        checkDirectoryContent(newSubDirAttributes.getElementUuid(), "userId", List.of(newSubSubDirAttributes));
+
+        // Test children number of root directory
+        checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, null, creationDateNewDirectory, creationDateNewDirectory, "userId")));
+
+        deleteElement(uuidNewDirectory, uuidNewDirectory, "userId", true, true, false, 0);
+        checkRootDirectoriesList("userId", List.of());
+
+        checkElementNotFound(newSubDirAttributes.getElementUuid(), "userId");
+        checkElementNotFound(newSubSubDirAttributes.getElementUuid(), "userId");
     }
 
     @Test
