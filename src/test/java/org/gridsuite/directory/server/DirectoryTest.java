@@ -117,6 +117,9 @@ public class DirectoryTest {
     @Autowired
     private InputDestination input;
 
+    @Autowired
+    private DirectoryService directoryService;
+
     private void cleanDB() {
         directoryElementRepository.deleteAll();
         directoryElementInfosRepository.deleteAll();
@@ -1570,6 +1573,32 @@ public class DirectoryTest {
 
         //we don't care about message
         output.clear();
+    }
+
+    @Test
+    public void duplicateElementTest() throws Exception {
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir", false, "user1");
+        ElementAttributes caseElement = toElementAttributes(UUID.randomUUID(), "caseName", "CASE", null, "user1");
+        insertAndCheckSubElement(rootDirUuid, false, caseElement);
+        UUID elementUUID = caseElement.getElementUuid();
+        UUID newElementUuid = UUID.randomUUID();
+        // duplicate the element
+        ElementAttributes duplicatedElement = directoryService.duplicateElement(elementUUID, newElementUuid, null, "user1");
+        assertEquals("caseName(1)", duplicatedElement.getElementName());
+        assertEquals(newElementUuid, duplicatedElement.getElementUuid());
+
+        List<DirectoryElementEntity> directoryElementList = directoryElementRepository.findAll();
+        //there should be 3 elements, the 2 directories created and the one element inside
+        assertEquals(3, directoryElementList.size());
+        DirectoryElementEntity sourceDirectoryElementEntity = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getId().equals(elementUUID)).findFirst().orElseThrow();
+
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("user1", headers.get(HEADER_USER_ID));
+        assertEquals(sourceDirectoryElementEntity.getParentId(), headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
 
     @Test
