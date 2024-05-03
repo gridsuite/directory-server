@@ -94,7 +94,7 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectories());
     }
 
-    @PostMapping(value = "/directoris/{directoryUuid}/reindex")
+    @PostMapping(value = "/directories/{directoryUuid}/reindex")
     @Operation(summary = "reindex elements of the directory and itslef if it's a root directory")
     @ApiResponse(responseCode = "200", description = "Elements reindexed")
     public ResponseEntity<Void> reindexElements(@PathVariable("directoryUuid") UUID directoryUuid) {

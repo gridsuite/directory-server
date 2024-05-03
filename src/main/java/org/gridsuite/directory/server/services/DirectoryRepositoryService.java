@@ -95,7 +95,7 @@ public class DirectoryRepositoryService {
     }
 
     public void reindexElements(UUID directoryUuid) {
-        Optional<DirectoryElementEntity> dir = directoryElementRepository.findById(directoryUuid);
+        Optional<DirectoryElementEntity> dir = directoryElementRepository.findByIdAndType(directoryUuid, "DIRECTORY");
         if (dir.isPresent()) {
             // if root dir then reindex it otherwise continue
             if (dir.get().getParentId() == null) {
