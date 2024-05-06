@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import lombok.NonNull;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -50,11 +52,14 @@ public class SupervisionService {
     }
 
     public Long getIndexedDirectoryElementsCount(UUID directoryUuid) {
+        if (directoryUuid == null) {
+            return getIndexedDirectoryElementsCount();
+        }
         return directoryElementInfosService.getDirectoryElementsInfosCount(directoryUuid);
     }
 
     @Transactional
-    public Long deleteIndexedDirectoryElements(UUID directoryUuid) {
+    public Long deleteIndexedDirectoryElements(@NonNull UUID directoryUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
 

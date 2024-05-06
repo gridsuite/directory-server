@@ -76,7 +76,7 @@ public class DirectoryElementInfosService {
         return directoryElementInfosRepository.count();
     }
 
-    public long getDirectoryElementsInfosCount(UUID directoryUuid) {
+    public long getDirectoryElementsInfosCount(@NonNull UUID directoryUuid) {
         return directoryElementInfosRepository.countByParentId(directoryUuid);
     }
 

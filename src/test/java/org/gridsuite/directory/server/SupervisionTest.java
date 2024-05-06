@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -35,8 +36,6 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 class SupervisionTest {
-
-    public static final String DIRECTORY = "DIRECTORY";
 
     @Autowired
     SupervisionService supervisionService;
@@ -87,6 +86,11 @@ class SupervisionTest {
 
         verify(directoryElementInfosRepository, times(1)).countByParentId(parentId);
         verify(directoryElementInfosRepository, times(1)).deleteAllByParentId(parentId);
+
+        assertException(new NullPointerException("directoryUuid is marked non-null but is null"), () -> supervisionService.deleteIndexedDirectoryElements(null));
+
+        verify(directoryElementInfosRepository, times(0)).countByParentId(null);
+        verify(directoryElementInfosRepository, times(0)).deleteAllByParentId(null);
     }
 
     @Test

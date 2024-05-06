@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,7 +47,7 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> getElementEntities(List<UUID> uuids, UUID parentUuid) {
-        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, "DIRECTORY", false);
+        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, DIRECTORY, false);
     }
 
     public boolean isRootDirectory(UUID directoryUuid) {
@@ -95,7 +96,7 @@ public class DirectoryRepositoryService {
     }
 
     public void reindexElements(UUID directoryUuid) {
-        Optional<DirectoryElementEntity> dir = directoryElementRepository.findByIdAndType(directoryUuid, "DIRECTORY");
+        Optional<DirectoryElementEntity> dir = directoryElementRepository.findByIdAndType(directoryUuid, DIRECTORY);
         if (dir.isPresent()) {
             // if root dir then reindex it otherwise continue
             if (dir.get().getParentId() == null) {
@@ -154,6 +155,6 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> getDirectories() {
-        return directoryElementRepository.findAllByType("DIRECTORY");
+        return directoryElementRepository.findAllByType(DIRECTORY);
     }
 }

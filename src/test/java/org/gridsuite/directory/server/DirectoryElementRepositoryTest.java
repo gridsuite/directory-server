@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.*;
 import static org.assertj.core.api.Assertions.*;
 
@@ -31,12 +32,12 @@ class DirectoryElementRepositoryTest {
     @Test
     void testFindAllByIdInAndParentIdAndTypeNot() {
         DirectoryElementEntity parentDirectory = directoryElementRepository.save(
-            createRootElement("root", "DIRECTORY", false, "user1")
+            createRootElement("root", DIRECTORY, false, "user1")
         );
         UUID parentDirectoryUuid = parentDirectory.getId();
 
         List<DirectoryElementEntity> insertedElement = directoryElementRepository.saveAll(List.of(
-            createElement(parentDirectoryUuid, "dir1", "DIRECTORY", false, "user1"),
+            createElement(parentDirectoryUuid, "dir1", DIRECTORY, false, "user1"),
             createElement(parentDirectoryUuid, "filter1", "FILTER", false, "user1"),
             createElement(parentDirectoryUuid, "study1", "STUDY", false, "user2"),
             createElement(parentDirectoryUuid, "study2", "STUDY", false, "user2"),
@@ -44,11 +45,11 @@ class DirectoryElementRepositoryTest {
         ));
 
         List<DirectoryElementEntity> expectedResult = insertedElement.stream()
-            .filter(e -> !"DIRECTORY".equals(e.getType()))
+            .filter(e -> !DIRECTORY.equals(e.getType()))
             .filter(e -> parentDirectoryUuid.equals(e.getParentId()))
             .filter(e -> !e.isStashed())
             .toList();
 
-        assertThat(expectedResult).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(insertedElement.stream().map(e -> e.getId()).toList(), parentDirectoryUuid, "DIRECTORY", false));
+        assertThat(expectedResult).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(insertedElement.stream().map(e -> e.getId()).toList(), parentDirectoryUuid, DIRECTORY, false));
     }
 }
