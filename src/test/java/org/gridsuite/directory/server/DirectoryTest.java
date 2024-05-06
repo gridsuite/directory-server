@@ -1182,6 +1182,93 @@ public class DirectoryTest {
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
     }
 
+    @Test
+    public void testSupervision() throws Exception {
+        MvcResult mvcResult;
+        // Test get elasticsearch host
+        mvcResult = mockMvc.perform(get("/v1/supervision/elasticsearch-host"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals("localhost:9200", mvcResult.getResponse().getContentAsString());
+
+        // Test get indexed elements index name
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-index-name"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals("directory-elements", mvcResult.getResponse().getContentAsString());
+
+        // create some elements here
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir", false, "userId");
+
+        UUID dirUuid = UUID.randomUUID();
+        ElementAttributes directoryAttributes = toElementAttributes(dirUuid, "directory", DIRECTORY, false, "userId");
+        insertAndCheckSubElement(rootDirUuid, false, directoryAttributes);
+        ElementAttributes subdirectoryAttributes = toElementAttributes(UUID.randomUUID(), "subdirectory", DIRECTORY, false, "userId");
+        insertAndCheckSubElement(dirUuid, false, subdirectoryAttributes);
+        ElementAttributes studyAttributes = toElementAttributes(UUID.randomUUID(), "study", STUDY, null, "userId");
+        insertAndCheckSubElement(rootDirUuid, false, studyAttributes);
+
+        // Test get directories
+        mvcResult = mockMvc.perform(get("/v1/supervision/directories"))
+            .andExpect(status().isOk())
+            .andReturn();
+        List<ElementAttributes> elementAttributes = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(3, elementAttributes.size());
+
+        // Test get indexed elements counts
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        // Test indexed elements deletion
+        mockMvc.perform(delete("/v1/supervision/directories/{directoriesUuid}/indexed-directory-elements", dirUuid))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+        assertEquals(3, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        mockMvc.perform(delete("/v1/supervision/directories/{directoriesUuid}/indexed-directory-elements", rootDirUuid))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+        assertEquals(0, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        // reindex
+        mockMvc.perform(post("/v1/supervision/directories/{directoriesUuid}/reindex", dirUuid))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+        assertEquals(1, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        mockMvc.perform(post("/v1/supervision/directories/{directoriesUuid}/reindex", rootDirUuid))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+        assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/directories"))
+            .andExpect(status().isOk())
+            .andReturn();
+    }
+
     private List<ElementAttributes> getPath(UUID elementUuid, String userId) throws Exception {
         String response = mockMvc.perform(get("/v1/elements/" + elementUuid + "/path")
                         .header("userId", userId))
