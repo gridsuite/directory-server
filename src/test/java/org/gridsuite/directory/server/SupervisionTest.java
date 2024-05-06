@@ -35,6 +35,9 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 class SupervisionTest {
+
+    public static final String DIRECTORY = "DIRECTORY";
+
     @Autowired
     SupervisionService supervisionService;
 
@@ -45,7 +48,7 @@ class SupervisionTest {
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
     List<DirectoryElementEntity> expectedElements = List.of(
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", DIRECTORY, false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
         new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
         new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", true, LocalDateTime.now())
     );
@@ -89,15 +92,15 @@ class SupervisionTest {
     @Test
     void testReindexElements() {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
-        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", "DIRECTORY", true, "userId", "description", now, now, "userId", false, null);
-        DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "DIRECTORY", true, "userId", "description", now, now, "userId", false, null);
-        DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", "DIRECTORY", true, "userId", "description", now, now, "userId", false, null);
-        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "STUDY", true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE", true, "userId", "description", now, now, "userId", false, null);
 
-        when(directoryElementRepository.findByIdAndType(rootDir.getId(), "DIRECTORY")).thenReturn(Optional.of(rootDir));
-        when(directoryElementRepository.findByIdAndType(dirEntity.getId(), "DIRECTORY")).thenReturn(Optional.of(dirEntity));
-        when(directoryElementRepository.findByIdAndType(subdirEntity.getId(), "DIRECTORY")).thenReturn(Optional.of(subdirEntity));
-        when(directoryElementRepository.findByIdAndType(studyEntity.getId(), "DIRECTORY")).thenReturn(Optional.empty());
+        when(directoryElementRepository.findByIdAndType(rootDir.getId(), DIRECTORY)).thenReturn(Optional.of(rootDir));
+        when(directoryElementRepository.findByIdAndType(dirEntity.getId(), DIRECTORY)).thenReturn(Optional.of(dirEntity));
+        when(directoryElementRepository.findByIdAndType(subdirEntity.getId(), DIRECTORY)).thenReturn(Optional.of(subdirEntity));
+        when(directoryElementRepository.findByIdAndType(studyEntity.getId(), DIRECTORY)).thenReturn(Optional.empty());
 
         when(directoryElementRepository.findAllByParentId(rootDir.getId())).thenReturn(List.of(dirEntity, studyEntity));
         when(directoryElementRepository.findAllByParentId(dirEntity.getId())).thenReturn(List.of(subdirEntity));
@@ -105,25 +108,28 @@ class SupervisionTest {
 
         assertException(new DirectoryException(NOT_FOUND), () -> supervisionService.reindexElements(studyEntity.getId()));
 
-        verify(directoryElementRepository, times(1)).findByIdAndType(studyEntity.getId(), "DIRECTORY");
+        verify(directoryElementRepository, times(1)).findByIdAndType(studyEntity.getId(), DIRECTORY);
         verify(directoryElementRepository, times(0)).findAllByParentId(studyEntity.getId());
         verify(directoryElementInfosRepository, times(0)).saveAll(List.of(studyEntity.toDirectoryElementInfos()));
 
+        supervisionService.getDirectories();
+        verify(directoryElementRepository, times(1)).findAllByType(DIRECTORY);
+
         supervisionService.reindexElements(subdirEntity.getId());
 
-        verify(directoryElementRepository, times(1)).findByIdAndType(subdirEntity.getId(), "DIRECTORY");
+        verify(directoryElementRepository, times(1)).findByIdAndType(subdirEntity.getId(), DIRECTORY);
         verify(directoryElementRepository, times(1)).findAllByParentId(subdirEntity.getId());
         verify(directoryElementInfosRepository, times(0)).saveAll(List.of(subdirEntity.toDirectoryElementInfos()));
 
         supervisionService.reindexElements(dirEntity.getId());
 
-        verify(directoryElementRepository, times(1)).findByIdAndType(dirEntity.getId(), "DIRECTORY");
+        verify(directoryElementRepository, times(1)).findByIdAndType(dirEntity.getId(), DIRECTORY);
         verify(directoryElementRepository, times(1)).findAllByParentId(dirEntity.getId());
         verify(directoryElementInfosRepository, times(1)).saveAll(List.of(subdirEntity.toDirectoryElementInfos()));
 
         supervisionService.reindexElements(rootDir.getId());
 
-        verify(directoryElementRepository, times(1)).findByIdAndType(rootDir.getId(), "DIRECTORY");
+        verify(directoryElementRepository, times(1)).findByIdAndType(rootDir.getId(), DIRECTORY);
         verify(directoryElementRepository, times(1)).findAllByParentId(rootDir.getId());
         verify(directoryElementInfosRepository, times(1)).saveAll(List.of(rootDir.toDirectoryElementInfos()));
         verify(directoryElementInfosRepository, times(1)).saveAll(List.of(dirEntity.toDirectoryElementInfos(), studyEntity.toDirectoryElementInfos()));
