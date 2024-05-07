@@ -8,7 +8,6 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
-import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -80,7 +79,6 @@ public class ElementAttributesTest {
 
     @Test
     public void testElementAttributesCreation() {
-        AccessRightsAttributes accessRightsAttributes = new AccessRightsAttributes(true);
         ZonedDateTime zonedCreationDate = ZonedDateTime.now(ZoneOffset.UTC);
         LocalDateTime localCreationDate = LocalDateTime.now(ZoneOffset.UTC);
 

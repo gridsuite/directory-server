@@ -71,8 +71,6 @@ class DirectoryServiceTest {
             .thenReturn(elementsExpectedToDelete);
 
         // acutal service call
-        //DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, parentDirectoryUuid, "user1"));
-
         directoryService.deleteElements(elementToDeleteUuids, parentDirectoryUuid, "user1");
 
         // check elements are actually deleted

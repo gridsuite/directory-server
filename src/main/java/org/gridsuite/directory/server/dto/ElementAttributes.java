@@ -37,8 +37,6 @@ public class ElementAttributes {
 
     private String type;
 
-    //private AccessRightsAttributes accessRights;
-
     private String owner;
 
     private Long subdirectoriesCount;
@@ -52,12 +50,9 @@ public class ElementAttributes {
     private String lastModifiedBy;
 
     public boolean isAllowed(@NonNull String userId) {
-        //todo: create another methode to check for update a,nd delete right instead of this
         if (!type.equals(DIRECTORY)) {
             throw new DirectoryException(NOT_DIRECTORY);
         }
-        //return owner.equals(userId) || !accessRights.isPrivate();
-        //TODO: check if isAllowed is needed or not
         return true;
     }
 
