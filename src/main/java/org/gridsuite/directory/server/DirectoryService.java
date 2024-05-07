@@ -416,7 +416,6 @@ public class DirectoryService {
                     .allMatch(e -> isElementUpdatable(e, userId, true))
                 );
         } else {
-            //return getParentElement(element.getElementUuid()).isDeletionOrUpdateAllowed(userId);
             return element.isDeletionOrUpdateAllowed(userId);
         }
     }
