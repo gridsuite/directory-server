@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+
+import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -59,6 +62,19 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId, allowNewName));
     }
 
+    @PostMapping(value = "/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Duplicate an element in a directory")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
+        @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
+    public ResponseEntity<ElementAttributes> duplicateElement(
+                                                           @RequestParam("duplicateFrom") UUID elementUuid,
+                                                           @Parameter(description = "ID of the new element") @RequestParam("newElementUuid") UUID newElementUuid,
+                                                           @Parameter(description = "Optional UUID of the target directory where the new element will be placed. Defaults to the same directory as the original element if not specified.")
+                                                           @RequestParam(name = "targetDirectoryId", required = false) UUID targetDirectoryId,
+                                                           @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.duplicateElement(elementUuid, newElementUuid, targetDirectoryId, userId));
+    }
+
     @PostMapping(value = "/directories/paths/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element inside the given directory described by the path, if one of more directory of the path are missing we create them.")
     @ApiResponses(value = {
@@ -77,7 +93,12 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The searched element was not found")})
     public ResponseEntity<List<ElementAttributes>> getPath(@PathVariable("elementUuid") UUID elementUuid,
                                                                         @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid, userId));
+
+        List<ElementAttributes> path = service.getPath(elementUuid);
+        if (!service.isPathAccessible(userId, path)) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(path);
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")
@@ -235,5 +256,15 @@ public class DirectoryController {
     public ResponseEntity<Void> reindexAllElements() {
         service.reindexAllElements();
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/elements/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search elements in elasticsearch")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})
+    public ResponseEntity<List<DirectoryElementInfos>> searchElements(
+            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
+            @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(service.searchElements(userInput, userId));
     }
 }
