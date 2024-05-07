@@ -38,7 +38,9 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT d FROM DirectoryElementEntity d " +
             "WHERE d.parentId IS NULL " +
             "AND d.type = 'DIRECTORY' " +
-            "AND (d.isPrivate=false or d.owner=:owner) " +
+           // "AND (d.isPrivate=false or d.owner=:owner) " +
+            //todo: check this
+           // "AND d.owner=:owner " +
             "AND d.stashed = false")
     List<DirectoryElementEntity> findRootDirectoriesByUserId(String owner);
 
@@ -51,7 +53,9 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT name FROM DirectoryElementEntity WHERE parentId=:parentId AND type=:type AND name like :name% and stashed = false ")
     List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
 
-    boolean existsByIdAndOwnerOrIsPrivateAndId(UUID id, String owner, boolean isPrivate, UUID id2);
+    //todo: change this
+   // boolean existsByIdAndOwnerOrIsPrivateAndId(UUID id, String owner, boolean isPrivate, UUID id2);
+    boolean existsByIdAndOwnerOrId(UUID id, String owner, UUID id2);
 
     interface SubDirectoryCount {
         UUID getId();
@@ -62,7 +66,9 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND d.stashed = FALSE GROUP BY d.parentId")
     List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes);
 
-    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND (d.isPrivate=false or d.owner=:owner) AND d.stashed = FALSE GROUP BY d.parentId")
+    // todo :change the query
+    //@Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND (d.isPrivate=false or d.owner=:owner) AND d.stashed = FALSE GROUP BY d.parentId")
+    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND d.owner=:owner AND d.stashed = FALSE GROUP BY d.parentId")
     List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes, String owner);
 
     @Transactional

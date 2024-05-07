@@ -47,13 +47,13 @@ public class NotificationService {
         studyUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
-    public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, Boolean isPrivate, boolean isRoot, NotificationType notificationType) {
+    public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
                 .setHeader(HEADER_ELEMENT_NAME, elementName)
                 .setHeader(HEADER_IS_ROOT_DIRECTORY, isRoot)
-                .setHeader(HEADER_IS_PUBLIC_DIRECTORY, isPrivate == null || !isPrivate) // null may only come from borked REST request
+                .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from borked REST request
                 .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
                 .setHeader(HEADER_ERROR, error);

@@ -52,8 +52,9 @@ public class DirectoryRepositoryService {
     public boolean isPrivateDirectory(UUID directoryUuid) {
         // TODO replace orElse by the commented line (orElseThrow)
         // Should be done after deleting the notification sent by the study server on delete (!)
-        return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::getIsPrivate).orElse(false);
+       // return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::getIsPrivate).orElse(false);
         //.orElseThrow(() -> new DirectoryServerException(directoryUuid + " not found!"));
+        return false;
     }
 
     public boolean isRootDirectoryExist(String rootName) {
@@ -87,7 +88,7 @@ public class DirectoryRepositoryService {
     }
 
     public boolean canRead(UUID id, String userId) {
-        return directoryElementRepository.existsByIdAndOwnerOrIsPrivateAndId(id, userId, false, id);
+        return directoryElementRepository.existsByIdAndOwnerOrId(id, userId, id);
     }
 
     public void reindexAllElements() {

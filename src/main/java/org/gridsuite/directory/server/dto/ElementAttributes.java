@@ -37,7 +37,7 @@ public class ElementAttributes {
 
     private String type;
 
-    private AccessRightsAttributes accessRights;
+    //private AccessRightsAttributes accessRights;
 
     private String owner;
 
@@ -52,10 +52,17 @@ public class ElementAttributes {
     private String lastModifiedBy;
 
     public boolean isAllowed(@NonNull String userId) {
+        //todo: create another methode to check for update a,nd delete right instead of this
         if (!type.equals(DIRECTORY)) {
             throw new DirectoryException(NOT_DIRECTORY);
         }
-        return owner.equals(userId) || !accessRights.isPrivate();
+        //return owner.equals(userId) || !accessRights.isPrivate();
+        //TODO: check if isAllowed is needed or not
+        return true;
+    }
+
+    public boolean isDeletionOrUpdateAllowed(@NonNull String userId) {
+        return owner.equals(userId);
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
@@ -63,32 +70,32 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription(), ZonedDateTime.ofInstant(entity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), ZonedDateTime.ofInstant(entity.getLastModificationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), entity.getLastModifiedBy());
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount, entity.getDescription(), ZonedDateTime.ofInstant(entity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), ZonedDateTime.ofInstant(entity.getLastModificationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), entity.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
-        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getAccessRights(), rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(), rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
+        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(), rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, Boolean isPrivate, @NonNull String userId) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, null, null, null, null);
-    }
-
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        Boolean isPrivate, @NonNull String userId, @NonNull String elementDescription) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, null, null, null);
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, @NonNull String userId) {
+        return toElementAttributes(elementUuid, elementName, elementType, userId, 0L, null, null, null, null);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        Boolean isPrivate, @NonNull String userId, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
-        return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
+                                                        @NonNull String userId, @NonNull String elementDescription) {
+        return toElementAttributes(elementUuid, elementName, elementType, userId, 0L, elementDescription, null, null, null);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        @NonNull AccessRightsAttributes accessRights, @NonNull String userId,
+                                                        @NonNull String userId, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
+        return toElementAttributes(elementUuid, elementName, elementType, userId, 0L, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
+    }
+
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+                                                        @NonNull String userId,
                                                         long subdirectoriesCount, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
         return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
-            .type(elementType).accessRights(accessRights).owner(userId).creationDate(creationDate)
+            .type(elementType).owner(userId).creationDate(creationDate)
             .subdirectoriesCount(subdirectoriesCount).description(elementDescription)
             .lastModificationDate(lastModificationDate).lastModifiedBy(lastModifiedBy)
             .build();

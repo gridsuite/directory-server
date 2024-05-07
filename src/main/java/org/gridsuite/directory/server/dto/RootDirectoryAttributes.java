@@ -21,7 +21,7 @@ import java.time.ZonedDateTime;
 public class RootDirectoryAttributes {
     private String elementName;
 
-    private AccessRightsAttributes accessRights;
+    //private AccessRightsAttributes accessRights;
 
     private String owner;
 

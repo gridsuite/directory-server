@@ -33,16 +33,16 @@ class DirectoryServiceTest {
     @MockBean
     NotificationService notificationService;
 
-    DirectoryElementEntity parentDirectory = createRootElement("root", "DIRECTORY", false, "user1");
+    DirectoryElementEntity parentDirectory = createRootElement("root", "DIRECTORY", "user1");
     UUID parentDirectoryUuid = parentDirectory.getId();
 
-    DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", "DIRECTORY", false, "user1");
-    DirectoryElementEntity filter1 = createElement(parentDirectoryUuid, "filter1", "FILTER", false, "user1");
-    DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", "STUDY", false, "user2");
-    DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", "STUDY", false, "user2");
-    DirectoryElementEntity studyFromOtherDir = createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", false, "user2");
+    DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", "DIRECTORY", "user1");
+    DirectoryElementEntity filter1 = createElement(parentDirectoryUuid, "filter1", "FILTER", "user1");
+    DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", "STUDY", "user2");
+    DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", "STUDY", "user2");
+    DirectoryElementEntity studyFromOtherDir = createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", "user2");
 
-    DirectoryElementEntity privateDir = createElement(parentDirectoryUuid, "dir2", "DIRECTORY", true, "user2");
+    DirectoryElementEntity privateDir = createElement(parentDirectoryUuid, "dir2", "DIRECTORY", "user2");
 
     List<DirectoryElementEntity> elementsToDelete = List.of(
         dir1,
@@ -71,6 +71,8 @@ class DirectoryServiceTest {
             .thenReturn(elementsExpectedToDelete);
 
         // acutal service call
+        //DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, parentDirectoryUuid, "user1"));
+
         directoryService.deleteElements(elementToDeleteUuids, parentDirectoryUuid, "user1");
 
         // check elements are actually deleted
@@ -82,7 +84,7 @@ class DirectoryServiceTest {
         verify(notificationService, times(1)).emitDeletedStudy(study2.getId(), "user1");
 
         // notification for updated directory
-        verify(notificationService, times(1)).emitDirectoryChanged(parentDirectoryUuid, null, "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(parentDirectoryUuid, null, "user1", null, false, NotificationType.UPDATE_DIRECTORY);
 
         verifyNoMoreInteractions(notificationService);
     }
