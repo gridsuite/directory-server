@@ -232,7 +232,6 @@ public class DirectoryService {
                     parentDirectoryUuid = createRootDirectory(
                             new RootDirectoryAttributes(
                                     s,
-                                    //new AccessRightsAttributes(false),
                                     userId,
                                     null,
                                     now,
