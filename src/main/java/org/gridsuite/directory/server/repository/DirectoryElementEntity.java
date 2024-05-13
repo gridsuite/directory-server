@@ -91,9 +91,7 @@ public class DirectoryElementEntity {
     public void updateModificationAttributes(String lastModifiedBy,
                                              LocalDateTime lastModificationDate) {
         this.setLastModificationDate(lastModificationDate);
-        if (Objects.nonNull(lastModifiedBy)) {
-            this.setLastModifiedBy(lastModifiedBy);
-        }
+        this.setLastModifiedBy(lastModifiedBy);
     }
 
     public boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes, String userId) {
