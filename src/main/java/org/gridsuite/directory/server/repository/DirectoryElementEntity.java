@@ -14,6 +14,7 @@ import jakarta.persistence.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -68,7 +69,8 @@ public class DirectoryElementEntity {
     private LocalDateTime stashDate;
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
-        if (StringUtils.isNotBlank(newElementAttributes.getElementName())) {
+        boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
+        if (isElementNameUpdated) {
             this.name = newElementAttributes.getElementName();
         }
 
@@ -76,11 +78,20 @@ public class DirectoryElementEntity {
             this.isPrivate = newElementAttributes.getAccessRights().isPrivate();
         }
 
-        if (Objects.nonNull(newElementAttributes.getDescription())) {
+        boolean isDescriptionUpdated = Objects.nonNull(newElementAttributes.getDescription());
+        if (isDescriptionUpdated) {
             this.description = newElementAttributes.getDescription();
         }
-
+        if (isDescriptionUpdated || isElementNameUpdated) {
+            updateModificationAttributes(lastModifiedBy, LocalDateTime.now(ZoneOffset.UTC));
+        }
         return this;
+    }
+
+    public void updateModificationAttributes(@NonNull String lastModifiedBy,
+                                             @NonNull LocalDateTime lastModificationDate) {
+        this.setLastModificationDate(lastModificationDate);
+        this.setLastModifiedBy(lastModifiedBy);
     }
 
     public boolean isAttributesUpdatable(@NonNull ElementAttributes newElementAttributes, String userId) {
@@ -97,12 +108,6 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getCreationDate()) &&
             Objects.isNull(newElementAttributes.getLastModificationDate()) &&
             Objects.isNull(newElementAttributes.getLastModifiedBy());
-    }
-
-    public DirectoryElementEntity stashElement(boolean stashed, LocalDateTime stashDate) {
-        this.stashDate = stashDate;
-        this.stashed = stashed;
-        return this;
     }
 
     public DirectoryElementInfos toDirectoryElementInfos() {
