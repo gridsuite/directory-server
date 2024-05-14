@@ -88,7 +88,7 @@ public class DirectoryElementEntity {
         return this;
     }
 
-    public void updateModificationAttributes(String lastModifiedBy,
+    public void updateModificationAttributes(@NonNull String lastModifiedBy,
                                              LocalDateTime lastModificationDate) {
         this.setLastModificationDate(lastModificationDate);
         this.setLastModifiedBy(lastModifiedBy);
