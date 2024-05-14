@@ -89,7 +89,7 @@ public class DirectoryElementEntity {
     }
 
     public void updateModificationAttributes(@NonNull String lastModifiedBy,
-                                             LocalDateTime lastModificationDate) {
+                                             @NonNull LocalDateTime lastModificationDate) {
         this.setLastModificationDate(lastModificationDate);
         this.setLastModifiedBy(lastModifiedBy);
     }
