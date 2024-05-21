@@ -96,19 +96,15 @@ public class DirectoryRepositoryService {
     }
 
     public void reindexElements(UUID directoryUuid) {
-        Optional<DirectoryElementEntity> dir = directoryElementRepository.findByIdAndType(directoryUuid, DIRECTORY);
-        if (dir.isPresent()) {
-            // if root dir then reindex it otherwise continue
-            if (dir.get().getParentId() == null) {
-                saveElementsInfos(List.of(dir.get().toDirectoryElementInfos()));
-            }
-            // then reindex children
-            saveElementsInfos(directoryElementRepository.findAllByParentId(directoryUuid).stream()
-                .map(DirectoryElementEntity::toDirectoryElementInfos)
-                .toList());
-        } else {
-            throw new DirectoryException(NOT_FOUND);
+        DirectoryElementEntity dir = directoryElementRepository.findByIdAndType(directoryUuid, DIRECTORY).orElseThrow(() -> new DirectoryException(NOT_FOUND));
+        // if root dir then reindex it otherwise continue
+        if (dir.getParentId() == null) {
+            saveElementsInfos(List.of(dir.toDirectoryElementInfos()));
         }
+        // then reindex children
+        saveElementsInfos(directoryElementRepository.findAllByParentId(directoryUuid).stream()
+            .map(DirectoryElementEntity::toDirectoryElementInfos)
+            .toList());
     }
 
     public UUID getParentUuid(UUID elementUuid) {
