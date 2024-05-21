@@ -53,6 +53,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
 import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
@@ -148,6 +149,7 @@ public class DirectoryTest {
         ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", false, "userId");
         UUID uuidNewDirectory = newDirectory.getElementUuid();
         ZonedDateTime creationDateNewDirectory = newDirectory.getCreationDate();
+        ZonedDateTime modificationDateNewDirectory = newDirectory.getLastModificationDate();
 
         // Insert a sub-element of type DIRECTORY
         ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, true, "userId");
@@ -173,7 +175,7 @@ public class DirectoryTest {
         // Rename the root directory
         renameElement(uuidNewDirectory, uuidNewDirectory, "userId", "newName", true, false);
 
-        checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, false, "userId", null, creationDateNewDirectory, creationDateNewDirectory, "userId")));
+        checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, false, "userId", null, creationDateNewDirectory, modificationDateNewDirectory, "userId")));
 
         // Change root directory access rights public => private
         // change access of a root directory from public to private => we should receive a notification with isPrivate= false to notify all clients
@@ -1033,7 +1035,8 @@ public class DirectoryTest {
         ElementAttributes newContingency = toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, null, "user1", null, contingencyAttributes.getCreationDate(), contingencyAttributes.getLastModificationDate(), "user1");
         ElementAttributes newFilter = toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, null, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1");
         ElementAttributes newScript = toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1");
-        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(newContingency, newFilter, newScript)));
+
+        assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(List.of(newContingency, newFilter, newScript));
 
         ElementAttributes directory = retrieveInsertAndCheckRootDirectory("testDir", false, "user1");
         List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(FILTER), 200);
@@ -1041,10 +1044,10 @@ public class DirectoryTest {
         result.sort(Comparator.comparing(ElementAttributes::getElementName));
 
         result.sort(Comparator.comparing(ElementAttributes::getElementName));
-        org.hamcrest.MatcherAssert.assertThat(result, new MatcherJson<>(objectMapper, List.of(
+        assertThat(result).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(List.of(
                 toElementAttributes(FILTER_UUID, "newFilter", FILTER, new AccessRightsAttributes(null), "user1", 0, null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
                 directory
-        )));
+        ));
 
         ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, true, "user1");
         insertAndCheckSubElement(rootDirUuid, false, subDirAttributes);
@@ -1095,13 +1098,11 @@ public class DirectoryTest {
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
-        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper,
-            List.of(
+        assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(List.of(
                 toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, null, "user1", null, contingencyAttributes.getCreationDate(), contingencyAttributes.getLastModificationDate(), "user1"),
                 toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, null, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
                 toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, null, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1")
-            ))
-        );
+        ));
     }
 
     @Test
@@ -1266,7 +1267,7 @@ public class DirectoryTest {
 
         List<ElementAttributes> elementAttributes = objectMapper.readValue(response, new TypeReference<>() {
         });
-        assertTrue(new MatcherJson<>(objectMapper, list).matchesSafely(elementAttributes));
+        assertThat(list).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(elementAttributes);
     }
 
     private ElementAttributes retrieveInsertAndCheckRootDirectory(String rootDirectoryName, boolean isPrivate, String userId) throws Exception {
@@ -1281,8 +1282,9 @@ public class DirectoryTest {
 
         UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getElementUuid();
         ZonedDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
+        ZonedDateTime modificationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getLastModificationDate();
 
-        ElementAttributes newDirectoryAttributes = toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, isPrivate, userId, null, creationDateNewDirectory, creationDateNewDirectory, userId);
+        ElementAttributes newDirectoryAttributes = toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, isPrivate, userId, null, creationDateNewDirectory, modificationDateNewDirectory, userId);
         assertElementIsProperlyInserted(newDirectoryAttributes);
 
         // assert that the broker message has been sent a root directory creation request message
@@ -1334,7 +1336,7 @@ public class DirectoryTest {
 
     private List<ElementAttributes> getElements(List<UUID> elementUuids, String userId, boolean strictMode, List<String> elementTypes, int httpCodeExpected) throws Exception {
         var ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        var typesPath = elementTypes != null ? "&elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
+        var typesPath = elementTypes != null ? "&elementTypes=" + String.join(",", elementTypes) : "";
 
         // get sub-elements list
         if (httpCodeExpected == 200) {
@@ -1515,7 +1517,7 @@ public class DirectoryTest {
     }
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, List<ElementAttributes> list) throws Exception {
-        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + types.stream().collect(Collectors.joining(",")) : "";
+        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + String.join(",", types) : "";
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + elementTypes)
                 .header("userId", userId))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
@@ -1524,7 +1526,7 @@ public class DirectoryTest {
                 .getContentAsString();
         List<ElementAttributes> result = objectMapper.readValue(response, new TypeReference<>() {
         });
-        assertTrue(new MatcherJson<>(objectMapper, list).matchesSafely(result));
+        assertThat(list).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(result);
     }
 
     private void checkElementNotFound(UUID elementUuid, String userId) throws Exception {
