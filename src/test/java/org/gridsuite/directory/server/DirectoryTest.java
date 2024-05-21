@@ -1215,14 +1215,6 @@ public class DirectoryTest {
         ElementAttributes studyAttributes = toElementAttributes(UUID.randomUUID(), "study", STUDY, null, "userId");
         insertAndCheckSubElement(rootDirUuid, false, studyAttributes);
 
-        // Test get directories
-        mvcResult = mockMvc.perform(get("/v1/supervision/directories"))
-            .andExpect(status().isOk())
-            .andReturn();
-        List<ElementAttributes> elementAttributes = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        assertEquals(3, elementAttributes.size());
-
         // Test get indexed elements counts
         mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
             .andExpect(status().isOk())
@@ -1231,35 +1223,14 @@ public class DirectoryTest {
         assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
         // Test indexed elements deletion
-        mockMvc.perform(delete("/v1/supervision/directories/{directoriesUuid}/indexed-directory-elements", dirUuid))
+        mvcResult = mockMvc.perform(delete("/v1/supervision/elements/indexed-directory-elements"))
             .andExpect(status().isOk())
             .andReturn();
 
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
-            .andExpect(status().isOk())
-            .andReturn();
-        assertEquals(3, Long.parseLong(mvcResult.getResponse().getContentAsString()));
-
-        mockMvc.perform(delete("/v1/supervision/directories/{directoriesUuid}/indexed-directory-elements", rootDirUuid))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
-            .andExpect(status().isOk())
-            .andReturn();
-        assertEquals(0, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+        assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
         // reindex
-        mockMvc.perform(post("/v1/supervision/directories/{directoriesUuid}/reindex", dirUuid))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
-            .andExpect(status().isOk())
-            .andReturn();
-        assertEquals(1, Long.parseLong(mvcResult.getResponse().getContentAsString()));
-
-        mockMvc.perform(post("/v1/supervision/directories/{directoriesUuid}/reindex", rootDirUuid))
+        mockMvc.perform(post("/v1/supervision/elements/reindex"))
             .andExpect(status().isOk())
             .andReturn();
 
@@ -1267,10 +1238,6 @@ public class DirectoryTest {
             .andExpect(status().isOk())
             .andReturn();
         assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
-
-        mvcResult = mockMvc.perform(get("/v1/supervision/directories"))
-            .andExpect(status().isOk())
-            .andReturn();
     }
 
     private List<ElementAttributes> getPath(UUID elementUuid, String userId) throws Exception {

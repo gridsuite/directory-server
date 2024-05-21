@@ -21,10 +21,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_FOUND;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,24 +71,14 @@ class SupervisionTest {
     void testGetElementInfosCount() {
         supervisionService.getIndexedDirectoryElementsCount();
         verify(directoryElementInfosRepository, times(1)).count();
-
-        UUID parentId = UUID.randomUUID();
-        supervisionService.getIndexedDirectoryElementsCount(parentId);
-        verify(directoryElementInfosRepository, times(1)).countByParentId(parentId);
     }
 
     @Test
     void testDeleteElementInfos() {
-        UUID parentId = UUID.randomUUID();
-        supervisionService.deleteIndexedDirectoryElements(parentId);
+        supervisionService.deleteIndexedDirectoryElements();
 
-        verify(directoryElementInfosRepository, times(1)).countByParentId(parentId);
-        verify(directoryElementInfosRepository, times(1)).deleteAllByParentId(parentId);
-
-        assertException(new NullPointerException("directoryUuid is marked non-null but is null"), () -> supervisionService.deleteIndexedDirectoryElements(null));
-
-        verify(directoryElementInfosRepository, times(0)).countByParentId(null);
-        verify(directoryElementInfosRepository, times(0)).deleteAllByParentId(null);
+        verify(directoryElementInfosRepository, times(1)).count();
+        verify(directoryElementInfosRepository, times(1)).deleteAll();
     }
 
     @Test
@@ -101,42 +89,13 @@ class SupervisionTest {
         DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
         DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE", true, "userId", "description", now, now, "userId", false, null);
 
-        when(directoryElementRepository.findByIdAndType(rootDir.getId(), DIRECTORY)).thenReturn(Optional.of(rootDir));
-        when(directoryElementRepository.findByIdAndType(dirEntity.getId(), DIRECTORY)).thenReturn(Optional.of(dirEntity));
-        when(directoryElementRepository.findByIdAndType(subdirEntity.getId(), DIRECTORY)).thenReturn(Optional.of(subdirEntity));
-        when(directoryElementRepository.findByIdAndType(studyEntity.getId(), DIRECTORY)).thenReturn(Optional.empty());
+        List<DirectoryElementEntity> allElements = List.of(rootDir, dirEntity, subdirEntity, studyEntity);
+        when(directoryElementRepository.findAll()).thenReturn(allElements);
 
-        when(directoryElementRepository.findAllByParentId(rootDir.getId())).thenReturn(List.of(dirEntity, studyEntity));
-        when(directoryElementRepository.findAllByParentId(dirEntity.getId())).thenReturn(List.of(subdirEntity));
-        when(directoryElementRepository.findAllByParentId(subdirEntity.getId())).thenReturn(List.of());
+        supervisionService.reindexElements();
 
-        assertException(new DirectoryException(NOT_FOUND), () -> supervisionService.reindexElements(studyEntity.getId()));
-
-        verify(directoryElementRepository, times(1)).findByIdAndType(studyEntity.getId(), DIRECTORY);
-        verify(directoryElementRepository, times(0)).findAllByParentId(studyEntity.getId());
-        verify(directoryElementInfosRepository, times(0)).saveAll(List.of(studyEntity.toDirectoryElementInfos()));
-
-        supervisionService.getDirectories();
-        verify(directoryElementRepository, times(1)).findAllByType(DIRECTORY);
-
-        supervisionService.reindexElements(subdirEntity.getId());
-
-        verify(directoryElementRepository, times(1)).findByIdAndType(subdirEntity.getId(), DIRECTORY);
-        verify(directoryElementRepository, times(1)).findAllByParentId(subdirEntity.getId());
-        verify(directoryElementInfosRepository, times(0)).saveAll(List.of(subdirEntity.toDirectoryElementInfos()));
-
-        supervisionService.reindexElements(dirEntity.getId());
-
-        verify(directoryElementRepository, times(1)).findByIdAndType(dirEntity.getId(), DIRECTORY);
-        verify(directoryElementRepository, times(1)).findAllByParentId(dirEntity.getId());
-        verify(directoryElementInfosRepository, times(1)).saveAll(List.of(subdirEntity.toDirectoryElementInfos()));
-
-        supervisionService.reindexElements(rootDir.getId());
-
-        verify(directoryElementRepository, times(1)).findByIdAndType(rootDir.getId(), DIRECTORY);
-        verify(directoryElementRepository, times(1)).findAllByParentId(rootDir.getId());
-        verify(directoryElementInfosRepository, times(1)).saveAll(List.of(rootDir.toDirectoryElementInfos()));
-        verify(directoryElementInfosRepository, times(1)).saveAll(List.of(dirEntity.toDirectoryElementInfos(), studyEntity.toDirectoryElementInfos()));
+        verify(directoryElementRepository, times(1)).findAll();
+        verify(directoryElementInfosRepository, times(1)).saveAll(allElements.stream().map(DirectoryElementEntity::toDirectoryElementInfos).toList());
     }
 
     void assertException(Exception expectedException, Executable executable) {

@@ -14,7 +14,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -31,14 +30,6 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed);
 
     List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNotAndStashed(List<UUID> uuids, UUID parentUuid, String type, boolean stashed);
-
-    List<DirectoryElementEntity> findAllByType(String type);
-
-    List<DirectoryElementEntity> findAllByParentId(UUID parentId);
-
-    Optional<DirectoryElementEntity> findByIdAndType(UUID id, String type);
-
-    List<DirectoryElementEntity> findAllByParentIdAndType(UUID parentId, String type);
 
     @Modifying
     @Transactional

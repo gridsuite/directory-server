@@ -81,25 +81,18 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.getIndexedDirectoryElementsCount()));
     }
 
-    @DeleteMapping(value = "/directories/{directoryUuid}/indexed-directory-elements")
-    @Operation(summary = "delete indexed directory elements for the given directory")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed directory elements for the given directory have been deleted")})
-    public ResponseEntity<String> deleteIndexedDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid) {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.deleteIndexedDirectoryElements(directoryUuid)));
+    @DeleteMapping(value = "/elements/indexed-directory-elements")
+    @Operation(summary = "delete indexed elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed elements have been deleted")})
+    public ResponseEntity<String> deleteIndexedDirectoryElements() {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.deleteIndexedDirectoryElements()));
     }
 
-    @GetMapping(value = "/directories")
-    @Operation(summary = "get directories")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Directories")})
-    public ResponseEntity<List<ElementAttributes>> getDirectories() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectories());
-    }
-
-    @PostMapping(value = "/directories/{directoryUuid}/reindex")
-    @Operation(summary = "reindex elements of the directory and itslef if it's a root directory")
+    @PostMapping(value = "/elements/reindex")
+    @Operation(summary = "reindex all elements")
     @ApiResponse(responseCode = "200", description = "Elements reindexed")
-    public ResponseEntity<Void> reindexElements(@PathVariable("directoryUuid") UUID directoryUuid) {
-        service.reindexElements(directoryUuid);
+    public ResponseEntity<Void> reindexElements() {
+        service.reindexElements();
         return ResponseEntity.ok().build();
     }
 }

@@ -1,14 +1,13 @@
 package org.gridsuite.directory.server.services;
 
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import lombok.NonNull;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,12 +22,12 @@ public class SupervisionService {
 
     private final DirectoryElementRepository directoryElementRepository;
     private final DirectoryRepositoryService repositoryService;
-    private final DirectoryElementInfosService directoryElementInfosService;
+    private final DirectoryElementInfosRepository directoryElementInfosRepository;
 
-    public SupervisionService(DirectoryRepositoryService repositoryService, DirectoryElementInfosService directoryElementInfosService, DirectoryElementRepository directoryElementRepository) {
+    public SupervisionService(DirectoryRepositoryService repositoryService, DirectoryElementInfosRepository directoryElementInfosRepository, DirectoryElementRepository directoryElementRepository) {
         this.repositoryService = repositoryService;
         this.directoryElementRepository = directoryElementRepository;
-        this.directoryElementInfosService = directoryElementInfosService;
+        this.directoryElementInfosRepository = directoryElementInfosRepository;
     }
 
     public List<ElementAttributes> getStashedElementsAttributes() {
@@ -48,36 +47,22 @@ public class SupervisionService {
     }
 
     public long getIndexedDirectoryElementsCount() {
-        return directoryElementInfosService.getDirectoryElementsInfosCount();
-    }
-
-    public long getIndexedDirectoryElementsCount(UUID directoryUuid) {
-        if (directoryUuid == null) {
-            return getIndexedDirectoryElementsCount();
-        }
-        return directoryElementInfosService.getDirectoryElementsInfosCount(directoryUuid);
+        return directoryElementInfosRepository.count();
     }
 
     @Transactional
-    public long deleteIndexedDirectoryElements(@NonNull UUID directoryUuid) {
+    public long deleteIndexedDirectoryElements() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
 
-        long nbIndexesToDelete = getIndexedDirectoryElementsCount(directoryUuid);
-        directoryElementInfosService.deleteAllByParentId(directoryUuid);
-        LOGGER.trace("Indexed directory elements deletion for directory \"{}\": {} seconds", directoryUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        long nbIndexesToDelete = getIndexedDirectoryElementsCount();
+        directoryElementInfosRepository.deleteAll();
+        LOGGER.trace("Indexed directory elements deletion : {} seconds", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return nbIndexesToDelete;
     }
 
     @Transactional
-    public List<ElementAttributes> getDirectories() {
-        return repositoryService.getDirectories().stream()
-                    .map(ElementAttributes::toElementAttributes)
-                    .toList();
-    }
-
-    @Transactional
-    public void reindexElements(UUID directoryUuid) {
-        repositoryService.reindexElements(directoryUuid);
+    public void reindexElements() {
+        repositoryService.reindexElements();
     }
 }

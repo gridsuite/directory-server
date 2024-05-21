@@ -9,7 +9,6 @@ package org.gridsuite.directory.server.services;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
-import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
@@ -19,7 +18,6 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
@@ -38,11 +36,8 @@ public class DirectoryElementInfosService {
     static final String ELEMENT_OWNER = "owner.keyword";
     static final String ELEMENT_PRIVATE_STATUS = "isPrivate";
 
-    private final DirectoryElementInfosRepository directoryElementInfosRepository;
-
-    public DirectoryElementInfosService(ElasticsearchOperations elasticsearchOperations, DirectoryElementInfosRepository directoryElementInfosRepository) {
+    public DirectoryElementInfosService(ElasticsearchOperations elasticsearchOperations) {
         this.elasticsearchOperations = elasticsearchOperations;
-        this.directoryElementInfosRepository = directoryElementInfosRepository;
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
@@ -70,18 +65,6 @@ public class DirectoryElementInfosService {
             sb.append(c);
         }
         return sb.toString();
-    }
-
-    public long getDirectoryElementsInfosCount() {
-        return directoryElementInfosRepository.count();
-    }
-
-    public long getDirectoryElementsInfosCount(@NonNull UUID directoryUuid) {
-        return directoryElementInfosRepository.countByParentId(directoryUuid);
-    }
-
-    public void deleteAllByParentId(@NonNull UUID parentId) {
-        directoryElementInfosRepository.deleteAllByParentId(parentId);
     }
 }
 
