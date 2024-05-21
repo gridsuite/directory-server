@@ -11,8 +11,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.elasticsearch.ESIndex;
 import org.gridsuite.directory.server.services.SupervisionService;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,17 +30,14 @@ import java.util.UUID;
 public class SupervisionController {
     private final SupervisionService service;
 
-    // Simple solution to get index name (with the prefix by environment).
-    // Maybe use the Spring boot actuator or other solution ?
-    // Keep indexName in sync with the annotation @Document in DirectoryElementInfos
-    @Value("#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements")
-    public String indexNameDirectoryElements;
+    private final ESIndex indexConf;
 
-    @Value("#{@environment.getProperty('spring.data.elasticsearch.host')}" + ":" + "#{@environment.getProperty('spring.data.elasticsearch.port')}")
-    public String elasticSerachHost;
+    private final ClientConfiguration elasticsearchClientConfiguration;
 
-    public SupervisionController(SupervisionService service) {
+    public SupervisionController(SupervisionService service, ClientConfiguration elasticsearchClientConfiguration, ESIndex indexConf) {
         this.service = service;
+        this.elasticsearchClientConfiguration = elasticsearchClientConfiguration;
+        this.indexConf = indexConf;
     }
 
     @GetMapping(value = "/elements/stash")
@@ -63,28 +61,31 @@ public class SupervisionController {
     @Operation(summary = "get the elasticsearch address")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "the elasticsearch address")})
     public ResponseEntity<String> getElasticsearchHost() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(elasticSerachHost);
+        String host = elasticsearchClientConfiguration.getEndpoints().get(0).getHostName()
+                        + ":"
+                        + elasticsearchClientConfiguration.getEndpoints().get(0).getPort();
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(host);
     }
 
     @GetMapping(value = "/indexed-directory-elements-index-name")
     @Operation(summary = "get the indexed directory elements index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed directory elements index name")})
     public ResponseEntity<String> getIndexedDirectoryElementsIndexName() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(indexNameDirectoryElements);
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(indexConf.getDirectoryElementsIndexName());
     }
 
     @GetMapping(value = "/indexed-directory-elements-count")
     @Operation(summary = "get indexed directory elements count")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed directory elements count")})
-    public ResponseEntity<Long> getIndexedDirectoryElementsCount() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getIndexedDirectoryElementsCount());
+    public ResponseEntity<String> getIndexedDirectoryElementsCount() {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.getIndexedDirectoryElementsCount()));
     }
 
     @DeleteMapping(value = "/directories/{directoryUuid}/indexed-directory-elements")
     @Operation(summary = "delete indexed directory elements for the given directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed directory elements for the given directory have been deleted")})
-    public ResponseEntity<Long> deleteIndexedDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.deleteIndexedDirectoryElements(directoryUuid));
+    public ResponseEntity<String> deleteIndexedDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid) {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.deleteIndexedDirectoryElements(directoryUuid)));
     }
 
     @GetMapping(value = "/directories")

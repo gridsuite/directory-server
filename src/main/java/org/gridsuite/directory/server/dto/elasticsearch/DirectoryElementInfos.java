@@ -28,7 +28,7 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode
 @Schema(description = "Directory element infos")
-@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements")
+@Document(indexName = ESIndex.DIRECTORY_ELEMENT_INFOS_INDEX_NAME)
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "DirectoryElementInfos")
 public class DirectoryElementInfos {

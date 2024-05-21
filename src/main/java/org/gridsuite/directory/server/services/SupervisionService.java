@@ -47,11 +47,11 @@ public class SupervisionService {
         return directoryElementRepository.findAllByStashed(true);
     }
 
-    public Long getIndexedDirectoryElementsCount() {
+    public long getIndexedDirectoryElementsCount() {
         return directoryElementInfosService.getDirectoryElementsInfosCount();
     }
 
-    public Long getIndexedDirectoryElementsCount(UUID directoryUuid) {
+    public long getIndexedDirectoryElementsCount(UUID directoryUuid) {
         if (directoryUuid == null) {
             return getIndexedDirectoryElementsCount();
         }
@@ -59,11 +59,11 @@ public class SupervisionService {
     }
 
     @Transactional
-    public Long deleteIndexedDirectoryElements(@NonNull UUID directoryUuid) {
+    public long deleteIndexedDirectoryElements(@NonNull UUID directoryUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
 
-        Long nbIndexesToDelete = getIndexedDirectoryElementsCount(directoryUuid);
+        long nbIndexesToDelete = getIndexedDirectoryElementsCount(directoryUuid);
         directoryElementInfosService.deleteAllByParentId(directoryUuid);
         LOGGER.trace("Indexed directory elements deletion for directory \"{}\": {} seconds", directoryUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return nbIndexesToDelete;

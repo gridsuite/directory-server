@@ -26,6 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -94,6 +95,9 @@ public class DirectoryTest {
     public static final String RECOLLEMENT = "recollement";
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
+
+    @Value("${spring.data.elasticsearch.embedded.port:}")
+    private String expectedEsPort;
 
     @Autowired
     ObjectMapper objectMapper;
@@ -1190,7 +1194,7 @@ public class DirectoryTest {
             .andExpect(status().isOk())
             .andReturn();
 
-        assertEquals("localhost:9200", mvcResult.getResponse().getContentAsString());
+        assertEquals("localhost:" + expectedEsPort, mvcResult.getResponse().getContentAsString());
 
         // Test get indexed elements index name
         mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-index-name"))
