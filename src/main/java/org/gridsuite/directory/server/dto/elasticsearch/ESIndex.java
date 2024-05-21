@@ -18,7 +18,8 @@ import lombok.Data;
 @Data
 public final class ESIndex {
 
-    public static final String DIRECTORY_ELEMENT_INFOS_INDEX_NAME = "${powsybl-ws.elasticsearch.index.prefix}directory-elements";
+    // It's not simple SPEL but this syntax is managed by both ES and Spring
+    public static final String DIRECTORY_ELEMENT_INFOS_INDEX_NAME = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements";
 
     private String directoryElementsIndexName;
 
