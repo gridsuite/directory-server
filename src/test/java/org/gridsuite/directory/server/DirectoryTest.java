@@ -1198,7 +1198,7 @@ public class DirectoryTest {
         assertEquals("localhost:" + expectedEsPort, mvcResult.getResponse().getContentAsString());
 
         // Test get indexed elements index name
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-index-name"))
+        mvcResult = mockMvc.perform(get("/v1/supervision/elements/index-name"))
             .andExpect(status().isOk())
             .andReturn();
 
@@ -1217,14 +1217,14 @@ public class DirectoryTest {
         insertAndCheckSubElement(rootDirUuid, false, studyAttributes);
 
         // Test get indexed elements counts
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
+        mvcResult = mockMvc.perform(get("/v1/supervision/elements/indexation-count"))
             .andExpect(status().isOk())
             .andReturn();
 
         assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
         // Test indexed elements deletion
-        mvcResult = mockMvc.perform(delete("/v1/supervision/elements/indexed-directory-elements"))
+        mvcResult = mockMvc.perform(delete("/v1/supervision/elements/indexation"))
             .andExpect(status().isOk())
             .andReturn();
 
@@ -1235,7 +1235,7 @@ public class DirectoryTest {
             .andExpect(status().isOk())
             .andReturn();
 
-        mvcResult = mockMvc.perform(get("/v1/supervision/indexed-directory-elements-count"))
+        mvcResult = mockMvc.perform(get("/v1/supervision/elements/indexation-count"))
             .andExpect(status().isOk())
             .andReturn();
         assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));

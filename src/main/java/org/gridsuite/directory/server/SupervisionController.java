@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.elasticsearch.ESIndex;
+import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.SupervisionService;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.http.MediaType;
@@ -30,14 +30,14 @@ import java.util.UUID;
 public class SupervisionController {
     private final SupervisionService service;
 
-    private final ESIndex indexConf;
+    private final DirectoryElementInfosService directoryElementInfosService;
 
     private final ClientConfiguration elasticsearchClientConfiguration;
 
-    public SupervisionController(SupervisionService service, ClientConfiguration elasticsearchClientConfiguration, ESIndex indexConf) {
+    public SupervisionController(SupervisionService service, ClientConfiguration elasticsearchClientConfiguration, DirectoryElementInfosService directoryElementInfosService) {
         this.service = service;
+        this.directoryElementInfosService = directoryElementInfosService;
         this.elasticsearchClientConfiguration = elasticsearchClientConfiguration;
-        this.indexConf = indexConf;
     }
 
     @GetMapping(value = "/elements/stash")
@@ -67,21 +67,21 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(host);
     }
 
-    @GetMapping(value = "/indexed-directory-elements-index-name")
+    @GetMapping(value = "/elements/index-name")
     @Operation(summary = "get the indexed directory elements index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed directory elements index name")})
     public ResponseEntity<String> getIndexedDirectoryElementsIndexName() {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(indexConf.getDirectoryElementsIndexName());
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(directoryElementInfosService.getDirectoryElementsIndexName());
     }
 
-    @GetMapping(value = "/indexed-directory-elements-count")
+    @GetMapping(value = "/elements/indexation-count")
     @Operation(summary = "get indexed directory elements count")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed directory elements count")})
     public ResponseEntity<String> getIndexedDirectoryElementsCount() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.getIndexedDirectoryElementsCount()));
     }
 
-    @DeleteMapping(value = "/elements/indexed-directory-elements")
+    @DeleteMapping(value = "/elements/indexation")
     @Operation(summary = "delete indexed elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed elements have been deleted")})
     public ResponseEntity<String> deleteIndexedDirectoryElements() {
