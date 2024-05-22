@@ -103,17 +103,6 @@ public class ElementAttributesTest {
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, null, 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
     }
 
-    @Test
-    public void testAllowedUser() {
-        assertTrue(toElementAttributes(ELEMENT_UUID, "dir", DIRECTORY, "user1").isAllowed("user"));
-        assertTrue(toElementAttributes(ELEMENT_UUID, "dir", DIRECTORY, "user1").isAllowed("user1"));
-        assertTrue(toElementAttributes(ELEMENT_UUID, "dir", DIRECTORY, "user").isAllowed("user1"));
-        assertTrue(toElementAttributes(ELEMENT_UUID, "dir", DIRECTORY, "user").isAllowed("user"));
-
-        ElementAttributes notDirectory = toElementAttributes(ELEMENT_UUID, "study", STUDY, "userId");
-        assertThrows("NOT_DIRECTORY", DirectoryException.class, () -> notDirectory.isAllowed("userId"));
-    }
-
     @SneakyThrows
     @Test
     public void testNullValues() {

@@ -23,8 +23,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_ALLOWED;
-
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -91,14 +89,8 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List info of an element and its parents in order to get its path"),
         @ApiResponse(responseCode = "403", description = "Access forbidden for the element"),
         @ApiResponse(responseCode = "404", description = "The searched element was not found")})
-    public ResponseEntity<List<ElementAttributes>> getPath(@PathVariable("elementUuid") UUID elementUuid,
-                                                                        @RequestHeader("userId") String userId) {
-
-        List<ElementAttributes> path = service.getPath(elementUuid);
-        if (!service.isPathAccessible(userId, path)) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(path);
+    public ResponseEntity<List<ElementAttributes>> getPath(@PathVariable("elementUuid") UUID elementUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid));
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")
@@ -207,11 +199,11 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The elements or the targeted directory was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized execute this update")
     })
-    public ResponseEntity<Void> updateElementsDirectory(
+    public ResponseEntity<Void> moveElementsDirectory(
             @RequestParam UUID targetDirectoryUuid,
             @RequestBody List<UUID> elementsUuids,
             @RequestHeader("userId") String userId) {
-        service.updateElementsDirectory(elementsUuids, targetDirectoryUuid, userId);
+        service.moveElementsDirectory(elementsUuids, targetDirectoryUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -262,9 +254,20 @@ public class DirectoryController {
     @Operation(summary = "Search elements in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})
     public ResponseEntity<List<DirectoryElementInfos>> searchElements(
-            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
-            @RequestHeader("userId") String userId) {
+            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(service.searchElements(userInput, userId));
+                .body(service.searchElements(userInput));
+    }
+
+    @GetMapping(value = "/elements/can-delete")
+    @Operation(summary = "Check if directories/elements can be deleted")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "If the directories/elements can be deleted or not"),
+        @ApiResponse(responseCode = "404", description = "At least one element was not found"),
+    })
+    public ResponseEntity<Boolean> canDeleteDirectoryElement(@RequestParam("ids") List<UUID> elementsUuid,
+                                              @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(service.canDeleteDirectoryElement(elementsUuid, userId));
     }
 }

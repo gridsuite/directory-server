@@ -38,11 +38,11 @@ class DirectoryServiceTest {
 
     DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", "DIRECTORY", "user1");
     DirectoryElementEntity filter1 = createElement(parentDirectoryUuid, "filter1", "FILTER", "user1");
-    DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", "STUDY", "user2");
-    DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", "STUDY", "user2");
-    DirectoryElementEntity studyFromOtherDir = createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", "user2");
+    DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", "STUDY", "user1");
+    DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", "STUDY", "user1");
+    DirectoryElementEntity studyFromOtherDir = createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", "user1");
 
-    DirectoryElementEntity privateDir = createElement(parentDirectoryUuid, "dir2", "DIRECTORY", "user2");
+    DirectoryElementEntity study3 = createElement(parentDirectoryUuid, "study3", "STUDY", "user2");
 
     List<DirectoryElementEntity> elementsToDelete = List.of(
         dir1,
@@ -67,6 +67,7 @@ class DirectoryServiceTest {
         List<UUID> elementExpectedToDeleteUuids = elementsExpectedToDelete.stream().map(e -> e.getId()).toList();
 
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
+        when(directoryElementRepository.findAllByIdInAndStashed(elementToDeleteUuids, false)).thenReturn(elementsToDelete);
         when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(elementToDeleteUuids, parentDirectoryUuid, "DIRECTORY", false))
             .thenReturn(elementsExpectedToDelete);
 
@@ -89,11 +90,13 @@ class DirectoryServiceTest {
 
     @Test
     void testDeleteFromForbiddenDirectory() {
-        List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(e -> e.getId()).toList();
-        UUID privateDirUuid = privateDir.getId();
-        when(directoryElementRepository.findById(privateDir.getId())).thenReturn(Optional.of(privateDir));
+        List<UUID> elementToDeleteUuids = List.of(study3).stream().map(e -> e.getId()).toList();
+        UUID study3Uuid = study3.getId();
+        when(directoryElementRepository.findById(study3.getId())).thenReturn(Optional.of(study3));
+        when(directoryElementRepository.findAllByIdInAndStashed(elementToDeleteUuids, false)).thenReturn(List.of(study3));
 
-        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, privateDirUuid, "user1"));
+        // study3 was created by user2,so it can not be deleted by user1
+        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, study3Uuid, "user1"));
         assertEquals(DirectoryException.Type.NOT_ALLOWED.name(), exception.getMessage());
     }
 }

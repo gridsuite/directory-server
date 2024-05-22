@@ -9,14 +9,12 @@ package org.gridsuite.directory.server.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.directory.server.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
-import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
@@ -49,14 +47,7 @@ public class ElementAttributes {
 
     private String lastModifiedBy;
 
-    public boolean isAllowed(@NonNull String userId) {
-        if (!type.equals(DIRECTORY)) {
-            throw new DirectoryException(NOT_DIRECTORY);
-        }
-        return true;
-    }
-
-    public boolean isDeletionOrUpdateAllowed(@NonNull String userId) {
+    public boolean isOwnedBy(@NonNull String userId) {
         return owner.equals(userId);
     }
 
