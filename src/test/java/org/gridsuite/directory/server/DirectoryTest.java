@@ -927,24 +927,24 @@ public class DirectoryTest {
         checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, "user1", null, study1Attributes.getCreationDate(), study1Attributes.getLastModificationDate(), "user1")));
     }
 
-   /* @Test
+    @Test
     public void testDirectory() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
-        // Insert a public root directory user1
+        // Insert a root directory by user1
         ElementAttributes rootDir = retrieveInsertAndCheckRootDirectory("rootDir1", "Doe");
         UUID rootDirUuid = rootDir.getElementUuid();
         ZonedDateTime rootDirCreationDate = rootDir.getCreationDate();
 
         checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, "Doe", null, rootDirCreationDate, rootDirCreationDate, "Doe")));
-    }*/
+    }
 
     @SneakyThrows
     @Test
     public void testEmitDirectoryChangedNotification() {
         checkRootDirectoriesList("Doe", List.of());
 
-        // Insert a root directory user1
+        // Insert a root directory by the user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
         // Insert a contingency list in the root directory by the user1
@@ -976,7 +976,7 @@ public class DirectoryTest {
     @SneakyThrows
     @Test
     public void testGetElement() {
-        // Insert a root directory by user1
+        // Insert a root directory by the user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
 
         // Insert a contingency list in the root directory by the user1

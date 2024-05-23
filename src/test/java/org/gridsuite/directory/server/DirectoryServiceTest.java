@@ -71,7 +71,7 @@ class DirectoryServiceTest {
         when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(elementToDeleteUuids, parentDirectoryUuid, "DIRECTORY", false))
             .thenReturn(elementsExpectedToDelete);
 
-        // acutal service call
+        // actual service call
         directoryService.deleteElements(elementToDeleteUuids, parentDirectoryUuid, "user1");
 
         // check elements are actually deleted
