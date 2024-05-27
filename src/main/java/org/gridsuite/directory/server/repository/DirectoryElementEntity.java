@@ -13,8 +13,7 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import jakarta.persistence.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -53,11 +52,11 @@ public class DirectoryElementEntity {
     @Column(name = "description", columnDefinition = "CLOB")
     private String description;
 
-    @Column(name = "creationDate")
-    private LocalDateTime creationDate;
+    @Column(name = "creationDate", columnDefinition = "timestamptz")
+    private ZonedDateTime creationDate;
 
-    @Column(name = "lastModificationDate")
-    private LocalDateTime lastModificationDate;
+    @Column(name = "lastModificationDate", columnDefinition = "timestamptz")
+    private ZonedDateTime lastModificationDate;
 
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
@@ -65,8 +64,8 @@ public class DirectoryElementEntity {
     @Column(name = "stashed")
     private boolean stashed;
 
-    @Column(name = "stash_date")
-    private LocalDateTime stashDate;
+    @Column(name = "stash_date", columnDefinition = "timestamptz")
+    private ZonedDateTime stashDate;
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
@@ -83,13 +82,13 @@ public class DirectoryElementEntity {
             this.description = newElementAttributes.getDescription();
         }
         if (isDescriptionUpdated || isElementNameUpdated) {
-            updateModificationAttributes(lastModifiedBy, LocalDateTime.now(ZoneOffset.UTC));
+            updateModificationAttributes(lastModifiedBy, ZonedDateTime.now());
         }
         return this;
     }
 
     public void updateModificationAttributes(@NonNull String lastModifiedBy,
-                                             @NonNull LocalDateTime lastModificationDate) {
+                                             @NonNull ZonedDateTime lastModificationDate) {
         this.setLastModificationDate(lastModificationDate);
         this.setLastModifiedBy(lastModifiedBy);
     }

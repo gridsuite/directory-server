@@ -44,7 +44,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.CollectionUtils;
 
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -1162,7 +1161,7 @@ public class DirectoryTest {
         ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, null, "userId", "descr study");
         insertAndCheckSubElement(uuidNewDirectory, false, subEltAttributes);
 
-        LocalDateTime newModificationDate = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
+        ZonedDateTime newModificationDate = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
 
         String userMakingModification = "newUser";
 
@@ -1179,7 +1178,7 @@ public class DirectoryTest {
 
         ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
 
-        assertEquals(newModificationDate, updatedElement.getLastModificationDate().toLocalDateTime());
+        assertEquals(newModificationDate, updatedElement.getLastModificationDate());
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
     }
 
@@ -1651,7 +1650,7 @@ public class DirectoryTest {
     @Test
     @SneakyThrows
     public void testReindexAll() {
-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).withNano(0);
         DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
         DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", STUDY, true, "userId", "description", now, now, "userId", false, null);
 

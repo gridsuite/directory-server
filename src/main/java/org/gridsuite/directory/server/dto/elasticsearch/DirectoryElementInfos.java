@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server.dto.elasticsearch;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Transient;
 import lombok.*;
@@ -14,7 +15,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.*;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,7 +29,7 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode
 @Schema(description = "Directory element infos")
-@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements")
+@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements-v2")
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "DirectoryElementInfos")
 public class DirectoryElementInfos {
@@ -53,8 +54,9 @@ public class DirectoryElementInfos {
     @Field(type = FieldType.Long)
     private long subdirectoriesCount;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
-    LocalDateTime lastModificationDate;
+    @Field(type = FieldType.Date, format = {DateFormat.date_time, DateFormat.epoch_millis})
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+    ZonedDateTime lastModificationDate;
 
     @Field(type = FieldType.Boolean)
     private Boolean isPrivate;

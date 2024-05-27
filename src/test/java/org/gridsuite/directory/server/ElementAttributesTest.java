@@ -20,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -57,10 +56,10 @@ public class ElementAttributesTest {
 
     @Test
     public void testElementEntityUpdate() {
-        LocalDateTime localCreationDate = LocalDateTime.now(ZoneOffset.UTC);
+        ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
 
-        DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
-        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", STUDY, true, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description", creationDate, creationDate, "userId", false, null);
+        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", STUDY, true, "userId", "description", creationDate, creationDate, "userId", false, null);
 
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), "userId"));
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId"));
@@ -75,34 +74,34 @@ public class ElementAttributesTest {
         assertFalse(elementEntity2.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId"));
 
         elementEntity.update(ElementAttributes.builder().elementName("newName").accessRights(new AccessRightsAttributes(false)).build());
-        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description", ZonedDateTime.ofInstant(elementEntity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), ZonedDateTime.ofInstant(elementEntity.getLastModificationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
+        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description", elementEntity.getCreationDate().withZoneSameInstant(ZoneOffset.UTC), elementEntity.getLastModificationDate().withZoneSameInstant(ZoneOffset.UTC), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
     }
 
     @Test
     public void testElementAttributesCreation() {
         AccessRightsAttributes accessRightsAttributes = new AccessRightsAttributes(true);
-        ZonedDateTime zonedCreationDate = ZonedDateTime.now(ZoneOffset.UTC);
-        LocalDateTime localCreationDate = LocalDateTime.now(ZoneOffset.UTC);
+        ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
+        ZonedDateTime lastModificationDate = ZonedDateTime.now(ZoneOffset.UTC);
 
-        verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        verifyElementAttributes(toElementAttributes(null, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, null, zonedCreationDate, zonedCreationDate, "userId"));
+        verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", creationDate, lastModificationDate, "userId"));
+        verifyElementAttributes(toElementAttributes(null, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", creationDate, lastModificationDate, "userId"));
+        verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, null, creationDate, lastModificationDate, "userId"));
 
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description"));
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, true, "userId"));
 
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description", localCreationDate, localCreationDate, "userId", false, null)));
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description", localCreationDate, localCreationDate, "userId", false, null), 1L));
-        verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", new AccessRightsAttributes(true), "userId", "description", zonedCreationDate, zonedCreationDate, "userId")));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description", creationDate, lastModificationDate, "userId", false, null)));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description", creationDate, lastModificationDate, "userId", false, null), 1L));
+        verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", new AccessRightsAttributes(true), "userId", "description", creationDate, lastModificationDate, "userId")));
 
         assertThrows(NullPointerException.class, () -> toElementAttributes((DirectoryElementEntity) null));
         assertThrows(NullPointerException.class, () -> toElementAttributes((RootDirectoryAttributes) null));
         assertThrows(NullPointerException.class, () -> toElementAttributes(null, 1));
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, true, "userId", null));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, null, DIRECTORY, accessRightsAttributes, "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", null, accessRightsAttributes, "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, null, "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, accessRightsAttributes, null, 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
+        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, null, DIRECTORY, accessRightsAttributes, "userId", 1L, "description", creationDate, creationDate, "userId"));
+        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", null, accessRightsAttributes, "userId", 1L, "description", creationDate, creationDate, "userId"));
+        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, null, "userId", 1L, "description", creationDate, creationDate, "userId"));
+        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, accessRightsAttributes, null, 1L, "description", creationDate, creationDate, "userId"));
     }
 
     @Test
