@@ -173,8 +173,13 @@ public class DirectoryController {
         @ApiResponse(responseCode = "403", description = "Access forbidden for at least one element")
     })
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
-                                                            @RequestHeader("userId") String userId) {
-        service.areElementsAccessible(userId, elementUuids);
+                                                      @RequestParam(value = "forDeletion", required = false, defaultValue = "false") Boolean forDeletion,
+                                                      @RequestHeader("userId") String userId) {
+        if (forDeletion) {
+            service.areDirectoryElementsDeletable(elementUuids, userId);
+        } else {
+            service.areDirectoryElementsAccessible(elementUuids, userId);
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -257,17 +262,5 @@ public class DirectoryController {
             @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(service.searchElements(userInput));
-    }
-
-    @GetMapping(value = "/elements/can-delete")
-    @Operation(summary = "Check if directories/elements can be deleted")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "If the directories/elements can be deleted or not"),
-        @ApiResponse(responseCode = "404", description = "At least one element was not found"),
-    })
-    public ResponseEntity<Boolean> canDeleteDirectoryElement(@RequestParam("ids") List<UUID> elementsUuid,
-                                              @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(service.canDeleteDirectoryElement(elementsUuid, userId));
     }
 }
