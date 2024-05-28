@@ -1689,6 +1689,42 @@ public class DirectoryTest {
         output.clear();
     }
 
+    @Test
+    public void testElementsAccessibilityOk() throws Exception {
+        checkRootDirectoriesList("userId", List.of());
+        // Insert a root directory
+        ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewDirectory = newDirectory.getElementUuid();
+
+        // Insert a sub-element of type DIRECTORY
+        ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, USER_ID);
+        insertAndCheckSubElement(uuidNewDirectory, subDirAttributes);
+        checkDirectoryContent(uuidNewDirectory, USER_ID, List.of(subDirAttributes));
+        // The subDirAttributes is created by the userId,so it is deletable
+        mockMvc
+                .perform(head("/v1/elements?forDeletion=true&ids={ids}", subDirAttributes.getElementUuid()).header(USER_ID, USER_ID))
+                .andExpectAll(status().isOk()).andReturn();
+        deleteElement(subDirAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false, 0);
+    }
+
+    @Test
+    public void testElementsAccessibilityNotOk() throws Exception {
+        checkRootDirectoriesList("userId", List.of());
+
+        // Insert a root directory
+        ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewDirectory = newDirectory.getElementUuid();
+
+        // Insert a sub-element of type DIRECTORY
+        ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, USER_ID);
+        insertAndCheckSubElement(uuidNewDirectory, subDirAttributes);
+        checkDirectoryContent(uuidNewDirectory, USER_ID, List.of(subDirAttributes));
+        //The subDirAttributes is created by the userId,so the userId1 is not allowed to delete it.
+        mockMvc
+                .perform(head("/v1/elements?forDeletion=true&ids={ids}", subDirAttributes.getElementUuid()).header(USER_ID, USERID_1))
+                .andExpectAll(status().isForbidden()).andReturn();
+    }
+
     private void assertQueuesEmptyThenClear(List<String> destinations) {
         try {
             destinations.forEach(destination -> assertNull("Should not be any messages in queue " + destination + " : ", output.receive(100, destination)));
