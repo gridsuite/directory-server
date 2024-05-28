@@ -8,8 +8,8 @@ package org.gridsuite.directory.server.utils;
 
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.UUID;
 
 /**
@@ -21,10 +21,10 @@ public final class DirectoryTestUtils {
     }
 
     public static DirectoryElementEntity createRootElement(String elementName, String type, boolean isPrivate, String userId) {
-        return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, isPrivate, userId, null, ZonedDateTime.now(ZoneOffset.UTC), ZonedDateTime.now(ZoneOffset.UTC), userId, false, null);
+        return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, isPrivate, userId, null, OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC), userId, false, null);
     }
 
     public static DirectoryElementEntity createElement(UUID parentDirectoryUuid, String elementName, String type, boolean isPrivate, String userId) {
-        return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, isPrivate, userId, null, ZonedDateTime.now(ZoneOffset.UTC), ZonedDateTime.now(ZoneOffset.UTC), userId, false, null);
+        return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, isPrivate, userId, null, OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC), userId, false, null);
     }
 }

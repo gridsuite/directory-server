@@ -25,8 +25,8 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Consumer;
@@ -183,7 +183,7 @@ public class DirectoryService {
     /* methods */
     private DirectoryElementEntity insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
         //We need to limit the precision to avoid database precision storage limit issue (postgres has a precision of 6 digits while h2 can go to 9)
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         return repositoryService.saveElement(
                 new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
                         parentDirectoryUuid,
@@ -224,7 +224,7 @@ public class DirectoryService {
 
     public void createElementInDirectoryPath(String directoryPath, ElementAttributes elementAttributes, String userId) {
         String[] directoryPathSplit = directoryPath.split("/");
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         UUID currentDirectoryUuid;
         UUID parentDirectoryUuid = null;
 
@@ -344,7 +344,7 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void updateElementLastModifiedAttributes(UUID elementUuid, ZonedDateTime lastModificationDate, String lastModifiedBy) {
+    public void updateElementLastModifiedAttributes(UUID elementUuid, OffsetDateTime lastModificationDate, String lastModifiedBy) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
         elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
 

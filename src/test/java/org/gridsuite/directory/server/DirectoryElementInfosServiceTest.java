@@ -20,8 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -57,10 +57,10 @@ class DirectoryElementInfosServiceTest {
 
     @Test
     void testAddDeleteElementInfos() {
-        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type("STUDY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
-        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type("FILTER").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
-        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type("DIRECTORY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
-        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type("CONTINGENCY_LIST").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type("STUDY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type("FILTER").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type("DIRECTORY").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type("CONTINGENCY_LIST").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
 
         // Add
         List<DirectoryElementInfos> infos = List.of(studyInfos, filterInfos, directoryInfos, contingencyListInfos);
@@ -81,11 +81,11 @@ class DirectoryElementInfosServiceTest {
 
     @Test
     void searchElementInfos() {
-        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).isPrivate(false).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
-        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type(STUDY).owner("admin1").parentId(UUID.randomUUID()).isPrivate(false).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
-        var caseInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aCase").type(CASE).owner("admin1").parentId(UUID.randomUUID()).isPrivate(null).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
-        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type(FILTER).owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
-        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type(CONTINGENCY_LIST).owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).isPrivate(false).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type(STUDY).owner("admin1").parentId(UUID.randomUUID()).isPrivate(false).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var caseInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aCase").type(CASE).owner("admin1").parentId(UUID.randomUUID()).isPrivate(null).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type(FILTER).owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type(CONTINGENCY_LIST).owner("admin").parentId(UUID.randomUUID()).isPrivate(true).subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
 
         List<DirectoryElementInfos> infos = List.of(directoryInfos, filterInfos, studyInfos, caseInfos, contingencyListInfos);
         repositoryService.saveElementsInfos(infos);
@@ -105,7 +105,7 @@ class DirectoryElementInfosServiceTest {
     public void searchSpecialChars() {
         var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("s+Ss+ss'sp&pn(n n)ne{e e}et<t t>te|eh-ht.th/hl\\lk[k k]k")
                 .type(STUDY).owner("admin1").parentId(UUID.randomUUID()).isPrivate(false)
-                .subdirectoriesCount(0L).lastModificationDate(ZonedDateTime.now(ZoneOffset.UTC).withNano(0)).build();
+                .subdirectoriesCount(0L).lastModificationDate(OffsetDateTime.now(ZoneOffset.UTC).withNano(0)).build();
         repositoryService.saveElementsInfos(List.of(studyInfos));
 
         testNameFullAscii("s+S");

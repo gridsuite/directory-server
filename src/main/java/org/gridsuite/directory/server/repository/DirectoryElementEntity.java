@@ -13,7 +13,8 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import jakarta.persistence.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -53,10 +54,10 @@ public class DirectoryElementEntity {
     private String description;
 
     @Column(name = "creationDate", columnDefinition = "timestamptz")
-    private ZonedDateTime creationDate;
+    private OffsetDateTime creationDate;
 
     @Column(name = "lastModificationDate", columnDefinition = "timestamptz")
-    private ZonedDateTime lastModificationDate;
+    private OffsetDateTime lastModificationDate;
 
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
@@ -65,7 +66,7 @@ public class DirectoryElementEntity {
     private boolean stashed;
 
     @Column(name = "stash_date", columnDefinition = "timestamptz")
-    private ZonedDateTime stashDate;
+    private OffsetDateTime stashDate;
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
@@ -82,13 +83,13 @@ public class DirectoryElementEntity {
             this.description = newElementAttributes.getDescription();
         }
         if (isDescriptionUpdated || isElementNameUpdated) {
-            updateModificationAttributes(lastModifiedBy, ZonedDateTime.now());
+            updateModificationAttributes(lastModifiedBy, OffsetDateTime.now(ZoneOffset.UTC));
         }
         return this;
     }
 
     public void updateModificationAttributes(@NonNull String lastModifiedBy,
-                                             @NonNull ZonedDateTime lastModificationDate) {
+                                             @NonNull OffsetDateTime lastModificationDate) {
         this.setLastModificationDate(lastModificationDate);
         this.setLastModifiedBy(lastModifiedBy);
     }

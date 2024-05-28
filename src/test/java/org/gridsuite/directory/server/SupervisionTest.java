@@ -17,8 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,9 +41,9 @@ class SupervisionTest {
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
     List<DirectoryElementEntity> expectedElements = List.of(
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", false, "user1", null, ZonedDateTime.now(ZoneOffset.UTC), ZonedDateTime.now(ZoneOffset.UTC), "user1", true, ZonedDateTime.now(ZoneOffset.UTC)),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", false, "user1", null, ZonedDateTime.now(ZoneOffset.UTC), ZonedDateTime.now(ZoneOffset.UTC), "user1", true, ZonedDateTime.now(ZoneOffset.UTC)),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", false, "user2", null, ZonedDateTime.now(ZoneOffset.UTC), ZonedDateTime.now(ZoneOffset.UTC), "user2", true, ZonedDateTime.now(ZoneOffset.UTC))
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", false, "user1", null, OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC), "user1", true, OffsetDateTime.now(ZoneOffset.UTC)),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", false, "user1", null, OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC), "user1", true, OffsetDateTime.now(ZoneOffset.UTC)),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", false, "user2", null, OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC), "user2", true, OffsetDateTime.now(ZoneOffset.UTC))
     );
 
     @Test

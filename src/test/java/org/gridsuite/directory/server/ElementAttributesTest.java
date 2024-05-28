@@ -20,8 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collector;
@@ -56,7 +56,7 @@ public class ElementAttributesTest {
 
     @Test
     public void testElementEntityUpdate() {
-        ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime creationDate = OffsetDateTime.now(ZoneOffset.UTC);
 
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, true, "userId", "description", creationDate, creationDate, "userId", false, null);
         DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", STUDY, true, "userId", "description", creationDate, creationDate, "userId", false, null);
@@ -74,14 +74,14 @@ public class ElementAttributesTest {
         assertFalse(elementEntity2.isAttributesUpdatable(ElementAttributes.builder().accessRights(new AccessRightsAttributes(false)).build(), "userId"));
 
         elementEntity.update(ElementAttributes.builder().elementName("newName").accessRights(new AccessRightsAttributes(false)).build());
-        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description", elementEntity.getCreationDate().withZoneSameInstant(ZoneOffset.UTC), elementEntity.getLastModificationDate().withZoneSameInstant(ZoneOffset.UTC), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
+        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, false, "userId", "description", elementEntity.getCreationDate(), elementEntity.getLastModificationDate(), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
     }
 
     @Test
     public void testElementAttributesCreation() {
         AccessRightsAttributes accessRightsAttributes = new AccessRightsAttributes(true);
-        ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
-        ZonedDateTime lastModificationDate = ZonedDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime creationDate = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime lastModificationDate = OffsetDateTime.now(ZoneOffset.UTC);
 
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", creationDate, lastModificationDate, "userId"));
         verifyElementAttributes(toElementAttributes(null, "name", DIRECTORY, new AccessRightsAttributes(true), "userId", 1L, "description", creationDate, lastModificationDate, "userId"));
@@ -124,7 +124,7 @@ public class ElementAttributesTest {
 
     @Test
     public void testJsonString() {
-        ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime creationDate = OffsetDateTime.now(ZoneOffset.UTC);
         DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
         String formattedCreationDate = creationDate.format(formatter);
 
@@ -166,9 +166,9 @@ public class ElementAttributesTest {
         if (value == null) {
             return (String) value;
         }
-        if (value instanceof ZonedDateTime) {
+        if (value instanceof OffsetDateTime) {
             DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
-            return String.format("\"%s\":\"%s\"", key, ((ZonedDateTime) value).format(formatter));
+            return String.format("\"%s\":\"%s\"", key, ((OffsetDateTime) value).format(formatter));
         }
         return String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
     }

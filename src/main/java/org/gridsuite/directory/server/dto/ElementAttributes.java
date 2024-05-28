@@ -12,8 +12,7 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.NOT_DIRECTORY;
@@ -45,9 +44,9 @@ public class ElementAttributes {
 
     private String description;
 
-    private ZonedDateTime creationDate;
+    private OffsetDateTime creationDate;
 
-    private ZonedDateTime lastModificationDate;
+    private OffsetDateTime lastModificationDate;
 
     private String lastModifiedBy;
 
@@ -63,7 +62,7 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription(), entity.getCreationDate().withZoneSameInstant(ZoneOffset.UTC), entity.getLastModificationDate().withZoneSameInstant(ZoneOffset.UTC), entity.getLastModifiedBy());
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), new AccessRightsAttributes(entity.getIsPrivate()), entity.getOwner(), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
@@ -80,13 +79,13 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        Boolean isPrivate, @NonNull String userId, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
+                                                        Boolean isPrivate, @NonNull String userId, String elementDescription, OffsetDateTime creationDate, OffsetDateTime lastModificationDate, String lastModifiedBy) {
         return toElementAttributes(elementUuid, elementName, elementType, new AccessRightsAttributes(isPrivate), userId, 0L, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull AccessRightsAttributes accessRights, @NonNull String userId,
-                                                        long subdirectoriesCount, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
+                                                        long subdirectoriesCount, String elementDescription, OffsetDateTime creationDate, OffsetDateTime lastModificationDate, String lastModifiedBy) {
         return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
             .type(elementType).accessRights(accessRights).owner(userId).creationDate(creationDate)
             .subdirectoriesCount(subdirectoriesCount).description(elementDescription)

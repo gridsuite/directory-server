@@ -11,7 +11,7 @@ package org.gridsuite.directory.server.services;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -43,7 +43,7 @@ public class ConsumerService {
             String modificationDateStr = message.getHeaders().get(HEADER_MODIFICATION_DATE, String.class);
 
             UUID elementUpdatedUuid = UUID.fromString(elementUpdatedUuidStr);
-            ZonedDateTime modificationDate = ZonedDateTime.parse(modificationDateStr);
+            OffsetDateTime modificationDate = OffsetDateTime.parse(modificationDateStr);
 
             directoryService.updateElementLastModifiedAttributes(elementUpdatedUuid, modificationDate, modifiedBy);
         };

@@ -15,7 +15,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.*;
 
-import java.time.ZonedDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,7 +29,7 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode
 @Schema(description = "Directory element infos")
-@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements-v2")
+@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements-v3")
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "DirectoryElementInfos")
 public class DirectoryElementInfos {
@@ -56,7 +56,7 @@ public class DirectoryElementInfos {
 
     @Field(type = FieldType.Date, format = {DateFormat.date_time, DateFormat.epoch_millis})
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-    ZonedDateTime lastModificationDate;
+    OffsetDateTime lastModificationDate;
 
     @Field(type = FieldType.Boolean)
     private Boolean isPrivate;
