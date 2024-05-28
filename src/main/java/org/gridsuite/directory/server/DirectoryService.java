@@ -570,7 +570,7 @@ public class DirectoryService {
         );
     }
 
-    public void areDirectoryElementsAccessible(@NonNull List<UUID> elementUuids, @NonNull String userId) {
+    public boolean areDirectoryElementsAccessible(@NonNull List<UUID> elementUuids, @NonNull String userId) {
         // TODO : check in the gateway should be modified. Now all directories are public. See with Slimane
         /* getElements(elementUuids, true, List.of()).stream()
                 .map(e -> e.getType().equals(DIRECTORY) ? e : getParentElement(e.getElementUuid()))
@@ -579,6 +579,7 @@ public class DirectoryService {
                         throw new DirectoryException(NOT_ALLOWED);
                     }
                 });*/
+        return true;
     }
 
     private String nameCandidate(String elementName, int n) {
@@ -621,7 +622,6 @@ public class DirectoryService {
         return directoryElementInfosService.searchElements(userInput)
                 .stream()
                 .map(e -> {
-                    //TODO: maybe bug here
                     List<ElementAttributes> path = getPath(e.getParentId());
                     Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(path);
                     e.setPathUuid(uuidsAndNames.getFirst());
@@ -631,9 +631,7 @@ public class DirectoryService {
                 .toList();
     }
 
-    public void areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {
-        if (!getElements(elementsUuid, true, List.of()).stream().allMatch(e -> isDirectoryElementDeletable(e, userId))) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
+    public boolean areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {
+        return getElements(elementsUuid, true, List.of()).stream().allMatch(e -> isDirectoryElementDeletable(e, userId));
     }
 }

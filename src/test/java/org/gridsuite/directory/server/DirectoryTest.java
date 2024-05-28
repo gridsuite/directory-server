@@ -1722,7 +1722,7 @@ public class DirectoryTest {
         //The subDirAttributes is created by the userId,so the userId1 is not allowed to delete it.
         mockMvc
                 .perform(head("/v1/elements?forDeletion=true&ids={ids}", subDirAttributes.getElementUuid()).header(USER_ID, USERID_1))
-                .andExpectAll(status().isForbidden()).andReturn();
+                .andExpectAll(status().isNoContent()).andReturn();
     }
 
     private void assertQueuesEmptyThenClear(List<String> destinations) {

@@ -170,17 +170,13 @@ public class DirectoryController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "All elements are accessible"),
         @ApiResponse(responseCode = "404", description = "At least one element was not found"),
-        @ApiResponse(responseCode = "403", description = "Access forbidden for at least one element")
+        @ApiResponse(responseCode = "204", description = "Access forbidden for at least one element")
     })
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                       @RequestParam(value = "forDeletion", required = false, defaultValue = "false") Boolean forDeletion,
                                                       @RequestHeader("userId") String userId) {
-        if (forDeletion) {
-            service.areDirectoryElementsDeletable(elementUuids, userId);
-        } else {
-            service.areDirectoryElementsAccessible(elementUuids, userId);
-        }
-        return ResponseEntity.ok().build();
+        boolean result = forDeletion ? service.areDirectoryElementsDeletable(elementUuids, userId) : service.areDirectoryElementsAccessible(elementUuids, userId);
+        return result ? ResponseEntity.ok().build() : ResponseEntity.noContent().build();
     }
 
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
