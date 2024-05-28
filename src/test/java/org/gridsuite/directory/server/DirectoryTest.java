@@ -1465,16 +1465,6 @@ public class DirectoryTest {
         assertEquals(isRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
     }
 
-    private void deleteElementFail(UUID elementUuidToBeDeleted, String userId, int httpCodeExpected) throws Exception {
-        if (httpCodeExpected == 403) {
-            mockMvc.perform(delete("/v1/elements/" + elementUuidToBeDeleted)
-                    .header("userId", userId))
-                            .andExpect(status().isForbidden());
-        } else {
-            fail("unexpected case");
-        }
-    }
-
     private void checkRootDirectoryExists(String rootDirectoryName) throws Exception {
         mockMvc.perform(head("/v1/root-directories?directoryName=" + rootDirectoryName))
                         .andExpect(status().isOk());

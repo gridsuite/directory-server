@@ -175,7 +175,7 @@ public class DirectoryController {
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                       @RequestParam(value = "forDeletion", required = false, defaultValue = "false") Boolean forDeletion,
                                                       @RequestHeader("userId") String userId) {
-        boolean result = forDeletion ? service.areDirectoryElementsDeletable(elementUuids, userId) : service.areDirectoryElementsAccessible(elementUuids, userId);
+        boolean result = Boolean.TRUE.equals(forDeletion) ? service.areDirectoryElementsDeletable(elementUuids, userId) : service.areDirectoryElementsAccessible(elementUuids, userId);
         return result ? ResponseEntity.ok().build() : ResponseEntity.noContent().build();
     }
 
