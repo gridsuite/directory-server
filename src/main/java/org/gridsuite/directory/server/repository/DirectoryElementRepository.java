@@ -39,9 +39,8 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT d FROM DirectoryElementEntity d " +
             "WHERE d.parentId IS NULL " +
             "AND d.type = 'DIRECTORY' " +
-            "AND (d.isPrivate=false or d.owner=:owner) " +
             "AND d.stashed = false")
-    List<DirectoryElementEntity> findRootDirectoriesByUserId(String owner);
+    List<DirectoryElementEntity> findRootDirectories();
 
     @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND d.name=:name and d.stashed = false ")
     List<DirectoryElementEntity> findRootDirectoriesByName(String name);
@@ -52,7 +51,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT name FROM DirectoryElementEntity WHERE parentId=:parentId AND type=:type AND name like :name% and stashed = false ")
     List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
 
-    boolean existsByIdAndOwnerOrIsPrivateAndId(UUID id, String owner, boolean isPrivate, UUID id2);
+    boolean existsByIdAndOwnerOrId(UUID id, String owner, UUID id2);
 
     interface SubDirectoryCount {
         UUID getId();
@@ -63,7 +62,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND d.stashed = FALSE GROUP BY d.parentId")
     List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes);
 
-    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND (d.isPrivate=false or d.owner=:owner) AND d.stashed = FALSE GROUP BY d.parentId")
+    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND d.owner=:owner AND d.stashed = FALSE GROUP BY d.parentId")
     List<SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes, String owner);
 
     @Transactional

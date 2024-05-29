@@ -40,9 +40,9 @@ class SupervisionTest {
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
     List<DirectoryElementEntity> expectedElements = List.of(
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", true, LocalDateTime.now())
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", true, LocalDateTime.now())
     );
 
     @Test

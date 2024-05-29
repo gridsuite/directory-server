@@ -49,13 +49,6 @@ public class DirectoryRepositoryService {
         return getParentUuid(directoryUuid) == null;
     }
 
-    public boolean isPrivateDirectory(UUID directoryUuid) {
-        // TODO replace orElse by the commented line (orElseThrow)
-        // Should be done after deleting the notification sent by the study server on delete (!)
-        return directoryElementRepository.findById(directoryUuid).map(DirectoryElementEntity::getIsPrivate).orElse(false);
-        //.orElseThrow(() -> new DirectoryServerException(directoryUuid + " not found!"));
-    }
-
     public boolean isRootDirectoryExist(String rootName) {
         return !directoryElementRepository.findRootDirectoriesByName(rootName).isEmpty();
     }
@@ -87,7 +80,7 @@ public class DirectoryRepositoryService {
     }
 
     public boolean canRead(UUID id, String userId) {
-        return directoryElementRepository.existsByIdAndOwnerOrIsPrivateAndId(id, userId, false, id);
+        return directoryElementRepository.existsByIdAndOwnerOrId(id, userId, id);
     }
 
     public void reindexAllElements() {
@@ -119,8 +112,8 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.findAllByParentIdAndStashed(parentId, false);
     }
 
-    public List<DirectoryElementEntity> findRootDirectoriesByUserId(String owner) {
-        return directoryElementRepository.findRootDirectoriesByUserId(owner);
+    public List<DirectoryElementEntity> findRootDirectories() {
+        return directoryElementRepository.findRootDirectories();
     }
 
     public List<DirectoryElementEntity> findRootDirectoriesByName(String name) {

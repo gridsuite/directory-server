@@ -33,8 +33,6 @@ public class DirectoryElementInfosService {
 
     private static final String ELEMENT_NAME = "name.fullascii";
     static final String ELEMENT_TYPE = "type.keyword";
-    static final String ELEMENT_OWNER = "owner.keyword";
-    static final String ELEMENT_PRIVATE_STATUS = "isPrivate";
 
     public DirectoryElementInfosService(ElasticsearchOperations elasticsearchOperations) {
         this.elasticsearchOperations = elasticsearchOperations;
