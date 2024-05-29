@@ -7,7 +7,6 @@
 package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.gridsuite.directory.server.dto.AccessRightsAttributes;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -79,63 +78,47 @@ public class AccessRightsControlTest {
         checkRootDirectories("user2", List.of());
         checkRootDirectories("user3", List.of());
 
-        // Insert a public root directory for user1
-        UUID rootUuid1 = insertRootDirectory("user1", "root1", false);
+        // Insert a root directory for user1
+        UUID rootUuid1 = insertRootDirectory("user1", "root1");
 
-        // Insert a public root directory for user2
-        UUID rootUuid2 = insertRootDirectory("user2", "root2", false);
-
-        // Insert a private root directory for user3
-        UUID rootUuid3 = insertRootDirectory("user3", "root3", true);
+        // Insert a root directory for user2
+        UUID rootUuid2 = insertRootDirectory("user2", "root2");
 
         // Test with empty list
         controlElementsAccess("user", List.of(), HttpStatus.OK);
 
-        // Any user has access to public root directories
+        // Any user has access to root directories
         controlElementsAccess("user", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
         controlElementsAccess("user1", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
         controlElementsAccess("user2", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
         controlElementsAccess("user3", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
 
-        // Only owner has access to a private root directory
-        controlElementsAccess("user", List.of(rootUuid3), HttpStatus.FORBIDDEN);
-        controlElementsAccess("user1", List.of(rootUuid3), HttpStatus.FORBIDDEN);
-        controlElementsAccess("user2", List.of(rootUuid3), HttpStatus.FORBIDDEN);
-        controlElementsAccess("user3", List.of(rootUuid3), HttpStatus.OK);
-        controlElementsAccess("user", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
-        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
-        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.FORBIDDEN);
-        controlElementsAccess("user3", List.of(rootUuid1, rootUuid2, rootUuid3), HttpStatus.OK);
     }
 
     @Test
     public void testElements() throws Exception {
         checkRootDirectories("user1", List.of());
         checkRootDirectories("user2", List.of());
+        // Create directory tree for user1 : root1 -> dir1 -> study1
+        UUID rootUuid1 = insertRootDirectory("user1", "root1");
+        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"));
+        UUID eltUuid1 = insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, "user1"));
 
-        // Create directory tree for user1 : root1(public) -> dir1(public) -> study1
-        UUID rootUuid1 = insertRootDirectory("user1", "root1", false);
-        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, false, "user1"));
-        UUID eltUuid1 = insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, true, "user1"));
+        // Create directory tree for user2 : root2 -> dir2 -> study2
+        UUID rootUuid2 = insertRootDirectory("user2", "root2");
+        UUID dirUuid2 = insertSubElement(rootUuid2, toElementAttributes(null, "dir2", DIRECTORY, "user2"));
+        UUID eltUuid2 = insertSubElement(dirUuid2, toElementAttributes(null, "study2", STUDY, "user2"));
 
-        // Create directory tree for user2 : root2(public) -> dir2(private) -> study2
-        UUID rootUuid2 = insertRootDirectory("user2", "root2", false);
-        UUID dirUuid2 = insertSubElement(rootUuid2, toElementAttributes(null, "dir2", DIRECTORY, true, "user2"));
-        UUID eltUuid2 = insertSubElement(dirUuid2, toElementAttributes(null, "study2", STUDY, true, "user2"));
+        // Dir2 is created by user2 and is accessible by user1 and user2
+        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), HttpStatus.OK);
+        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), HttpStatus.OK);
 
-        // Dir2 is private directory and only accessible by user2
-        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1), HttpStatus.OK);
-        controlElementsAccess("user1", List.of(dirUuid2), HttpStatus.FORBIDDEN);
-        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2), HttpStatus.FORBIDDEN);
-        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2), HttpStatus.OK);
+        // Dir2 is created by user2 and sub elements creation for user1
+        UUID dirUuid = insertSubElement(dirUuid2, toElementAttributes(null, "dir", DIRECTORY, "user1"));
+        UUID eltUuid = insertSubElement(dirUuid2, toElementAttributes(null, "study", STUDY, "user1"));
 
-        // Dir2 is private and only sub elements creation for user2
-        insertSubElement(dirUuid2, toElementAttributes(null, "dir", DIRECTORY, true, "user1"), HttpStatus.FORBIDDEN);
-        insertSubElement(dirUuid2, toElementAttributes(null, "study", STUDY, true, "user1"), HttpStatus.FORBIDDEN);
-
-        // Study2 is in a private directory and only accessible by user2
-        controlElementsAccess("user1", List.of(eltUuid1), HttpStatus.OK);
-        controlElementsAccess("user1", List.of(eltUuid2), HttpStatus.FORBIDDEN);
+        // Study2 is accessible by user1 and user2
+        controlElementsAccess("user1", List.of(eltUuid1, eltUuid2), HttpStatus.OK);
         controlElementsAccess("user2", List.of(eltUuid1, eltUuid2), HttpStatus.OK);
 
         // Delete elements
@@ -146,6 +129,9 @@ public class AccessRightsControlTest {
         deleteSubElement(dirUuid1, "user1", HttpStatus.NOT_FOUND);
         deleteSubElement(eltUuid1, "user1", HttpStatus.NOT_FOUND);
 
+        deleteSubElement(eltUuid, "user1", HttpStatus.OK);
+        deleteSubElement(dirUuid, "user1", HttpStatus.OK);
+
         deleteSubElement(dirUuid2, "user2", HttpStatus.OK);
         deleteSubElement(eltUuid2, "user2", HttpStatus.NOT_FOUND);
         deleteSubElement(rootUuid2, "user2", HttpStatus.OK);
@@ -154,14 +140,14 @@ public class AccessRightsControlTest {
     @Test
     public void testExistence() throws Exception {
         // Insert root directory with same name not allowed
-        UUID rootUuid1 = insertRootDirectory("user1", "root1", false);
-        insertRootDirectory("user1", "root1", false, HttpStatus.FORBIDDEN);
+        UUID rootUuid1 = insertRootDirectory("user1", "root1");
+        insertRootDirectory("user1", "root1", HttpStatus.FORBIDDEN);
 
         // Insert elements with same name in a directory not allowed
-        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, false, "user1"));
-        insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, false, "user1"), HttpStatus.FORBIDDEN);
-        insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, true, "user1"));
-        insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, true, "user1"), HttpStatus.FORBIDDEN);
+        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"));
+        insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"), HttpStatus.FORBIDDEN);
+        insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, "user1"));
+        insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, "user1"), HttpStatus.FORBIDDEN);
     }
 
     private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
@@ -203,18 +189,18 @@ public class AccessRightsControlTest {
         assertTrue(new MatcherJson<>(objectMapper, list).matchesSafely(elementAttributes));
     }
 
-    private UUID insertRootDirectory(String userId, String rootDirectoryName, boolean isPrivate) throws Exception {
-        MockHttpServletResponse response = insertRootDirectory(userId, rootDirectoryName, isPrivate, HttpStatus.OK).getResponse();
+    private UUID insertRootDirectory(String userId, String rootDirectoryName) throws Exception {
+        MockHttpServletResponse response = insertRootDirectory(userId, rootDirectoryName, HttpStatus.OK).getResponse();
         assertNotNull(response);
         assertEquals(APPLICATION_JSON_VALUE, response.getContentType());
         return objectMapper.readValue(response.getContentAsString(), ElementAttributes.class).getElementUuid();
     }
 
-    private MvcResult insertRootDirectory(String userId, String rootDirectoryName, boolean isPrivate, HttpStatus expectedStatus) throws Exception {
+    private MvcResult insertRootDirectory(String userId, String rootDirectoryName, HttpStatus expectedStatus) throws Exception {
         return mockMvc.perform(post("/v1/root-directories")
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, new AccessRightsAttributes(isPrivate), userId, null, null, null, null))))
+                .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, userId, null, null, null, null))))
                 .andExpect(status().is(new IsEqual<>(expectedStatus.value())))
                 .andReturn();
     }

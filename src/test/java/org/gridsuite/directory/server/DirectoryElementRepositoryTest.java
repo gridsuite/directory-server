@@ -31,16 +31,16 @@ class DirectoryElementRepositoryTest {
     @Test
     void testFindAllByIdInAndParentIdAndTypeNot() {
         DirectoryElementEntity parentDirectory = directoryElementRepository.save(
-            createRootElement("root", "DIRECTORY", false, "user1")
+            createRootElement("root", "DIRECTORY", "user1")
         );
         UUID parentDirectoryUuid = parentDirectory.getId();
 
         List<DirectoryElementEntity> insertedElement = directoryElementRepository.saveAll(List.of(
-            createElement(parentDirectoryUuid, "dir1", "DIRECTORY", false, "user1"),
-            createElement(parentDirectoryUuid, "filter1", "FILTER", false, "user1"),
-            createElement(parentDirectoryUuid, "study1", "STUDY", false, "user2"),
-            createElement(parentDirectoryUuid, "study2", "STUDY", false, "user2"),
-            createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", false, "user2")
+            createElement(parentDirectoryUuid, "dir1", "DIRECTORY", "user1"),
+            createElement(parentDirectoryUuid, "filter1", "FILTER", "user1"),
+            createElement(parentDirectoryUuid, "study1", "STUDY", "user2"),
+            createElement(parentDirectoryUuid, "study2", "STUDY", "user2"),
+            createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", "user2")
         ));
 
         List<DirectoryElementEntity> expectedResult = insertedElement.stream()
