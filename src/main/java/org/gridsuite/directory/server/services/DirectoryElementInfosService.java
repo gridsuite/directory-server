@@ -36,8 +36,6 @@ public class DirectoryElementInfosService {
 
     private static final String ELEMENT_NAME = "name.fullascii";
     static final String ELEMENT_TYPE = "type.keyword";
-    static final String ELEMENT_OWNER = "owner.keyword";
-    static final String ELEMENT_PRIVATE_STATUS = "isPrivate";
 
     @Value(ESConfig.DIRECTORY_ELEMENT_INFOS_INDEX_NAME)
     @Getter

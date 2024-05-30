@@ -20,9 +20,6 @@ import java.time.ZonedDateTime;
 @AllArgsConstructor
 public class RootDirectoryAttributes {
     private String elementName;
-
-    private AccessRightsAttributes accessRights;
-
     private String owner;
 
     private String description;

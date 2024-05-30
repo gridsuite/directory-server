@@ -45,9 +45,9 @@ class SupervisionTest {
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
     List<DirectoryElementEntity> expectedElements = List.of(
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", DIRECTORY, false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", false, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", false, "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", true, LocalDateTime.now())
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", DIRECTORY, "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", true, LocalDateTime.now())
     );
 
     @Test
@@ -84,10 +84,10 @@ class SupervisionTest {
     @Test
     void testReindexElements() {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
-        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
-        DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
-        DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", DIRECTORY, true, "userId", "description", now, now, "userId", false, null);
-        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE", true, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", DIRECTORY, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", DIRECTORY, "userId", "description", now, now, "userId", false, null);
+        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE", "userId", "description", now, now, "userId", false, null);
 
         List<DirectoryElementEntity> allElements = List.of(rootDir, dirEntity, subdirEntity, studyEntity);
         when(directoryElementRepository.findAll()).thenReturn(allElements);

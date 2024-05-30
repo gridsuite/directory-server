@@ -44,9 +44,6 @@ public class DirectoryElementEntity {
     @Column(name = "type", length = 30, nullable = false)
     private String type;
 
-    @Column(name = "isPrivate")
-    private Boolean isPrivate;
-
     @Column(name = "owner", length = 80, nullable = false)
     private String owner;
 
@@ -74,10 +71,6 @@ public class DirectoryElementEntity {
             this.name = newElementAttributes.getElementName();
         }
 
-        if (Objects.nonNull(newElementAttributes.getAccessRights())) {
-            this.isPrivate = newElementAttributes.getAccessRights().isPrivate();
-        }
-
         boolean isDescriptionUpdated = Objects.nonNull(newElementAttributes.getDescription());
         if (isDescriptionUpdated) {
             this.description = newElementAttributes.getDescription();
@@ -98,8 +91,7 @@ public class DirectoryElementEntity {
         return (// Updatable attributes
             Objects.nonNull(newElementAttributes.getDescription()) ||
             StringUtils.isNotBlank(newElementAttributes.getElementName()) ||
-                    //Only the owner can update the accessRights of a directory (to avoid user locking themselves out of a directory they don't own
-                    type.equals(DIRECTORY) && Objects.nonNull(newElementAttributes.getAccessRights()) && userId.equals(owner))
+                    type.equals(DIRECTORY) && userId.equals(owner))
             && // Non updatable attributes
             Objects.isNull(newElementAttributes.getElementUuid()) &&
             Objects.isNull(newElementAttributes.getType()) &&
@@ -117,7 +109,6 @@ public class DirectoryElementEntity {
                 .owner(getOwner())
                 .parentId(getParentId() == null ? getId() : getParentId())
                 .type(getType())
-                .isPrivate(getIsPrivate())
                 .lastModificationDate(getLastModificationDate())
                 .build();
     }

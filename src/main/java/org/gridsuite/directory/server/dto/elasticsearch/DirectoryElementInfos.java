@@ -58,9 +58,6 @@ public class DirectoryElementInfos {
     @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
     LocalDateTime lastModificationDate;
 
-    @Field(type = FieldType.Boolean)
-    private Boolean isPrivate;
-
     @Transient
     private List<String> pathName;
 
