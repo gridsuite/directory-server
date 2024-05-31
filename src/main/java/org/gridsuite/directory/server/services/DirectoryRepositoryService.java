@@ -96,8 +96,8 @@ public class DirectoryRepositoryService {
                 .orElse(null);
     }
 
-    public List<DirectoryElementRepository.SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes) {
-        return directoryElementRepository.getSubdirectoriesCounts(subDirectories, elementTypes);
+    public List<DirectoryElementRepository.SubDirectoryCount> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes) {
+        return directoryElementRepository.getSubDirectoriesCounts(subDirectories, elementTypes);
     }
 
     public List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids) {

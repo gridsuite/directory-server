@@ -250,8 +250,8 @@ public class DirectoryService {
         insertElement(elementAttributes, parentDirectoryUuid);
     }
 
-    private Map<UUID, Long> getSubElementsCount(List<UUID> subDirectories, List<String> types) {
-        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = repositoryService.getSubdirectoriesCounts(subDirectories, types);
+    private Map<UUID, Long> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> types) {
+        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = repositoryService.getSubDirectoriesCounts(subDirectories, types);
         Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
         subdirectoriesCountsList.forEach(e -> subdirectoriesCountsMap.put(e.getId(), e.getCount()));
         return subdirectoriesCountsMap;
@@ -277,7 +277,7 @@ public class DirectoryService {
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types) {
         List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentId(directoryUuid);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(types, directoryElements);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements);
         return directoryElements
                 .stream()
                 .filter(e -> e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
@@ -286,14 +286,14 @@ public class DirectoryService {
 
     public List<ElementAttributes> getRootDirectories(List<String> types) {
         List<DirectoryElementEntity> directoryElements = repositoryService.findRootDirectories();
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(types, directoryElements);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements);
         return directoryElements.stream()
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
                 .toList();
     }
 
-    private Map<UUID, Long> getSubDirectoriesCountMap(List<String> types, List<DirectoryElementEntity> directoryElements) {
-        return getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types);
+    private Map<UUID, Long> getSubDirectoriesCountsMap(List<String> types, List<DirectoryElementEntity> directoryElements) {
+        return getSubDirectoriesCounts(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types);
     }
 
     public void updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
@@ -524,7 +524,7 @@ public class DirectoryService {
             throw new DirectoryException(NOT_FOUND);
         }
 
-        Map<UUID, Long> subElementsCount = getSubElementsCount(elementEntities.stream().map(DirectoryElementEntity::getId).toList(), types);
+        Map<UUID, Long> subElementsCount = getSubDirectoriesCounts(elementEntities.stream().map(DirectoryElementEntity::getId).toList(), types);
 
         return elementEntities.stream()
                 .map(attribute -> toElementAttributes(attribute, subElementsCount.getOrDefault(attribute.getId(), 0L)))
