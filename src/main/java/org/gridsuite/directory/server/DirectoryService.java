@@ -373,7 +373,6 @@ public class DirectoryService {
     }
 
     private void notifyStudyUpdateIfApplicable(DirectoryElementEntity element, String userId) {
-        //TODO: move this to the explore server
         if (element.getType().equals(STUDY)) {
             studyService.notifyStudyUpdate(element.getId(), userId);
         }
@@ -433,7 +432,6 @@ public class DirectoryService {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
         repositoryService.deleteElement(elementAttributes.getElementUuid());
-        //TODO: move this to the explore server
         if (STUDY.equals(elementAttributes.getType())) {
             notificationService.emitDeletedStudy(elementAttributes.getElementUuid(), userId);
         }
@@ -467,7 +465,6 @@ public class DirectoryService {
         repositoryService.deleteElements(elementsAttributesToDelete.stream().map(ElementAttributes::getElementUuid).toList());
 
         // extracting studyUuids from this list, to send specific notifications
-        //TODO: move this to the explore server
         elementsAttributesToDelete.stream()
             .filter(element -> STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid)
             .forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));
