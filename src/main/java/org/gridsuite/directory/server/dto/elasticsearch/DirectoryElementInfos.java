@@ -29,7 +29,7 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode
 @Schema(description = "Directory element infos")
-@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements-v3")
+@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements-v2")
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "DirectoryElementInfos")
 public class DirectoryElementInfos {
