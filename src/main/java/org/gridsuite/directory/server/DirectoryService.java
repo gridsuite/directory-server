@@ -257,14 +257,7 @@ public class DirectoryService {
         return subdirectoriesCountsMap;
     }
 
-    private Map<UUID, Long> getSubElementsCount(List<UUID> subDirectories, List<String> types, String userId) {
-        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = repositoryService.getSubdirectoriesCounts(subDirectories, types, userId);
-        Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
-        subdirectoriesCountsList.forEach(e -> subdirectoriesCountsMap.put(e.getId(), e.getCount()));
-        return subdirectoriesCountsMap;
-    }
-
-    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, String userId, List<String> types) {
+    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types) {
         ElementAttributes elementAttributes = getElement(directoryUuid);
         if (elementAttributes == null) {
             throw DirectoryException.createElementNotFound(DIRECTORY, directoryUuid);
@@ -274,37 +267,33 @@ public class DirectoryService {
             return List.of();
         }
 
-        return getAllDirectoryElementsStream(directoryUuid, types, userId).toList();
+        return getAllDirectoryElementsStream(directoryUuid, types).toList();
     }
 
-    private Stream<ElementAttributes> getOnlyElementsStream(UUID directoryUuid, String userId, List<String> types) {
-        return getAllDirectoryElementsStream(directoryUuid, types, userId)
+    private Stream<ElementAttributes> getOnlyElementsStream(UUID directoryUuid, List<String> types) {
+        return getAllDirectoryElementsStream(directoryUuid, types)
                 .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY));
     }
 
-    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
+    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types) {
         List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentId(directoryUuid);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(types, directoryElements);
         return directoryElements
                 .stream()
                 .filter(e -> e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
-    public List<ElementAttributes> getRootDirectories(String userId, List<String> types) {
+    public List<ElementAttributes> getRootDirectories(List<String> types) {
         List<DirectoryElementEntity> directoryElements = repositoryService.findRootDirectories();
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(userId, types, directoryElements);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountMap(types, directoryElements);
         return directoryElements.stream()
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
                 .toList();
     }
 
-    private Map<UUID, Long> getSubDirectoriesCountMap(String userId, List<String> types, List<DirectoryElementEntity> directoryElements) {
-        if (!types.isEmpty()) {
-            return getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types);
-        } else {
-            return getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types, userId);
-        }
+    private Map<UUID, Long> getSubDirectoriesCountMap(List<String> types, List<DirectoryElementEntity> directoryElements) {
+        return getSubElementsCount(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types);
     }
 
     public void updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
@@ -312,7 +301,7 @@ public class DirectoryService {
         if (!isDirectoryElementUpdatable(toElementAttributes(directoryElement), userId) ||
             !directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
             !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
-             directoryHasElementOfNameAndType(directoryElement.getParentId(), userId, newElementAttributes.getElementName(), directoryElement.getType())) {
+             directoryHasElementOfNameAndType(directoryElement.getParentId(), newElementAttributes.getElementName(), directoryElement.getType())) {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
@@ -368,7 +357,7 @@ public class DirectoryService {
             throw new DirectoryException(IS_DIRECTORY);
         }
         if (!isDirectoryElementUpdatable(toElementAttributes(element), userId) ||
-                directoryHasElementOfNameAndType(newDirectoryUuid, userId, element.getName(), element.getType())) {
+                directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType())) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
@@ -384,6 +373,7 @@ public class DirectoryService {
     }
 
     private void notifyStudyUpdateIfApplicable(DirectoryElementEntity element, String userId) {
+        //TODO: move this to the explore server
         if (element.getType().equals(STUDY)) {
             studyService.notifyStudyUpdate(element.getId(), userId);
         }
@@ -398,8 +388,8 @@ public class DirectoryService {
         }
     }
 
-    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String userId, String elementName, String elementType) {
-        return getOnlyElementsStream(directoryUUID, userId, List.of(elementType))
+    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String elementName, String elementType) {
+        return getOnlyElementsStream(directoryUUID, List.of(elementType))
             .anyMatch(
                 e -> e.getElementName().equals(elementName)
             );
@@ -412,7 +402,7 @@ public class DirectoryService {
     private boolean isDirectoryElementDeletable(ElementAttributes element, String userId) {
         if (element.getType().equals(DIRECTORY)) {
             return element.isOwnedBy(userId) &&
-                    getAllDirectoryElementsStream(element.getElementUuid(), List.of(), userId)
+                    getAllDirectoryElementsStream(element.getElementUuid(), List.of())
                             .allMatch(e -> isDirectoryElementDeletable(e, userId));
         } else {
             return element.isOwnedBy(userId);
@@ -443,13 +433,14 @@ public class DirectoryService {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
         repositoryService.deleteElement(elementAttributes.getElementUuid());
+        //TODO: move this to the explore server
         if (STUDY.equals(elementAttributes.getType())) {
             notificationService.emitDeletedStudy(elementAttributes.getElementUuid(), userId);
         }
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
     }
 
     /**
@@ -476,6 +467,7 @@ public class DirectoryService {
         repositoryService.deleteElements(elementsAttributesToDelete.stream().map(ElementAttributes::getElementUuid).toList());
 
         // extracting studyUuids from this list, to send specific notifications
+        //TODO: move this to the explore server
         elementsAttributesToDelete.stream()
             .filter(element -> STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid)
             .forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));

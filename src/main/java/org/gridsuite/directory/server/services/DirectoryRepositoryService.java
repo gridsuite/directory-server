@@ -100,10 +100,6 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getSubdirectoriesCounts(subDirectories, elementTypes);
     }
 
-    public List<DirectoryElementRepository.SubDirectoryCount> getSubdirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes, String owner) {
-        return directoryElementRepository.getSubdirectoriesCounts(subDirectories, elementTypes, owner);
-    }
-
     public List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids) {
         return directoryElementRepository.findAllByIdInAndStashed(uuids, false);
     }

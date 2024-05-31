@@ -118,9 +118,8 @@ public class DirectoryController {
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get root directories")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The root directories"))
-    public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestHeader(name = "userId") String userId,
-                                                                      @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
-        return ResponseEntity.ok().body(service.getRootDirectories(userId, types));
+    public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
+        return ResponseEntity.ok().body(service.getRootDirectories(types));
     }
 
     @RequestMapping(value = "/root-directories", method = RequestMethod.HEAD)
@@ -138,9 +137,8 @@ public class DirectoryController {
     @Operation(summary = "Get directory elements")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
     public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
-                                                                        @RequestHeader("userId") String userId,
                                                                         @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, userId, types));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, types));
     }
 
     @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
