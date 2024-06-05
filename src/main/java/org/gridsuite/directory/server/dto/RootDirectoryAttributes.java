@@ -10,7 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.ZonedDateTime;
+import java.time.Instant;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -24,9 +24,9 @@ public class RootDirectoryAttributes {
 
     private String description;
 
-    private ZonedDateTime creationDate;
+    private Instant creationDate;
 
-    private ZonedDateTime lastModificationDate;
+    private Instant lastModificationDate;
 
     private String lastModifiedBy;
 }

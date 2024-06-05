@@ -17,7 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,9 +40,9 @@ class SupervisionTest {
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
     List<DirectoryElementEntity> expectedElements = List.of(
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", "user1", null, LocalDateTime.now(), LocalDateTime.now(), "user1", true, LocalDateTime.now()),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", "user2", null, LocalDateTime.now(), LocalDateTime.now(), "user2", true, LocalDateTime.now())
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", "user1", null, Instant.now(), Instant.now(), "user1", true, Instant.now()),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", "user1", null, Instant.now(), Instant.now(), "user1", true, Instant.now()),
+        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", "user2", null, Instant.now(), Instant.now(), "user2", true, Instant.now())
     );
 
     @Test

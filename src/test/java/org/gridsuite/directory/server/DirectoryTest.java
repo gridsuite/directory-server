@@ -43,9 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.util.CollectionUtils;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -143,8 +141,8 @@ public class DirectoryTest {
         // Insert a root directory
         ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", "userId");
         UUID uuidNewDirectory = newDirectory.getElementUuid();
-        ZonedDateTime creationDateNewDirectory = newDirectory.getCreationDate();
-        ZonedDateTime modificationDateNewDirectory = newDirectory.getLastModificationDate();
+        Instant creationDateNewDirectory = newDirectory.getCreationDate();
+        Instant modificationDateNewDirectory = newDirectory.getLastModificationDate();
 
         // Insert a sub-element of type DIRECTORY
         ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, "userId");
@@ -680,11 +678,11 @@ public class DirectoryTest {
         // Insert a root directory user1
         ElementAttributes rootDir1 = retrieveInsertAndCheckRootDirectory("rootDir1", "user1");
         UUID rootDir1Uuid = rootDir1.getElementUuid();
-        ZonedDateTime rootDir1CreationDate = rootDir1.getCreationDate();
+        Instant rootDir1CreationDate = rootDir1.getCreationDate();
         // Insert a root directory user2
         ElementAttributes rootDir2 = retrieveInsertAndCheckRootDirectory("rootDir2", "user2");
         UUID rootDir2Uuid = rootDir2.getElementUuid();
-        ZonedDateTime rootDir2CreationDate = rootDir2.getCreationDate();
+        Instant rootDir2CreationDate = rootDir2.getCreationDate();
 
         checkRootDirectoriesList("user1", List.of(toElementAttributes(rootDir1Uuid, "rootDir1", DIRECTORY, "user1", null, rootDir1CreationDate, rootDir1CreationDate, "user1"),
                 toElementAttributes(rootDir2Uuid, "rootDir2", DIRECTORY, "user2", null, rootDir2CreationDate, rootDir2CreationDate, "user2")));
@@ -903,7 +901,7 @@ public class DirectoryTest {
         // Insert a root directory user1
         ElementAttributes rootDir = retrieveInsertAndCheckRootDirectory("rootDir1", "Doe");
         UUID rootDirUuid = rootDir.getElementUuid();
-        ZonedDateTime rootDirCreationDate = rootDir.getCreationDate();
+        Instant rootDirCreationDate = rootDir.getCreationDate();
 
         assertNbElementsInRepositories(1);
 
@@ -934,7 +932,7 @@ public class DirectoryTest {
         // Insert a root directory by user1
         ElementAttributes rootDir = retrieveInsertAndCheckRootDirectory("rootDir1", "Doe");
         UUID rootDirUuid = rootDir.getElementUuid();
-        ZonedDateTime rootDirCreationDate = rootDir.getCreationDate();
+        Instant rootDirCreationDate = rootDir.getCreationDate();
 
         checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, "Doe", null, rootDirCreationDate, rootDirCreationDate, "Doe")));
     }
@@ -1016,7 +1014,7 @@ public class DirectoryTest {
         ElementAttributes newFilter = toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1");
         ElementAttributes newScript = toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1");
 
-        assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(List.of(newContingency, newFilter, newScript));
+        assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(newContingency, newFilter, newScript));
 
         ElementAttributes directory = retrieveInsertAndCheckRootDirectory("testDir", "user1");
         List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(FILTER), 200);
@@ -1024,7 +1022,7 @@ public class DirectoryTest {
         result.sort(Comparator.comparing(ElementAttributes::getElementName));
 
         result.sort(Comparator.comparing(ElementAttributes::getElementName));
-        assertThat(result).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(List.of(
+        assertThat(result).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(
                 toElementAttributes(FILTER_UUID, "newFilter", FILTER, "user1", 0, null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
                 directory
         ));
@@ -1078,7 +1076,7 @@ public class DirectoryTest {
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
-        assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(List.of(
+        assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(
                 toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, "user1", null, contingencyAttributes.getCreationDate(), contingencyAttributes.getLastModificationDate(), "user1"),
                 toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
                 toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1")
@@ -1146,7 +1144,7 @@ public class DirectoryTest {
         ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, "userId", "descr study");
         insertAndCheckSubElement(uuidNewDirectory, subEltAttributes);
 
-        LocalDateTime newModificationDate = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
+        Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
 
         String userMakingModification = "newUser";
 
@@ -1163,7 +1161,7 @@ public class DirectoryTest {
 
         ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
 
-        assertEquals(newModificationDate, updatedElement.getLastModificationDate().toLocalDateTime());
+        assertEquals(newModificationDate, updatedElement.getLastModificationDate());
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
     }
 
@@ -1193,7 +1191,7 @@ public class DirectoryTest {
 
         List<ElementAttributes> elementAttributes = objectMapper.readValue(response, new TypeReference<>() {
         });
-        assertThat(list).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(elementAttributes);
+        assertThat(list).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(elementAttributes);
     }
 
     private ElementAttributes retrieveInsertAndCheckRootDirectory(String rootDirectoryName, String userId) throws Exception {
@@ -1207,8 +1205,8 @@ public class DirectoryTest {
                 .getContentAsString();
 
         UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getElementUuid();
-        ZonedDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
-        ZonedDateTime modificationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getLastModificationDate();
+        Instant creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
+        Instant modificationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getLastModificationDate();
 
         ElementAttributes newDirectoryAttributes = toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, userId, null, creationDateNewDirectory, modificationDateNewDirectory, userId);
         assertElementIsProperlyInserted(newDirectoryAttributes);
@@ -1238,7 +1236,7 @@ public class DirectoryTest {
                 .getContentAsString();
 
         UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getElementUuid();
-        ZonedDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
+        Instant creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
 
         assertElementIsProperlyInserted(toElementAttributes(uuidNewDirectory, rootDirectoryName, DIRECTORY, userId, null, creationDateNewDirectory, creationDateNewDirectory, userId));
 
@@ -1294,7 +1292,7 @@ public class DirectoryTest {
 
         UUID uuidNewDirectory = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class)
                 .getElementUuid();
-        ZonedDateTime creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class).getCreationDate();
+        Instant creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class).getCreationDate();
         String lastModifiedBy = objectMapper.readValue(Objects.requireNonNull(response).getResponse().getContentAsString(), ElementAttributes.class).getLastModifiedBy();
 
         subElementAttributes.setElementUuid(uuidNewDirectory);
@@ -1415,7 +1413,7 @@ public class DirectoryTest {
                 .getContentAsString();
         List<ElementAttributes> result = objectMapper.readValue(response, new TypeReference<>() {
         });
-        assertThat(list).usingRecursiveComparison().ignoringFieldsOfTypes(ZonedDateTime.class).isEqualTo(result);
+        assertThat(list).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(result);
     }
 
     private void checkElementNotFound(UUID elementUuid, String userId) throws Exception {
@@ -1509,7 +1507,7 @@ public class DirectoryTest {
     @SneakyThrows
     public void testCreateElementInDirectory() {
         String userId = "user";
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "caseName", "CASE", "user", null, now, now, userId);
         String requestBody = objectMapper.writeValueAsString(caseElement);
         mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
@@ -1597,7 +1595,7 @@ public class DirectoryTest {
     @Test
     @SneakyThrows
     public void testReindexAll() {
-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
+        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", DIRECTORY, "userId", "description", now, now, "userId", false, null);
         DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", STUDY, "userId", "description", now, now, "userId", false, null);
 

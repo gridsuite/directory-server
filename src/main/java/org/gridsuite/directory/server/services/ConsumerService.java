@@ -11,7 +11,7 @@ package org.gridsuite.directory.server.services;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -43,7 +43,7 @@ public class ConsumerService {
             String modificationDateStr = message.getHeaders().get(HEADER_MODIFICATION_DATE, String.class);
 
             UUID elementUpdatedUuid = UUID.fromString(elementUpdatedUuidStr);
-            LocalDateTime modificationDate = LocalDateTime.parse(modificationDateStr);
+            Instant modificationDate = Instant.parse(modificationDateStr);
 
             directoryService.updateElementLastModifiedAttributes(elementUpdatedUuid, modificationDate, modifiedBy);
         };
