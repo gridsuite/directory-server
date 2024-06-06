@@ -8,7 +8,7 @@ package org.gridsuite.directory.server.utils;
 
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -20,10 +20,10 @@ public final class DirectoryTestUtils {
     }
 
     public static DirectoryElementEntity createRootElement(String elementName, String type, String userId) {
-        return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, userId, null, LocalDateTime.now(), LocalDateTime.now(), userId, false, null);
+        return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, userId, null, Instant.now(), Instant.now(), userId, false, null);
     }
 
     public static DirectoryElementEntity createElement(UUID parentDirectoryUuid, String elementName, String type, String userId) {
-        return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, userId, null, LocalDateTime.now(), LocalDateTime.now(), userId, false, null);
+        return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, userId, null, Instant.now(), Instant.now(), userId, false, null);
     }
 }
