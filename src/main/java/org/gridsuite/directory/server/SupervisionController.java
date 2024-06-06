@@ -12,17 +12,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.services.SupervisionService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @RestController
-@RequestMapping(value = "/" + DirectoryApi.API_VERSION + "/supervision")
+@RequestMapping(value = "/" + DirectoryApi.API_VERSION + "/supervision", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "directory-server - Supervision")
 public class SupervisionController {
     private final SupervisionService service;
@@ -46,5 +48,18 @@ public class SupervisionController {
     public ResponseEntity<Void> deleteElements(@RequestParam("ids") List<UUID> elementsUuid) {
         service.deleteElementsByIds(elementsUuid);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/elements/recreate-index", produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "Recreate the index then reindex data")
+    @ApiResponse(responseCode = "200", description = "Success of the index recreation & reindexing of elements")
+    @ApiResponse(responseCode = "500", description = "An error happen while recreating the index.\nAn manual intervention is needing as no details of the error is available.")
+    public ResponseEntity<Optional<String>> deleteElements() {
+        if (service.recreateIndexDirectoryElementInfos()) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.internalServerError().contentType(MediaType.TEXT_PLAIN)
+                    .body(Optional.of("An error happen while re-creating the index. As no details is available an manual intervention is required."));
+        }
     }
 }
