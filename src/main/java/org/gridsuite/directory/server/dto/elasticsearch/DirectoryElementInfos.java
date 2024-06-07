@@ -16,7 +16,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,8 +55,8 @@ public class DirectoryElementInfos {
     @Field(type = FieldType.Long)
     private long subdirectoriesCount;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_hour_minute_second_millis)
-    LocalDateTime lastModificationDate;
+    @Field(type = FieldType.Date, format = DateFormat.date_time)
+    Instant lastModificationDate;
 
     @Transient
     private List<String> pathName;

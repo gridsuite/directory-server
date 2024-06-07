@@ -11,8 +11,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
@@ -41,9 +40,9 @@ public class ElementAttributes {
 
     private String description;
 
-    private ZonedDateTime creationDate;
+    private Instant creationDate;
 
-    private ZonedDateTime lastModificationDate;
+    private Instant lastModificationDate;
 
     private String lastModifiedBy;
 
@@ -56,7 +55,7 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount, entity.getDescription(), ZonedDateTime.ofInstant(entity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), ZonedDateTime.ofInstant(entity.getLastModificationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), entity.getLastModifiedBy());
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
@@ -73,13 +72,13 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        @NonNull String userId, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
+                                                        @NonNull String userId, String elementDescription, Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
         return toElementAttributes(elementUuid, elementName, elementType, userId, 0L, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull String userId,
-                                                        long subdirectoriesCount, String elementDescription, ZonedDateTime creationDate, ZonedDateTime lastModificationDate, String lastModifiedBy) {
+                                                        long subdirectoriesCount, String elementDescription, Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
         return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
             .type(elementType).owner(userId).creationDate(creationDate)
             .subdirectoriesCount(subdirectoriesCount).description(elementDescription)

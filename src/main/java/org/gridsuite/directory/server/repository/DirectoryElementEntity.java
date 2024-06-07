@@ -13,8 +13,7 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import jakarta.persistence.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -51,10 +50,10 @@ public class DirectoryElementEntity {
     private String description;
 
     @Column(name = "creationDate")
-    private LocalDateTime creationDate;
+    private Instant creationDate;
 
     @Column(name = "lastModificationDate")
-    private LocalDateTime lastModificationDate;
+    private Instant lastModificationDate;
 
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
@@ -63,7 +62,7 @@ public class DirectoryElementEntity {
     private boolean stashed;
 
     @Column(name = "stash_date")
-    private LocalDateTime stashDate;
+    private Instant stashDate;
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
@@ -76,13 +75,13 @@ public class DirectoryElementEntity {
             this.description = newElementAttributes.getDescription();
         }
         if (isDescriptionUpdated || isElementNameUpdated) {
-            updateModificationAttributes(lastModifiedBy, LocalDateTime.now(ZoneOffset.UTC));
+            updateModificationAttributes(lastModifiedBy, Instant.now());
         }
         return this;
     }
 
     public void updateModificationAttributes(@NonNull String lastModifiedBy,
-                                             @NonNull LocalDateTime lastModificationDate) {
+                                             @NonNull Instant lastModificationDate) {
         this.setLastModificationDate(lastModificationDate);
         this.setLastModifiedBy(lastModifiedBy);
     }

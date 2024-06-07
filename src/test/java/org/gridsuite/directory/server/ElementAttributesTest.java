@@ -19,9 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collector;
@@ -56,7 +54,7 @@ public class ElementAttributesTest {
 
     @Test
     public void testElementEntityUpdate() {
-        LocalDateTime localCreationDate = LocalDateTime.now(ZoneOffset.UTC);
+        Instant localCreationDate = Instant.now();
 
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
         DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", STUDY, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
@@ -74,33 +72,33 @@ public class ElementAttributesTest {
         assertFalse(elementEntity2.isAttributesUpdatable(ElementAttributes.builder().build(), "userId"));
 
         elementEntity.update(ElementAttributes.builder().elementName("newName").build());
-        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, "userId", "description", ZonedDateTime.ofInstant(elementEntity.getCreationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), ZonedDateTime.ofInstant(elementEntity.getLastModificationDate().toInstant(ZoneOffset.UTC), ZoneOffset.UTC), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
+        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, "userId", "description", elementEntity.getCreationDate(), elementEntity.getLastModificationDate(), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
     }
 
     @Test
     public void testElementAttributesCreation() {
-        ZonedDateTime zonedCreationDate = ZonedDateTime.now(ZoneOffset.UTC);
-        LocalDateTime localCreationDate = LocalDateTime.now(ZoneOffset.UTC);
+        Instant creationDate = Instant.now();
+        Instant lastModificationDate = Instant.now();
 
-        verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        verifyElementAttributes(toElementAttributes(null, "name", DIRECTORY, "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", 1L, null, zonedCreationDate, zonedCreationDate, "userId"));
+        verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"));
+        verifyElementAttributes(toElementAttributes(null, "name", DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"));
+        verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", 1L, null, creationDate, creationDate, "userId"));
 
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", "description"));
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId"));
 
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", localCreationDate, localCreationDate, "userId", false, null)));
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", localCreationDate, localCreationDate, "userId", false, null), 1L));
-        verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", "userId", "description", zonedCreationDate, zonedCreationDate, "userId")));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId", false, null)));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId", false, null), 1L));
+        verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", "userId", "description", creationDate, creationDate, "userId")));
 
         assertThrows(NullPointerException.class, () -> toElementAttributes((DirectoryElementEntity) null));
         assertThrows(NullPointerException.class, () -> toElementAttributes((RootDirectoryAttributes) null));
         assertThrows(NullPointerException.class, () -> toElementAttributes(null, 1));
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", null));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, null, DIRECTORY, "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", null, "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, null, DIRECTORY, "userId", 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, null, 1L, "description", zonedCreationDate, zonedCreationDate, "userId"));
+        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, null, DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"));
+        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", null, "userId", 1L, "description", creationDate, creationDate, "userId"));
+        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, null, DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"));
+        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, null, 1L, "description", creationDate, creationDate, "userId"));
     }
 
     @SneakyThrows
@@ -112,9 +110,9 @@ public class ElementAttributesTest {
 
     @Test
     public void testJsonString() {
-        ZonedDateTime creationDate = ZonedDateTime.now(ZoneOffset.UTC);
-        DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
-        String formattedCreationDate = creationDate.format(formatter);
+        Instant creationDate = Instant.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_INSTANT;
+        String formattedCreationDate = formatter.format(creationDate);
 
         assertEquals(
             "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + formattedCreationDate + "\",\"lastModificationDate\":\"" + formattedCreationDate + "\",\"lastModifiedBy\":\"userId\"}",
@@ -149,9 +147,9 @@ public class ElementAttributesTest {
         if (value == null) {
             return (String) value;
         }
-        if (value instanceof ZonedDateTime) {
-            DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
-            return String.format("\"%s\":\"%s\"", key, ((ZonedDateTime) value).format(formatter));
+        if (value instanceof Instant) {
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_INSTANT;
+            return String.format("\"%s\":\"%s\"", key, formatter.format((Instant) value));
         }
         return String.format(value instanceof String || value instanceof UUID ? "\"%s\":\"%s\"" : "\"%s\":%s", key, value);
     }
