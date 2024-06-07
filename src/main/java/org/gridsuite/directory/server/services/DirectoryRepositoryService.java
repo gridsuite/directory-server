@@ -87,7 +87,6 @@ public class DirectoryRepositoryService {
     }
 
     public void reindexElements() {
-        // reindex all
         saveElementsInfos(directoryElementRepository.findAll().stream()
             .map(DirectoryElementEntity::toDirectoryElementInfos)
             .toList());
