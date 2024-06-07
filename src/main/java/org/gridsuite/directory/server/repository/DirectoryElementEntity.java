@@ -49,10 +49,10 @@ public class DirectoryElementEntity {
     @Column(name = "description", columnDefinition = "CLOB")
     private String description;
 
-    @Column(name = "creationDate")
+    @Column(name = "creationDate", columnDefinition = "timestamptz")
     private Instant creationDate;
 
-    @Column(name = "lastModificationDate")
+    @Column(name = "lastModificationDate", columnDefinition = "timestamptz")
     private Instant lastModificationDate;
 
     @Column(name = "lastModifiedBy")
@@ -61,7 +61,7 @@ public class DirectoryElementEntity {
     @Column(name = "stashed")
     private boolean stashed;
 
-    @Column(name = "stash_date")
+    @Column(name = "stash_date", columnDefinition = "timestamptz")
     private Instant stashDate;
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
