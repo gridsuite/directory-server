@@ -8,12 +8,15 @@ package org.gridsuite.directory.server.services;
 
 import com.google.common.collect.Lists;
 import lombok.NonNull;
+
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,7 +45,7 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> getElementEntities(List<UUID> uuids, UUID parentUuid) {
-        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, "DIRECTORY", false);
+        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, DIRECTORY, false);
     }
 
     public boolean isRootDirectory(UUID directoryUuid) {
@@ -83,10 +86,10 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.existsByIdAndOwnerOrId(id, userId, id);
     }
 
-    public void reindexAllElements() {
-        saveElementsInfos(directoryElementRepository.findAllByStashed(false).stream()
-                .map(DirectoryElementEntity::toDirectoryElementInfos)
-                .toList());
+    public void reindexElements() {
+        saveElementsInfos(directoryElementRepository.findAll().stream()
+            .map(DirectoryElementEntity::toDirectoryElementInfos)
+            .toList());
     }
 
     public UUID getParentUuid(UUID elementUuid) {
