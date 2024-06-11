@@ -15,6 +15,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -65,9 +66,24 @@ public class DirectoryRepositoryService {
 
     public DirectoryElementEntity saveElement(DirectoryElementEntity elementEntity) {
         DirectoryElementEntity savedElementEntity = directoryElementRepository.save(elementEntity);
-        directoryElementInfosRepository.save(savedElementEntity.toDirectoryElementInfos());
+        DirectoryElementInfos directoryElementInfos = savedElementEntity.toDirectoryElementInfos();
+
+        List<DirectoryElementEntity> ascendants = findAllAscendants(savedElementEntity.getId());
+        List<DirectoryElementEntity> decendents = findAllDescendants(savedElementEntity.getId());
+        List<String> pathName = decendents.stream().map(DirectoryElementEntity::getName).toList();
+//        Collections.reverse(pathName);
+        List<UUID> pathUuid = decendents.stream().map(DirectoryElementEntity::getId).toList();
+//        Collections.reverse(pathUuid);
+
+        List<DirectoryElementEntity> directoryElements = findAllByParentId(savedElementEntity.getParentId());
+
+
+        directoryElementInfos.setPathName(pathName);
+        directoryElementInfos.setPathUuid(pathUuid);
+        directoryElementInfosRepository.save(directoryElementInfos);
         return savedElementEntity;
     }
+
 
     public void deleteElement(UUID elementUuid) {
         directoryElementRepository.deleteById(elementUuid);
@@ -126,5 +142,9 @@ public class DirectoryRepositoryService {
 
     public List<DirectoryElementEntity> findAllAscendants(UUID elementId) {
         return directoryElementRepository.findAllAscendants(elementId);
+    }
+
+    private List<DirectoryElementEntity> findAllDescendants(UUID elementId) {
+        return directoryElementRepository.findAllDescendants(elementId);
     }
 }

@@ -56,10 +56,8 @@ public class DirectoryElementInfos {
     @Field(type = FieldType.Date, format = DateFormat.date_time)
     Instant lastModificationDate;
 
-    @Transient
     private List<String> pathName;
 
-    @Transient
     private List<UUID> pathUuid;
 
 }
