@@ -529,6 +529,10 @@ public class DirectoryService {
                 .toList();
     }
 
+    public int getCasesCount(String userId) {
+        return directoryElementRepository.getCasesCountByOwner(userId);
+    }
+
     public void notify(@NonNull String notificationName, @NonNull UUID elementUuid, @NonNull String userId) {
         NotificationType notification;
         try {

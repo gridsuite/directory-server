@@ -51,6 +51,9 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     @Query("SELECT name FROM DirectoryElementEntity WHERE parentId=:parentId AND type=:type AND name like :name% and stashed = false ")
     List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
 
+    @Query("SELECT count(*) FROM DirectoryElementEntity WHERE owner=:owner AND type='CASE'")
+    int getCasesCountByOwner(String owner);
+
     boolean existsByIdAndOwnerOrId(UUID id, String owner, UUID id2);
 
     interface SubDirectoryCount {
