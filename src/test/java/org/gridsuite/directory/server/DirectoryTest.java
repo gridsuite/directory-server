@@ -216,6 +216,8 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory2UUID, study1Attributes);
         SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(study1UUID, "Doe");
+
+        //There is only recursive query and SQLStatementCountValidator ignore them
         assertRequestsCount(0, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
