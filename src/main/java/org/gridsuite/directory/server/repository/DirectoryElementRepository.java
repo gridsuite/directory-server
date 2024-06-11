@@ -67,17 +67,21 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
 
+
+    //https://www.postgresql.org/docs/current/queries-union.html
     @Query(nativeQuery = true, value =
             "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id, depth) AS ( " +
-                    "  SELECT id AS element_id, parent_id AS parent_element_id, 0 AS depth FROM element WHERE id = :elementId " +
+                    "  SELECT id AS element_id, parent_id AS parent_element_id, 0 AS depth" +
+                    "  FROM element " +
+                    "  WHERE id = :elementId " +
                     "  UNION ALL " +
-                    "  SELECT e.id AS element_id, e.parent_id AS parent_element_id, eh.depth + 1 AS depth " +
+                    "  SELECT e.id AS element_id, e.parent_id AS parent_element_id, eh.depth + 1" +
                     "  FROM element e " +
-                    "  INNER JOIN ElementHierarchy eh ON eh.parent_element_id = e.id WHERE e.parent_id IS NOT NULL) " +
-                    "SELECT e.* FROM element e " +
-                    "JOIN ElementHierarchy eh ON e.id = eh.element_id " +
+                    "  INNER JOIN ElementHierarchy eh ON eh.parent_element_id = e.id " +
+                    ") " +
+                    "SELECT * FROM element e " +
+                    "JOIN ElementHierarchy eh ON e.id = eh.parent_element_id " +
                     "WHERE e.stashed = false " +
-                    "ORDER BY eh.depth ASC")
+                    "ORDER BY eh.depth ")
     List<DirectoryElementEntity> findAllAscendants(@Param("elementId") UUID elementId);
-
 }

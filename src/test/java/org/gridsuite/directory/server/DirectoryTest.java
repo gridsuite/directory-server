@@ -223,7 +223,7 @@ public class DirectoryTest {
                 path.stream()
                     .map(ElementAttributes::getElementUuid)
                     .collect(Collectors.toList()),
-                Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
+                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, study1UUID)
         );
     }
 
@@ -255,7 +255,7 @@ public class DirectoryTest {
                 path.stream()
                     .map(ElementAttributes::getElementUuid)
                     .collect(Collectors.toList()),
-                Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
+                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, filter1UUID)
         );
     }
 

@@ -490,6 +490,7 @@ public class DirectoryService {
         List<ElementAttributes> path = new ArrayList<>(List.of(toElementAttributes(currentElement)));
         path.addAll(repositoryService.findAllAscendants(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList());
 
+        Collections.reverse(path);
         return path;
     }
 
