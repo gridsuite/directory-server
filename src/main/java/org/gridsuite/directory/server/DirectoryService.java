@@ -19,7 +19,6 @@ import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.util.Pair;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -586,24 +585,13 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    private Pair<List<UUID>, List<String>> getUuidsAndNamesFromPath(List<ElementAttributes> elementAttributesList) {
-        List<UUID> uuids = new ArrayList<>(elementAttributesList.size());
-        List<String> names = new ArrayList<>(elementAttributesList.size());
-        elementAttributesList
-                .forEach(e -> {
-                    uuids.add(e.getElementUuid());
-                    names.add(e.getElementName());
-                });
-        return Pair.of(uuids, names);
-    }
-
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
         return directoryElementInfosService.searchElements(userInput)
                 .stream()
                 .map(e -> {
-                    Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(getPath(e.getParentId()));
-                    e.setPathUuid(uuidsAndNames.getFirst());
-                    e.setPathName(uuidsAndNames.getSecond());
+                    List<ElementAttributes> path = getPath(e.getParentId());
+                    e.setPathUuid(path.stream().map(ElementAttributes::getElementUuid).toList());
+                    e.setPathName(path.stream().map(ElementAttributes::getElementName).toList());
                     return e;
                 })
                 .toList();
