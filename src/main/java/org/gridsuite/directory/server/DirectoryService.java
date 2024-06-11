@@ -484,7 +484,11 @@ public class DirectoryService {
      * @return ElementAttributes of element and all it's parents up to root directory
      */
     public List<ElementAttributes> getPath(UUID elementUuid) {
-        return repositoryService.findElementHierarchy(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList();
+        List<ElementAttributes> path = repositoryService.findElementHierarchy(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList();
+        if (path.isEmpty()) {
+            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+        }
+        return path;
     }
 
     public ElementAttributes getElement(UUID elementUuid) {
@@ -597,11 +601,7 @@ public class DirectoryService {
         return directoryElementInfosService.searchElements(userInput)
                 .stream()
                 .map(e -> {
-                    List<ElementAttributes> path = getPath(e.getParentId());
-
-                    //We remove the element from its hierarchy
-                    List<ElementAttributes> ascendants = path.subList(0, path.size() - 2);
-                    Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(ascendants);
+                    Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(getPath(e.getParentId()));
                     e.setPathUuid(uuidsAndNames.getFirst());
                     e.setPathName(uuidsAndNames.getSecond());
                     return e;

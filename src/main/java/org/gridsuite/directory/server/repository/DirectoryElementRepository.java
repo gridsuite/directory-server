@@ -81,6 +81,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
                     "  INNER JOIN ElementHierarchy eh ON eh.parent_element_id = e.id " +
                     ") " +
                     "SELECT * FROM element e " +
-                    "WHERE e.id in (SELECT eh.element_id from ElementHierarchy eh order by eh.depth DESC)")
+                    "WHERE e.id in (SELECT eh.element_id from ElementHierarchy eh) " +
+                    "ORDER BY (SELECT depth FROM ElementHierarchy WHERE element_id = e.id) DESC")
     List<DirectoryElementEntity> findElementHierarchy(@Param("elementId") UUID elementId);
 }
