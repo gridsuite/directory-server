@@ -68,6 +68,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
 
 
+    //When using UNION, there is no guarantee order in which the rows are actually returned
     //https://www.postgresql.org/docs/current/queries-union.html
     @Query(nativeQuery = true, value =
             "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id, depth) AS ( " +
