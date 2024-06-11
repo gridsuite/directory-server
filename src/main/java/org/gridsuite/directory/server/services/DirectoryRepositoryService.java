@@ -127,7 +127,7 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(type, parentId, name);
     }
 
-    public List<DirectoryElementEntity> findAllAscendants(UUID elementId) {
-        return directoryElementRepository.findAllAscendants(elementId);
+    public List<DirectoryElementEntity> findElementHierarchy(UUID elementId) {
+        return directoryElementRepository.findElementHierarchy(elementId);
     }
 }
