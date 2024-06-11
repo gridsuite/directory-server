@@ -79,30 +79,22 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
                     "WHERE e.stashed = false ")
     List<DirectoryElementEntity> findAllAscendants(@Param("elementId") UUID elementId);
 
-
     @Query(nativeQuery = true, value =
-    "WITH RECURSIVE DescendantHierarchy (element_id, parent_element_id) AS (" +
-            "  SELECT" +
-            "    id AS element_id, parent_id AS parent_element_id" +
-            "  FROM element where id = :elementId" +
-            "  UNION ALL" +
-            "  select e.id AS element_id, e.parent_id AS parent_element_id" +
-            "  FROM element e" +
-            "  INNER JOIN" +
-            "    DescendantHierarchy dh" +
-            "    ON dh.element_id = e.parent_id" +
-            "    WHERE e.type = 'DIRECTORY' )" +
-            "SELECT * FROM element e" +
-            "JOIN" +
-            "  DescendantHierarchy dh" +
-            "  ON e.id = dh.element_id")
+        "WITH RECURSIVE DescendantHierarchy (element_id, parent_element_id) AS (" +
+                "  SELECT" +
+                "    id AS element_id, parent_id AS parent_element_id" +
+                "  FROM element where id = :elementId" +
+                "  UNION ALL" +
+                "  select e.id AS element_id, e.parent_id AS parent_element_id" +
+                "  FROM element e" +
+                "  INNER JOIN" +
+                "    DescendantHierarchy dh" +
+                "    ON dh.element_id = e.parent_id" +
+                "    WHERE e.type = 'DIRECTORY' )" +
+                "SELECT * FROM element e" +
+                "JOIN" +
+                "  DescendantHierarchy dh" +
+                "  ON e.id = dh.element_id")
     List<DirectoryElementEntity> findAllDescendants(@Param("elementId") UUID elementId);
 }
 
-
-// d04145fd-1bb6-401e-93d4-668688884760|d2_1|jamal|d00b68ff-ab0b-4d4a-a628-bb13740c9622|DIRECTORY|           |2024-06-06 15:34:42.413 +0200|2024-06-06 15:34:42.413 +0200|jamal           |          |false  |d04145fd-1bb6-401e-93d4-668688884760|d00b68ff-ab0b-4d4a-a628-bb13740c9622|
-// b4aaa9c2-9c78-40ac-958a-2a9144ddfbcc|d3_1|jamal|d04145fd-1bb6-401e-93d4-668688884760|DIRECTORY|           |2024-06-06 15:35:17.627 +0200|2024-06-06 15:44:39.803 +0200|jamal           |          |false  |b4aaa9c2-9c78-40ac-958a-2a9144ddfbcc|d04145fd-1bb6-401e-93d4-668688884760|
-// 1737b1f3-eaf7-4b99-8bea-ea3ad757e596|d3_2|jamal|d04145fd-1bb6-401e-93d4-668688884760|DIRECTORY|           |2024-06-06 15:35:28.094 +0200|2024-06-06 15:44:32.764 +0200|jamal           |          |false  |1737b1f3-eaf7-4b99-8bea-ea3ad757e596|d04145fd-1bb6-401e-93d4-668688884760|
-// b8ceaf5c-f586-4b7f-9add-56844c0454a5|d3_3|jamal|d04145fd-1bb6-401e-93d4-668688884760|DIRECTORY|           |2024-06-06 15:35:36.860 +0200|2024-06-06 15:35:36.860 +0200|jamal           |          |false  |b8ceaf5c-f586-4b7f-9add-56844c0454a5|d04145fd-1bb6-401e-93d4-668688884760|
-// f683d999-0d77-4992-a5cd-210028b49f47|d4_1|jamal|b4aaa9c2-9c78-40ac-958a-2a9144ddfbcc|DIRECTORY|           |2024-06-06 15:45:22.806 +0200|2024-06-06 15:45:22.806 +0200|jamal           |          |false  |f683d999-0d77-4992-a5cd-210028b49f47|b4aaa9c2-9c78-40ac-958a-2a9144ddfbcc|
-// 2ac56f0b-5dc9-4ced-9003-127186fb802a|d5_1|jamal|f683d999-0d77-4992-a5cd-210028b49f47|DIRECTORY|           |2024-06-07 15:07:37.319 +0200|2024-06-07 15:07:37.319 +0200|jamal           |          |false  |2ac56f0b-5dc9-4ced-9003-127186fb802a|f683d999-0d77-4992-a5cd-210028b49f47|

@@ -15,10 +15,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -64,26 +61,42 @@ public class DirectoryRepositoryService {
                 .forEach(directoryElementInfosRepository::saveAll);
     }
 
+    String getFullPathName(DirectoryElementEntity elementEntity, List<DirectoryElementEntity> ascendants) {
+        List<String> pathName = new ArrayList<>(ascendants.stream().map(DirectoryElementEntity::getName).toList());
+        String fullPathName = pathName.stream().reduce("", (s1, s2) -> s1 + "/" + s2);
+        if (elementEntity.getType().equals("DIRECTORY")) {
+            pathName.add(elementEntity.getName());
+        }
+        return fullPathName.toString();
+    }
+
+    String getFullPathUuid(DirectoryElementEntity elementEntity, List<DirectoryElementEntity> ascendants) {
+        List<UUID> pathUuid = new ArrayList<>(ascendants.stream().map(DirectoryElementEntity::getId).toList());
+        if (elementEntity.getType().equals("DIRECTORY")) {
+            pathUuid.add(elementEntity.getId());
+        }
+
+        StringBuilder fullPathUuid = new StringBuilder();
+        for (UUID uuid : pathUuid) {
+            fullPathUuid.append(uuid.toString()).append("/");
+        }
+
+        return fullPathUuid.toString();
+    }
+
     public DirectoryElementEntity saveElement(DirectoryElementEntity elementEntity) {
         DirectoryElementEntity savedElementEntity = directoryElementRepository.save(elementEntity);
         DirectoryElementInfos directoryElementInfos = savedElementEntity.toDirectoryElementInfos();
 
         List<DirectoryElementEntity> ascendants = findAllAscendants(savedElementEntity.getId());
-        List<DirectoryElementEntity> decendents = findAllDescendants(savedElementEntity.getId());
-        List<String> pathName = decendents.stream().map(DirectoryElementEntity::getName).toList();
-//        Collections.reverse(pathName);
-        List<UUID> pathUuid = decendents.stream().map(DirectoryElementEntity::getId).toList();
-//        Collections.reverse(pathUuid);
+        String fullPathName = getFullPathName(elementEntity, ascendants);
+        String fullPathUuid = getFullPathUuid(elementEntity, ascendants);
 
-        List<DirectoryElementEntity> directoryElements = findAllByParentId(savedElementEntity.getParentId());
-
-
-        directoryElementInfos.setPathName(pathName);
-        directoryElementInfos.setPathUuid(pathUuid);
+        directoryElementInfos.setFullPathName(fullPathName);
+        directoryElementInfos.setFullPathUuid(fullPathUuid);
         directoryElementInfosRepository.save(directoryElementInfos);
         return savedElementEntity;
     }
-
 
     public void deleteElement(UUID elementUuid) {
         directoryElementRepository.deleteById(elementUuid);
@@ -101,7 +114,13 @@ public class DirectoryRepositoryService {
 
     public void reindexAllElements() {
         saveElementsInfos(directoryElementRepository.findAllByStashed(false).stream()
-                .map(DirectoryElementEntity::toDirectoryElementInfos)
+                .map(directoryElementEntity -> {
+                    List<DirectoryElementEntity> ascendants = findAllAscendants(directoryElementEntity.getId());
+                    DirectoryElementInfos directoryElementInfos = directoryElementEntity.toDirectoryElementInfos();
+                    directoryElementInfos.setFullPathName(getFullPathName(directoryElementEntity, ascendants));
+                    directoryElementInfos.setFullPathUuid(getFullPathUuid(directoryElementEntity, ascendants));
+                    return directoryElementInfos;
+                })
                 .toList());
     }
 
