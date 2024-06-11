@@ -484,14 +484,7 @@ public class DirectoryService {
      * @return ElementAttributes of element and all it's parents up to root directory
      */
     public List<ElementAttributes> getPath(UUID elementUuid) {
-        DirectoryElementEntity currentElement = repositoryService.getElementEntity(elementUuid)
-                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
-
-        List<ElementAttributes> path = new ArrayList<>(List.of(toElementAttributes(currentElement)));
-        path.addAll(repositoryService.findAllAscendants(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList());
-
-        Collections.reverse(path);
-        return path;
+        return repositoryService.findElementHierarchy(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList();
     }
 
     public ElementAttributes getElement(UUID elementUuid) {
@@ -592,8 +585,7 @@ public class DirectoryService {
     private Pair<List<UUID>, List<String>> getUuidsAndNamesFromPath(List<ElementAttributes> elementAttributesList) {
         List<UUID> uuids = new ArrayList<>(elementAttributesList.size());
         List<String> names = new ArrayList<>(elementAttributesList.size());
-        elementAttributesList.stream()
-                .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), DIRECTORY))
+        elementAttributesList
                 .forEach(e -> {
                     uuids.add(e.getElementUuid());
                     names.add(e.getElementName());
@@ -606,7 +598,10 @@ public class DirectoryService {
                 .stream()
                 .map(e -> {
                     List<ElementAttributes> path = getPath(e.getParentId());
-                    Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(path);
+
+                    //We remove the element from its hierarchy
+                    List<ElementAttributes> ascendants = path.subList(0, path.size() - 2);
+                    Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(ascendants);
                     e.setPathUuid(uuidsAndNames.getFirst());
                     e.setPathName(uuidsAndNames.getSecond());
                     return e;
