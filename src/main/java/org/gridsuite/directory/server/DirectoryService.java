@@ -585,8 +585,8 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
-        return directoryElementInfosService.searchElements(userInput)
+    public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
+        return directoryElementInfosService.searchElements(userInput, directoryUuid)
                 .stream()
                 .map(e -> {
                     List<ElementAttributes> path = getPath(e.getParentId());

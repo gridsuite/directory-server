@@ -90,14 +90,14 @@ class DirectoryElementInfosServiceTest {
         List<DirectoryElementInfos> infos = List.of(directoryInfos, filterInfos, studyInfos, caseInfos, contingencyListInfos);
         repositoryService.saveElementsInfos(infos);
 
-        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a"));
+        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", ""));
         assertEquals(4, hits.size());
         assertTrue(hits.contains(studyInfos));
         assertTrue(hits.contains(caseInfos));
         assertTrue(hits.contains(filterInfos));
         assertTrue(hits.contains(contingencyListInfos));
 
-        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory"));
+        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory",""));
         assertEquals(0, hits.size());
     }
 
@@ -128,6 +128,6 @@ class DirectoryElementInfosServiceTest {
     }
 
     private void testNameFullAscii(String pat) {
-        Assert.assertEquals(1, directoryElementInfosService.searchElements(pat).size());
+        Assert.assertEquals(1, directoryElementInfosService.searchElements(pat,"").size());
     }
 }

@@ -6,7 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 package org.gridsuite.directory.server.services;
 
-import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import lombok.Getter;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
-import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.stereotype.Service;
@@ -45,12 +44,36 @@ public class DirectoryElementInfosService {
         this.elasticsearchOperations = elasticsearchOperations;
     }
 
-    public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
+    public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String currentDirectoryUuid) {
+
+        Query directory = TermQuery.of(m -> m
+                .field(ELEMENT_TYPE)
+                .value(DIRECTORY)
+        )._toQuery();
+
+        Query elementName = WildcardQuery.of(m -> m
+                .field(ELEMENT_NAME)
+                .wildcard("*" + escapeLucene(userInput) + "*")
+        )._toQuery();
+
+        Query fullPathQuery = MatchQuery.of(m -> m
+                .field("fullPathUuid")
+                .query("*"+ currentDirectoryUuid + "*")
+                .boost(2.0f)
+        )._toQuery();
+
+        Query parentIdQuery = MatchQuery.of(m -> m
+                .field("parentId")
+                .query(currentDirectoryUuid)
+                .boost(2.0f)
+        )._toQuery();
+
         BoolQuery query = new BoolQuery.Builder()
-                .mustNot(Queries.termQuery(ELEMENT_TYPE, DIRECTORY)._toQuery())
-                .must(Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*")._toQuery())
-//                .should(Queries.prefixQuery("fullPathUuid", currentDirectoryFullPathUuid)._toQuery().boost(2.0f)) // boost score for elements in subdirectories
+                .mustNot(directory)
+                .must(elementName)
+                .should(fullPathQuery, parentIdQuery)
                 .build();
+
         NativeQuery nativeQuery = new NativeQueryBuilder()
                 .withQuery(query._toQuery())
                 .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))

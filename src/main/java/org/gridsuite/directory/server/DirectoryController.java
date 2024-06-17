@@ -245,8 +245,9 @@ public class DirectoryController {
     @Operation(summary = "Search elements in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})
     public ResponseEntity<List<DirectoryElementInfos>> searchElements(
-            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput) {
+            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
+            @Parameter(description = "Current directory UUID") @RequestParam(value = "directoryUuid", required = false, defaultValue = "") String directoryUuid){
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
-                .body(service.searchElements(userInput));
+                .body(service.searchElements(userInput, directoryUuid));
     }
 }
