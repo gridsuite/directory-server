@@ -9,6 +9,8 @@ package org.gridsuite.directory.server.dto.elasticsearch;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import org.gridsuite.directory.server.elasticsearch.ESConfig;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.TypeAlias;
@@ -28,7 +30,7 @@ import java.util.UUID;
 @ToString
 @EqualsAndHashCode
 @Schema(description = "Directory element infos")
-@Document(indexName = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements")
+@Document(indexName = ESConfig.DIRECTORY_ELEMENT_INFOS_INDEX_NAME)
 @Setting(settingPath = "elasticsearch_settings.json")
 @TypeAlias(value = "DirectoryElementInfos")
 public class DirectoryElementInfos {

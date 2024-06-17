@@ -67,34 +67,39 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
 
+
+    //When using UNION, there is no guarantee order in which the rows are actually returned
+    //https://www.postgresql.org/docs/current/queries-union.html
     @Query(nativeQuery = true, value =
-            "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id) AS ( " +
-                    "  SELECT id AS element_id, parent_id AS parent_element_id FROM element WHERE id = :elementId " +
+            "WITH RECURSIVE ElementHierarchy (element_id, parent_element_id, depth) AS ( " +
+                    "  SELECT id AS element_id, parent_id AS parent_element_id, 0 AS depth" +
+                    "  FROM element " +
+                    "  WHERE id = :elementId " +
                     "  UNION ALL " +
-                    "  SELECT e.id AS element_id, e.parent_id AS parent_element_id " +
+                    "  SELECT e.id AS element_id, e.parent_id AS parent_element_id, eh.depth + 1" +
                     "  FROM element e " +
-                    "  INNER JOIN ElementHierarchy ON ElementHierarchy.parent_element_id = e.id WHERE e.parent_id IS NOT NULL) " +
+                    "  INNER JOIN ElementHierarchy eh ON eh.parent_element_id = e.id " +
+                    ") " +
                     "SELECT * FROM element e " +
-                    "JOIN ElementHierarchy eh ON e.id = eh.parent_element_id " +
-                    "WHERE e.stashed = false ")
-    List<DirectoryElementEntity> findAllAscendants(@Param("elementId") UUID elementId);
+                    "WHERE e.id in (SELECT eh.element_id from ElementHierarchy eh) " +
+                    "ORDER BY (SELECT depth FROM ElementHierarchy WHERE element_id = e.id) DESC")
+    List<DirectoryElementEntity> findElementHierarchy(@Param("elementId") UUID elementId);
 
     @Query(nativeQuery = true, value =
-        "WITH RECURSIVE DescendantHierarchy (element_id, parent_element_id) AS (" +
-                "  SELECT" +
-                "    id AS element_id, parent_id AS parent_element_id" +
-                "  FROM element where id = :elementId" +
-                "  UNION ALL" +
-                "  select e.id AS element_id, e.parent_id AS parent_element_id" +
-                "  FROM element e" +
-                "  INNER JOIN" +
-                "    DescendantHierarchy dh" +
-                "    ON dh.element_id = e.parent_id" +
-                "    WHERE e.type = 'DIRECTORY' )" +
-                "SELECT * FROM element e" +
-                "JOIN" +
-                "  DescendantHierarchy dh" +
-                "  ON e.id = dh.element_id")
+            "WITH RECURSIVE DescendantHierarchy (element_id, parent_element_id) AS (" +
+                    "  SELECT" +
+                    "    id AS element_id, parent_id AS parent_element_id" +
+                    "  FROM element where id = :elementId" +
+                    "  UNION ALL" +
+                    "  select e.id AS element_id, e.parent_id AS parent_element_id" +
+                    "  FROM element e" +
+                    "  INNER JOIN" +
+                    "    DescendantHierarchy dh" +
+                    "    ON dh.element_id = e.parent_id" +
+                    "    WHERE e.type = 'DIRECTORY' )" +
+                    "SELECT * FROM element e" +
+                    "JOIN" +
+                    "  DescendantHierarchy dh" +
+                    "  ON e.id = dh.element_id")
     List<DirectoryElementEntity> findAllDescendants(@Param("elementId") UUID elementId);
 }
-

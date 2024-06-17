@@ -8,6 +8,7 @@ package org.gridsuite.directory.server.services;
 
 import com.google.common.collect.Lists;
 import lombok.NonNull;
+
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -15,7 +16,12 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -40,7 +46,7 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> getElementEntities(List<UUID> uuids, UUID parentUuid) {
-        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, "DIRECTORY", false);
+        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, DIRECTORY, false);
     }
 
     public boolean isRootDirectory(UUID directoryUuid) {
@@ -111,7 +117,7 @@ public class DirectoryRepositoryService {
     }
 
     public void reindexAllElements() {
-        saveElementsInfos(directoryElementRepository.findAllByStashed(false).stream()
+        saveElementsInfos(directoryElementRepository.findAll().stream()
                 .map(directoryElementEntity -> {
                     List<DirectoryElementEntity> ascendants = findAllAscendants(directoryElementEntity.getId());
                     DirectoryElementInfos directoryElementInfos = directoryElementEntity.toDirectoryElementInfos();
@@ -156,8 +162,8 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(type, parentId, name);
     }
 
-    public List<DirectoryElementEntity> findAllAscendants(UUID elementId) {
-        return directoryElementRepository.findAllAscendants(elementId);
+    public List<DirectoryElementEntity> findElementHierarchy(UUID elementId) {
+        return directoryElementRepository.findElementHierarchy(elementId);
     }
 
     private List<DirectoryElementEntity> findAllDescendants(UUID elementId) {

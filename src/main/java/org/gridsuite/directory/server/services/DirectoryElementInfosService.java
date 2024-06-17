@@ -7,8 +7,11 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 package org.gridsuite.directory.server.services;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import lombok.Getter;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+import org.gridsuite.directory.server.elasticsearch.ESConfig;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
@@ -33,6 +36,10 @@ public class DirectoryElementInfosService {
 
     private static final String ELEMENT_NAME = "name.fullascii";
     static final String ELEMENT_TYPE = "type.keyword";
+
+    @Value(ESConfig.DIRECTORY_ELEMENT_INFOS_INDEX_NAME)
+    @Getter
+    private String directoryElementsIndexName;
 
     public DirectoryElementInfosService(ElasticsearchOperations elasticsearchOperations) {
         this.elasticsearchOperations = elasticsearchOperations;

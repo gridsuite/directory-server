@@ -23,6 +23,9 @@ import java.util.Optional;
 @EnableElasticsearchRepositories
 public class ESConfig extends ElasticsearchConfiguration {
 
+    // It's not simple SPEL but this syntax is managed by both ES and Spring
+    public static final String DIRECTORY_ELEMENT_INFOS_INDEX_NAME = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements";
+
     @Value("#{'${spring.data.elasticsearch.embedded:false}' ? 'localhost' : '${spring.data.elasticsearch.host}'}")
     private String esHost;
 
