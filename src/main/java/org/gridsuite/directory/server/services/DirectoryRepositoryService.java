@@ -89,10 +89,8 @@ public class DirectoryRepositoryService {
         DirectoryElementInfos directoryElementInfos = savedElementEntity.toDirectoryElementInfos();
 
         List<DirectoryElementEntity> ascendants = findAllAscendants(savedElementEntity.getId());
-        String fullPathName = getFullPathName(elementEntity, ascendants);
         String fullPathUuid = getFullPathUuid(elementEntity, ascendants);
 
-        directoryElementInfos.setFullPathName(fullPathName);
         directoryElementInfos.setFullPathUuid(fullPathUuid);
         directoryElementInfosRepository.save(directoryElementInfos);
         return savedElementEntity;
@@ -117,7 +115,6 @@ public class DirectoryRepositoryService {
                 .map(directoryElementEntity -> {
                     List<DirectoryElementEntity> ascendants = findAllAscendants(directoryElementEntity.getId());
                     DirectoryElementInfos directoryElementInfos = directoryElementEntity.toDirectoryElementInfos();
-                    directoryElementInfos.setFullPathName(getFullPathName(directoryElementEntity, ascendants));
                     directoryElementInfos.setFullPathUuid(getFullPathUuid(directoryElementEntity, ascendants));
                     return directoryElementInfos;
                 })

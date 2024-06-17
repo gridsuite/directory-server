@@ -42,8 +42,8 @@ public class DirectoryElementInfosService {
         BoolQuery query = new BoolQuery.Builder()
                 .mustNot(Queries.termQuery(ELEMENT_TYPE, DIRECTORY)._toQuery())
                 .must(Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*")._toQuery())
+//                .should(Queries.prefixQuery("fullPathUuid", currentDirectoryFullPathUuid)._toQuery().boost(2.0f)) // boost score for elements in subdirectories
                 .build();
-
         NativeQuery nativeQuery = new NativeQueryBuilder()
                 .withQuery(query._toQuery())
                 .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))

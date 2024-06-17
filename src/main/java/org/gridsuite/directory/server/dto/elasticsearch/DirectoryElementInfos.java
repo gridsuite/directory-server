@@ -57,9 +57,6 @@ public class DirectoryElementInfos {
     Instant lastModificationDate;
 
     @Field(type = FieldType.Text)
-    private String fullPathName;
-
-    @Field(type = FieldType.Text)
     private String fullPathUuid;
 
     @Transient
