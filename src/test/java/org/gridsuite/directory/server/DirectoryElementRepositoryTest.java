@@ -76,11 +76,11 @@ class DirectoryElementRepositoryTest {
         ));
 
         long expectedResult = insertedElement.stream()
-                .filter(e -> "CASE".equals(e.getType()))
+                .filter(e -> "CASE".equals(e.getType()) || "STUDY".equals(e.getType()))
                 .filter(e -> e.getOwner().equals(userId1))
                 .count();
 
-        assertThat(expectedResult).isEqualTo(4);
+        assertThat(expectedResult).isEqualTo(7);
         assertThat(directoryElementRepository.getCasesCountByOwner(userId1)).isEqualTo(expectedResult);
     }
 }
