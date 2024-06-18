@@ -72,7 +72,8 @@ class DirectoryElementRepositoryTest {
                 createElement(parentDirectoryUuid, "case3", "CASE", userId1),
                 createElement(UUID.randomUUID(), "case4", "CASE", userId1),
                 createElement(parentDirectoryUuid, "case5", "CASE", "user2"),
-                createElement(UUID.randomUUID(), "case6", "CASE", "user2")
+                createElement(UUID.randomUUID(), "case6", "CASE", "user2"),
+                createElement(UUID.randomUUID(), "study3", "STUDY", "user2")
         ));
 
         long expectedResult = insertedElement.stream()
