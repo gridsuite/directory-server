@@ -600,8 +600,11 @@ public class DirectoryService {
             elementInfos.setPathName(path.stream().map(ElementAttributes::getElementName).toList());
             return elementInfos;
         } catch (DirectoryException ex) {
-            LOGGER.error("Error retrieving path for element: (id: {}, name: {}, owner: {}, parent element id: {}). {}", elementInfos.getId(), elementInfos.getName(), elementInfos.getOwner(), elementInfos.getParentId(), ex.getMessage());
-            return null;
+            if (ex.getType() == DirectoryException.Type.NOT_FOUND) {
+                LOGGER.error("Error retrieving path for element: '{}' : {}", elementInfos, ex.getMessage());
+                return null;
+            }
+            throw ex;
         }
     }
 
