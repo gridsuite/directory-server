@@ -587,14 +587,22 @@ public class DirectoryService {
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
         return directoryElementInfosService.searchElements(userInput)
-                .stream()
-                .map(e -> {
-                    List<ElementAttributes> path = getPath(e.getParentId());
-                    e.setPathUuid(path.stream().map(ElementAttributes::getElementUuid).toList());
-                    e.setPathName(path.stream().map(ElementAttributes::getElementName).toList());
-                    return e;
-                })
-                .toList();
+                    .stream()
+                    .map(this::populatePathInfo)
+                    .filter(Objects::nonNull)
+                    .toList();
+    }
+
+    private DirectoryElementInfos populatePathInfo(DirectoryElementInfos elementInfos) {
+        try {
+            List<ElementAttributes> path = getPath(elementInfos.getParentId());
+            elementInfos.setPathUuid(path.stream().map(ElementAttributes::getElementUuid).toList());
+            elementInfos.setPathName(path.stream().map(ElementAttributes::getElementName).toList());
+            return elementInfos;
+        } catch (DirectoryException ex) {
+            LOGGER.error("Error retrieving path for element: (id: {}, name: {}, owner: {}, parent element id: {}). {}", elementInfos.getId(), elementInfos.getName(), elementInfos.getOwner(), elementInfos.getParentId(), ex.getMessage());
+            return null;
+        }
     }
 
     public boolean areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {
