@@ -1770,6 +1770,37 @@ public class DirectoryTest {
     }
 
     @Test
+    public void testCountUserCases() throws Exception {
+        checkRootDirectoriesList("userId", List.of());
+        // Insert a root directory
+        ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewDirectory = newDirectory.getElementUuid();
+
+        // Insert a sub-elements of type cases
+        ElementAttributes caseAttributes1 = toElementAttributes(null, "case1", CASE, USER_ID);
+        insertAndCheckSubElement(uuidNewDirectory, caseAttributes1);
+        ElementAttributes caseAttributes2 = toElementAttributes(null, "case2", CASE, USER_ID);
+        insertAndCheckSubElement(uuidNewDirectory, caseAttributes2);
+        ElementAttributes caseAttributes3 = toElementAttributes(null, "case3", CASE, USER_ID);
+        insertAndCheckSubElement(uuidNewDirectory, caseAttributes3);
+        ElementAttributes caseAttribute4 = toElementAttributes(null, "case4", CASE, "NOT_SAME_USER");
+        insertAndCheckSubElement(uuidNewDirectory, caseAttribute4);
+        checkDirectoryContent(uuidNewDirectory, USER_ID, List.of(caseAttributes1, caseAttributes2, caseAttributes3, caseAttribute4));
+
+        //get the number of cases for user "userId" and expect 3
+        MvcResult result = mockMvc
+                .perform(get("/v1/users/{userId}/cases/count", USER_ID))
+                .andExpectAll(status().isOk()).andReturn();
+        assertEquals("3", result.getResponse().getContentAsString());
+
+        //get the number of cases for user "NOT_SAME_USER" and expect 1
+        result = mockMvc
+                .perform(get("/v1/users/{userId}/cases/count", "NOT_SAME_USER"))
+                .andExpectAll(status().isOk()).andReturn();
+        assertEquals("1", result.getResponse().getContentAsString());
+    }
+
+    @Test
     public void testSearchWithOrphans() throws Exception {
         //     root
         //   /       \
@@ -1788,9 +1819,10 @@ public class DirectoryTest {
         insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
 
         MvcResult mvcResult = mockMvc
-                .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
-                .andExpectAll(status().isOk()).andReturn();
-        List<Object> result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+              .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
+              .andExpectAll(status().isOk()).andReturn();
+        List<Object> result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
         assertEquals(2, result.size());
         output.clear();
 
@@ -1800,9 +1832,10 @@ public class DirectoryTest {
         directoryElementRepository.deleteById(subDirUuid1);
 
         mvcResult = mockMvc
-                .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
-                .andExpectAll(status().isOk()).andReturn();
-        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+              .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
+              .andExpectAll(status().isOk()).andReturn();
+        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
         assertEquals(1, result.size());
         output.clear();
     }
