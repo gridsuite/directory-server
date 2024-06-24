@@ -67,15 +67,6 @@ public class DirectoryRepositoryService {
                 .forEach(directoryElementInfosRepository::saveAll);
     }
 
-    String getFullPathName(DirectoryElementEntity elementEntity, List<DirectoryElementEntity> ascendants) {
-        List<String> pathName = new ArrayList<>(ascendants.stream().map(DirectoryElementEntity::getName).toList());
-        String fullPathName = pathName.stream().reduce("", (s1, s2) -> s1 + "/" + s2);
-        if (elementEntity.getType().equals("DIRECTORY")) {
-            pathName.add(elementEntity.getName());
-        }
-        return fullPathName.toString();
-    }
-
     String getFullPathUuid(DirectoryElementEntity elementEntity, List<DirectoryElementEntity> ascendants) {
         List<UUID> pathUuid = new ArrayList<>(ascendants.stream().map(DirectoryElementEntity::getId).toList());
         if (elementEntity.getType().equals("DIRECTORY")) {
@@ -166,7 +157,4 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.findElementHierarchy(elementId);
     }
 
-    private List<DirectoryElementEntity> findAllDescendants(UUID elementId) {
-        return directoryElementRepository.findAllDescendants(elementId);
-    }
 }
