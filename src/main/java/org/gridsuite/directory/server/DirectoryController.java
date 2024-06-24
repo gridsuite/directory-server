@@ -255,7 +255,7 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})
     public ResponseEntity<List<DirectoryElementInfos>> searchElements(
             @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput,
-            @Parameter(description = "Current directory UUID") @RequestParam(value = "directoryUuid", required = false, defaultValue = "") String directoryUuid){
+            @Parameter(description = "Current directory UUID") @RequestParam(value = "directoryUuid", required = false, defaultValue = "") String directoryUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(service.searchElements(userInput, directoryUuid));
     }

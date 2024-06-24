@@ -58,7 +58,7 @@ public class DirectoryElementInfosService {
 
         Query fullPathQuery = MatchQuery.of(m -> m
                 .field("fullPathUuid")
-                .query("*"+ currentDirectoryUuid + "*")
+                .query("*" + currentDirectoryUuid + "*")
                 .boost(2.0f)
         )._toQuery();
 

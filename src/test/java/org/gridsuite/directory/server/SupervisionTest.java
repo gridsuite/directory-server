@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server;
 
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -14,6 +15,8 @@ import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -42,6 +45,9 @@ class SupervisionTest {
 
     @MockBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
+
+    @Captor
+    private ArgumentCaptor<List<DirectoryElementInfos>> captor;
 
     List<DirectoryElementEntity> expectedElements = List.of(
         new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", "user1", null, Instant.now(), Instant.now(), "user1", true, Instant.now()),
@@ -93,7 +99,10 @@ class SupervisionTest {
         supervisionService.reindexElements();
 
         verify(directoryElementRepository, times(1)).findAll();
-        verify(directoryElementInfosRepository, times(1)).saveAll(allElements.stream().map(DirectoryElementEntity::toDirectoryElementInfos).toList());
+        verify(directoryElementRepository, times(4)).findElementHierarchy(any());
+        verify(directoryElementInfosRepository).saveAll(captor.capture());
+
+        assertEquals(4, captor.getValue().size());
     }
 
     void assertException(Exception expectedException, Executable executable) {
