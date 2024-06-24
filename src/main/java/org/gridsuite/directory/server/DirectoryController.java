@@ -163,6 +163,15 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getElements(ids, strictMode, types));
     }
 
+    @GetMapping(value = "/users/{userId}/cases/count")
+    @Operation(summary = "Get the cases count of the given user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The cases count"),
+    })
+    public ResponseEntity<Integer> getCasesCount(@PathVariable("userId") String userId) {
+        return ResponseEntity.ok().body(service.getCasesCount(userId));
+    }
+
     @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
     @Operation(summary = "Control elements access permissions for a user")
     @ApiResponses(value = {
