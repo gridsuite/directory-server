@@ -46,32 +46,43 @@ public class DirectoryElementInfosService {
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String currentDirectoryUuid) {
 
+        //we dont want to show the directories
         Query directory = TermQuery.of(m -> m
                 .field(ELEMENT_TYPE)
                 .value(DIRECTORY)
         )._toQuery();
 
-        Query elementName = WildcardQuery.of(m -> m
+        // This query is used to search for elements whose name contains the user input.
+        Query elementNameContainSearchTerm = WildcardQuery.of(m -> m
                 .field(ELEMENT_NAME)
                 .wildcard("*" + escapeLucene(userInput) + "*")
         )._toQuery();
 
+        // This query is used to search for elements whose name exactly matches the user input.
+        Query exactMatchName = MatchQuery.of(m -> m
+                .field(ELEMENT_NAME)
+                .query(escapeLucene(userInput))
+                .boost(4.0f)
+        )._toQuery();
+
+        // the element is in path
         Query fullPathQuery = MatchQuery.of(m -> m
                 .field("fullPathUuid")
                 .query("*" + currentDirectoryUuid + "*")
-                .boost(2.0f)
+                .boost(1.0f)
         )._toQuery();
 
+        // boost the result if the element is in the current search derictory
         Query parentIdQuery = MatchQuery.of(m -> m
                 .field("parentId")
                 .query(currentDirectoryUuid)
-                .boost(2.0f)
+                .boost(1.0f)
         )._toQuery();
 
         BoolQuery query = new BoolQuery.Builder()
                 .mustNot(directory)
-                .must(elementName)
-                .should(fullPathQuery, parentIdQuery)
+                .must(elementNameContainSearchTerm) //if a doccument doesn’t match the must clause, it will be filtered out.
+                .should(fullPathQuery, parentIdQuery, exactMatchName) // boost the query the document match
                 .build();
 
         NativeQuery nativeQuery = new NativeQueryBuilder()
