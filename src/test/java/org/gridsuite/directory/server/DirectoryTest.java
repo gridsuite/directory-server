@@ -7,13 +7,16 @@
 package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -32,6 +35,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -1704,21 +1708,24 @@ public class DirectoryTest {
         mvcResult = mockMvc
                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
                 .andExpectAll(status().isOk()).andReturn();
-        List<Object> result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        List<DirectoryElementInfos> result = mvcResultToList(mvcResult);
+
         assertEquals(5, result.size());
         output.clear();
 
         mvcResult = mockMvc
                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_2))
                 .andExpectAll(status().isOk()).andReturn();
-        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        result = mvcResultToList(mvcResult);
+
         assertEquals(5, result.size());
         output.clear();
 
         mvcResult = mockMvc
                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_3))
                 .andExpectAll(status().isOk()).andReturn();
-        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        result = mvcResultToList(mvcResult);
+
         assertEquals(5, result.size());
         output.clear();
     }
@@ -1821,8 +1828,7 @@ public class DirectoryTest {
         MvcResult mvcResult = mockMvc
               .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
               .andExpectAll(status().isOk()).andReturn();
-        List<Object> result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
+        List<DirectoryElementInfos> result = mvcResultToList(mvcResult);
         assertEquals(2, result.size());
         output.clear();
 
@@ -1834,9 +1840,14 @@ public class DirectoryTest {
         mvcResult = mockMvc
               .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
               .andExpectAll(status().isOk()).andReturn();
-        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
+        result = mvcResultToList(mvcResult);
         assertEquals(1, result.size());
         output.clear();
+    }
+
+    private <T> List<T> mvcResultToList(MvcResult mvcResult) throws Exception {
+        JsonNode resultJson = objectMapper.readTree(mvcResult.getResponse().getContentAsString());
+        ObjectReader resultReader = objectMapper.readerFor(new TypeReference<>() { });
+        return resultReader.readValue(resultJson.get("content"));
     }
 }

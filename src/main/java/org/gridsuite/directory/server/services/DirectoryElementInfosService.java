@@ -12,25 +12,22 @@ import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.ESConfig;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+import static org.gridsuite.directory.server.elasticsearch.ESUtils.searchHitsToPage;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 @Service
 public class DirectoryElementInfosService {
-
-    private static final int PAGE_MAX_SIZE = 10;
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -45,7 +42,7 @@ public class DirectoryElementInfosService {
         this.elasticsearchOperations = elasticsearchOperations;
     }
 
-    public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
+    public Page<DirectoryElementInfos> searchElements(@NonNull String userInput, Pageable pageable) {
         BoolQuery query = new BoolQuery.Builder()
                 .mustNot(Queries.termQuery(ELEMENT_TYPE, DIRECTORY)._toQuery())
                 .must(Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*")._toQuery())
@@ -53,10 +50,13 @@ public class DirectoryElementInfosService {
 
         NativeQuery nativeQuery = new NativeQueryBuilder()
                 .withQuery(query._toQuery())
-                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
+                .withPageable(pageable)
                 .build();
 
-        return elasticsearchOperations.search(nativeQuery, DirectoryElementInfos.class).stream().map(SearchHit::getContent).toList();
+        return searchHitsToPage(
+            elasticsearchOperations.search(nativeQuery, DirectoryElementInfos.class),
+            pageable
+        );
     }
 
     public static String escapeLucene(String s) {

@@ -18,13 +18,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.*;
@@ -90,15 +91,27 @@ class DirectoryElementInfosServiceTest {
         List<DirectoryElementInfos> infos = List.of(directoryInfos, filterInfos, studyInfos, caseInfos, contingencyListInfos);
         repositoryService.saveElementsInfos(infos);
 
-        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a"));
-        assertEquals(4, hits.size());
-        assertTrue(hits.contains(studyInfos));
-        assertTrue(hits.contains(caseInfos));
-        assertTrue(hits.contains(filterInfos));
-        assertTrue(hits.contains(contingencyListInfos));
+        Page<DirectoryElementInfos> pagedHits = directoryElementInfosService.searchElements("a", PageRequest.of(0, 10));
+        assertEquals(4, pagedHits.getTotalElements());
+        assertTrue(pagedHits.getContent().contains(studyInfos));
+        assertTrue(pagedHits.getContent().contains(caseInfos));
+        assertTrue(pagedHits.getContent().contains(filterInfos));
+        assertTrue(pagedHits.getContent().contains(contingencyListInfos));
 
-        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory"));
-        assertEquals(0, hits.size());
+        pagedHits = directoryElementInfosService.searchElements("aDirectory", PageRequest.of(0, 10));
+        assertEquals(0, pagedHits.getTotalElements());
+    }
+
+    @Test
+    void searchPagedElementInfos() {
+        List<DirectoryElementInfos> elements = new ArrayList<>(20);
+        for (int i = 0 ;i < 20; i++) {
+            elements.add(createFilter("filter" + i));
+        }
+        repositoryService.saveElementsInfos(elements);
+        Page<DirectoryElementInfos> pagedHits = directoryElementInfosService.searchElements("filter", PageRequest.of(0, 10));
+        assertEquals(20, pagedHits.getTotalElements());
+        assertEquals(10, pagedHits.getContent().size());
     }
 
     @Test
@@ -128,6 +141,10 @@ class DirectoryElementInfosServiceTest {
     }
 
     private void testNameFullAscii(String pat) {
-        Assert.assertEquals(1, directoryElementInfosService.searchElements(pat).size());
+        Assert.assertEquals(1, directoryElementInfosService.searchElements(pat, PageRequest.of(0, 10)).getTotalElements());
+    }
+
+    private DirectoryElementInfos createFilter(String name) {
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(FILTER).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
 }
