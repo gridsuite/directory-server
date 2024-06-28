@@ -105,7 +105,7 @@ class DirectoryElementInfosServiceTest {
     @Test
     void searchPagedElementInfos() {
         List<DirectoryElementInfos> elements = new ArrayList<>(20);
-        for (int i = 0 ;i < 20; i++) {
+        for (int i = 0; i < 20; i++) {
             elements.add(createFilter("filter" + i));
         }
         repositoryService.saveElementsInfos(elements);
