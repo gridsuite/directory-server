@@ -19,6 +19,10 @@ import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +55,7 @@ public class DirectoryService {
     public static final String UPDATE_TYPE_STUDIES = "studies";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
+    private static final int ES_PAGE_MAX_SIZE = 10;
 
     private final StudyService studyService;
 
@@ -589,12 +594,19 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
-        return directoryElementInfosService.searchElements(userInput)
-                    .stream()
-                    .map(this::populatePathInfo)
-                    .filter(Objects::nonNull)
-                    .toList();
+    public Page<DirectoryElementInfos> searchElements(@NonNull String userInput) {
+        Pageable pageRequest = PageRequest.of(0, ES_PAGE_MAX_SIZE);
+        Page<DirectoryElementInfos> pagedResults = directoryElementInfosService.searchElements(userInput, pageRequest);
+        long totalCount = pagedResults.getTotalElements();
+
+        //TODO: to prevent bugs with orphan data, we are filtering buggy results here, which can make total count erroneous
+        List<DirectoryElementInfos> populatedInfos = pagedResults
+            .stream()
+            .map(this::populatePathInfo)
+            .filter(Objects::nonNull)
+            .toList();
+
+        return new PageImpl<>(populatedInfos, pageRequest, totalCount);
     }
 
     private DirectoryElementInfos populatePathInfo(DirectoryElementInfos elementInfos) {

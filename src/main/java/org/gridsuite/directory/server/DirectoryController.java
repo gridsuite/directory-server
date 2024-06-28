@@ -15,6 +15,7 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -253,7 +254,7 @@ public class DirectoryController {
     @GetMapping(value = "/elements/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Search elements in elasticsearch")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements found")})
-    public ResponseEntity<List<DirectoryElementInfos>> searchElements(
+    public ResponseEntity<Page<DirectoryElementInfos>> searchElements(
             @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(service.searchElements(userInput));
