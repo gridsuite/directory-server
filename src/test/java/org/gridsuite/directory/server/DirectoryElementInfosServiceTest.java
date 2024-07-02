@@ -222,27 +222,32 @@ class DirectoryElementInfosServiceTest {
         ├── sub_directory1
         ....
         ├── sub_directory2
+        │   ├── new-file ** file to find
         │   .....
         │   ├── sub_sub_directory2_2
         │   │   ├── new-file ** file to find
         └── sub_directory3
             ├── sub_sub_directory3_1
-            ├── new-file
+            ├── new-file ** file to find
         ...
      */
     @Test
     void testGetExactMatchingParentDirectory() { // when a file is in a sub directory of the current directory
         HashMap<String, DirectoryElementInfos> allDirs = createFiles();
         UUID currentDir = allDirs.get("sub_directory2").getId();
+        var newFile1 = makeFile("new-file", allDirs.get("sub_directory2").getId());
         var newFile2 = makeFile("new-file", allDirs.get("sub_sub_directory2_2").getId());
         var newFile3 = makeFile("new-file", allDirs.get("sub_sub_directory3_1").getId());
-        repositoryService.saveElementsInfos(List.of(newFile2, newFile3));
+        repositoryService.saveElementsInfos(List.of(newFile1, newFile2, newFile3));
 
-        //we want to have the file in the sub_sub_directory2_2 first then the file in the sub_sub_directory3_1
+        //we want to have the files in the current directory if any
+        // then the files in the path of the current directory (sub directories and parent directories)
+        // then the files in the other directories
         List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("new-file", currentDir.toString());
-        assertEquals(2, hitsFile.size());
-        assertEquals(newFile2, hitsFile.get(0));
-        assertEquals(newFile3, hitsFile.get(1));
+        assertEquals(3, hitsFile.size());
+        assertEquals(newFile1, hitsFile.get(0));
+        assertEquals(newFile2, hitsFile.get(1));
+        assertEquals(newFile3, hitsFile.get(2));
     }
 
     @Test
@@ -252,6 +257,6 @@ class DirectoryElementInfosServiceTest {
         List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("file", currentDir.toString());
         assertEquals(9, hitsFile.size());
         assertEquals(hitsFile.get(0).getParentId(), currentDir); // we get first the elements in the current directory
-        assertEquals(hitsFile.get(1).getParentId(), currentDir); // we get second the elements in the current directory
+        assertEquals(hitsFile.get(1).getName(), "file1"); // we get second the elements in the path
     }
 }
