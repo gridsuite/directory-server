@@ -22,10 +22,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -129,5 +126,86 @@ class DirectoryElementInfosServiceTest {
 
     private void testNameFullAscii(String pat) {
         Assert.assertEquals(1, directoryElementInfosService.searchElements(pat, "").size());
+    }
+
+    private DirectoryElementInfos makeDir(String name){
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+    }
+
+    private DirectoryElementInfos makeFile(String name, String type, String owner, UUID parentId){
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(type).owner(owner).parentId(parentId).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+    }
+    /*
+        Directory Structure:
+
+        root_directory
+        ├── sub_directory1
+        │   ├── sub_sub_directory1_1
+        │   │   └── common_file
+        │   ├── sub_sub_directory1_2
+        │   │   └── common_file
+        │   └── file1
+        ├── sub_directory2
+        │   ├── sub_sub_directory2_1
+        │   │   └── common_file
+        │   ├── sub_sub_directory2_2
+        │   │   └── common_file
+        │   └── file2
+        └── sub_directory3
+            ├── sub_sub_directory3_1
+            │   └── common_file
+            ├── sub_sub_directory3_2
+            │   └── common_file
+            └── file3
+     */
+    HashMap<String, DirectoryElementInfos> createFiles() {
+        HashMap<String, DirectoryElementInfos> allDirs = new HashMap<>();
+        allDirs.put("root_directory", makeDir("root_directory"));
+        allDirs.put("sub_directory1", makeDir("sub_directory1"));
+        allDirs.put("sub_sub_directory1_1", makeDir("sub_sub_directory1_1"));
+        allDirs.put("sub_sub_directory1_2", makeDir("sub_sub_directory1_2"));
+        allDirs.put("sub_directory2", makeDir("sub_directory2"));
+        allDirs.put("sub_sub_directory2_1", makeDir("sub_sub_directory2_1"));
+        allDirs.put("sub_sub_directory2_2", makeDir("sub_sub_directory2_2"));
+        allDirs.put("sub_directory3", makeDir("sub_directory3"));
+        allDirs.put("sub_sub_directory3_1", makeDir("sub_sub_directory3_1"));
+        allDirs.put("sub_sub_directory3_2", makeDir("sub_sub_directory3_2"));
+
+        var file1 = makeFile("file1", STUDY, "admin", allDirs.get("sub_directory1").getId());
+        var file2 = makeFile("file2", FILTER, "admin", allDirs.get("sub_directory2").getId());
+        var file3 = makeFile("file2", STUDY, "admin", allDirs.get("sub_directory3").getId());
+
+        var common_file1 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory1_1").getId());
+        var common_file2 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory1_2").getId());
+        var common_file3 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory2_1").getId());
+        var common_file4 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory2_2").getId());
+        var common_file5 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory3_1").getId());
+        var common_file6 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory3_2").getId());
+
+        repositoryService.saveElementsInfos(allDirs.values().stream().toList());
+        List<DirectoryElementInfos> infos = List.of(
+                file1, file2, file3,
+                common_file1, common_file2, common_file3, common_file4, common_file5, common_file6);
+
+        repositoryService.saveElementsInfos(infos);
+
+        return allDirs;
+    }
+
+    @Test
+    void testGetExactMatchFromSubDirectory(){
+        createFiles();
+        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("common_file", ""));
+        assertEquals(6, hits.size());
+    }
+
+    @Test
+    void testGetExactMatchFromOtherDirectory(){
+
+    }
+
+    @Test
+    void testGetExactMatchinParentDirectory(){
+
     }
 }
