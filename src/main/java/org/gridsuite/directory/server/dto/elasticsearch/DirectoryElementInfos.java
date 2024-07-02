@@ -7,12 +7,12 @@
 package org.gridsuite.directory.server.dto.elasticsearch;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.persistence.Transient;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import org.gridsuite.directory.server.elasticsearch.ESConfig;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.*;
 
@@ -57,6 +57,9 @@ public class DirectoryElementInfos {
 
     @Field(type = FieldType.Date, format = DateFormat.date_time)
     Instant lastModificationDate;
+
+    @Field(type = FieldType.Text)
+    private String fullPathUuid;
 
     @Transient
     private List<String> pathName;

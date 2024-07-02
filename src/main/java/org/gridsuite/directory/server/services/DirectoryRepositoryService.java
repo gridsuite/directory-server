@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -66,9 +67,29 @@ public class DirectoryRepositoryService {
                 .forEach(directoryElementInfosRepository::saveAll);
     }
 
+    String getFullPathUuid(DirectoryElementEntity elementEntity, List<DirectoryElementEntity> ascendants) {
+        List<UUID> pathUuid = new ArrayList<>(ascendants.stream().map(DirectoryElementEntity::getId).toList());
+        if (elementEntity.getType().equals("DIRECTORY")) {
+            pathUuid.add(elementEntity.getId());
+        }
+
+        StringBuilder fullPathUuid = new StringBuilder();
+        for (UUID uuid : pathUuid) {
+            fullPathUuid.append(uuid.toString()).append("/");
+        }
+
+        return fullPathUuid.toString();
+    }
+
     public DirectoryElementEntity saveElement(DirectoryElementEntity elementEntity) {
         DirectoryElementEntity savedElementEntity = directoryElementRepository.save(elementEntity);
-        directoryElementInfosRepository.save(savedElementEntity.toDirectoryElementInfos());
+        DirectoryElementInfos directoryElementInfos = savedElementEntity.toDirectoryElementInfos();
+
+        List<DirectoryElementEntity> ascendants = findElementHierarchy(savedElementEntity.getId());
+        String fullPathUuid = getFullPathUuid(elementEntity, ascendants);
+
+        directoryElementInfos.setFullPathUuid(fullPathUuid);
+        directoryElementInfosRepository.save(directoryElementInfos);
         return savedElementEntity;
     }
 
@@ -88,8 +109,13 @@ public class DirectoryRepositoryService {
 
     public void reindexElements() {
         saveElementsInfos(directoryElementRepository.findAll().stream()
-            .map(DirectoryElementEntity::toDirectoryElementInfos)
-            .toList());
+                .map(directoryElementEntity -> {
+                    List<DirectoryElementEntity> ascendants = findElementHierarchy(directoryElementEntity.getId());
+                    DirectoryElementInfos directoryElementInfos = directoryElementEntity.toDirectoryElementInfos();
+                    directoryElementInfos.setFullPathUuid(getFullPathUuid(directoryElementEntity, ascendants));
+                    return directoryElementInfos;
+                })
+                .toList());
     }
 
     public UUID getParentUuid(UUID elementUuid) {
@@ -130,4 +156,5 @@ public class DirectoryRepositoryService {
     public List<DirectoryElementEntity> findElementHierarchy(UUID elementId) {
         return directoryElementRepository.findElementHierarchy(elementId);
     }
+
 }

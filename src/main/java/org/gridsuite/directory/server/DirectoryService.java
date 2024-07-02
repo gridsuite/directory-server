@@ -589,12 +589,12 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
-        return directoryElementInfosService.searchElements(userInput)
-                    .stream()
-                    .map(this::populatePathInfo)
-                    .filter(Objects::nonNull)
-                    .toList();
+    public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
+        return directoryElementInfosService.searchElements(userInput, directoryUuid)
+                .stream()
+                .map(this::populatePathInfo)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     private DirectoryElementInfos populatePathInfo(DirectoryElementInfos elementInfos) {
