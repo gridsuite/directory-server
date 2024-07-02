@@ -46,7 +46,7 @@ public class DirectoryElementInfosService {
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String currentDirectoryUuid) {
 
-        //we dont want to show the directories
+        // We dont want to show the directories
         Query directory = TermQuery.of(m -> m
                 .field(ELEMENT_TYPE)
                 .value(DIRECTORY)
@@ -72,7 +72,7 @@ public class DirectoryElementInfosService {
                 .boost(1.0f)
         )._toQuery();
 
-        // boost the result if the element is in the current search derictory
+        // boost the result if the element is in the current search directory
         Query parentIdQuery = MatchQuery.of(m -> m
                 .field("parentId")
                 .query(currentDirectoryUuid)
@@ -81,7 +81,7 @@ public class DirectoryElementInfosService {
 
         BoolQuery query = new BoolQuery.Builder()
                 .mustNot(directory)
-                .must(elementNameContainSearchTerm) //if a doccument doesn’t match the must clause, it will be filtered out.
+                .must(elementNameContainSearchTerm) // if a doccument doesn’t match the must clause, it will be filtered out.
                 .should(fullPathQuery, parentIdQuery, exactMatchName) // boost the query the document match
                 .build();
 

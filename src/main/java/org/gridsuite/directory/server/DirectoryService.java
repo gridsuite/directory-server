@@ -590,26 +590,7 @@ public class DirectoryService {
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
-        return directoryElementInfosService.searchElements(userInput, directoryUuid)
-                .stream()
-                .map(this::populatePathInfo)
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    private DirectoryElementInfos populatePathInfo(DirectoryElementInfos elementInfos) {
-        try {
-            List<ElementAttributes> path = getPath(elementInfos.getParentId());
-            elementInfos.setPathUuid(path.stream().map(ElementAttributes::getElementUuid).toList());
-            elementInfos.setPathName(path.stream().map(ElementAttributes::getElementName).toList());
-            return elementInfos;
-        } catch (DirectoryException ex) {
-            if (ex.getType() == DirectoryException.Type.NOT_FOUND) {
-                LOGGER.error("Error retrieving path for element: '{}' : {}", elementInfos, ex.getMessage());
-                return null;
-            }
-            throw ex;
-        }
+        return directoryElementInfosService.searchElements(userInput, directoryUuid);
     }
 
     public boolean areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {
