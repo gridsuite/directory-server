@@ -128,12 +128,12 @@ class DirectoryElementInfosServiceTest {
         Assert.assertEquals(1, directoryElementInfosService.searchElements(pat, "").size());
     }
 
-    private DirectoryElementInfos makeDir(String name){
+    private DirectoryElementInfos makeDir(String name) {
         return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
 
-    private DirectoryElementInfos makeFile(String name, String type, String owner, UUID parentId){
-        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(type).owner(owner).parentId(parentId).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+    private DirectoryElementInfos makeFile(String name, UUID parentId) {
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(STUDY).owner("admin").parentId(parentId).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
     /*
         Directory Structure:
@@ -171,21 +171,21 @@ class DirectoryElementInfosServiceTest {
         allDirs.put("sub_sub_directory3_1", makeDir("sub_sub_directory3_1"));
         allDirs.put("sub_sub_directory3_2", makeDir("sub_sub_directory3_2"));
 
-        var file1 = makeFile("file1", STUDY, "admin", allDirs.get("sub_directory1").getId());
-        var file2 = makeFile("file2", FILTER, "admin", allDirs.get("sub_directory2").getId());
-        var file3 = makeFile("file2", STUDY, "admin", allDirs.get("sub_directory3").getId());
+        var file1 = makeFile("file1", allDirs.get("sub_directory1").getId());
+        var file2 = makeFile("file2", allDirs.get("sub_directory2").getId());
+        var file3 = makeFile("file3", allDirs.get("sub_directory3").getId());
 
-        var common_file1 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory1_1").getId());
-        var common_file2 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory1_2").getId());
-        var common_file3 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory2_1").getId());
-        var common_file4 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory2_2").getId());
-        var common_file5 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory3_1").getId());
-        var common_file6 = makeFile("common_file", STUDY, "admin", allDirs.get("sub_sub_directory3_2").getId());
+        var commonFile1 = makeFile("common_file", allDirs.get("sub_sub_directory1_1").getId());
+        var commonFile2 = makeFile("common_file", allDirs.get("sub_sub_directory1_2").getId());
+        var commonFile3 = makeFile("common_file", allDirs.get("sub_sub_directory2_1").getId());
+        var commonFile4 = makeFile("common_file", allDirs.get("sub_sub_directory2_2").getId());
+        var commonFile5 = makeFile("common_file", allDirs.get("sub_sub_directory3_1").getId());
+        var commonFile6 = makeFile("common_file", allDirs.get("sub_sub_directory3_2").getId());
 
         repositoryService.saveElementsInfos(allDirs.values().stream().toList());
         List<DirectoryElementInfos> infos = List.of(
                 file1, file2, file3,
-                common_file1, common_file2, common_file3, common_file4, common_file5, common_file6);
+                commonFile1, commonFile2, commonFile3, commonFile4, commonFile5, commonFile6);
 
         repositoryService.saveElementsInfos(infos);
 
@@ -193,19 +193,64 @@ class DirectoryElementInfosServiceTest {
     }
 
     @Test
-    void testGetExactMatchFromSubDirectory(){
-        createFiles();
-        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("common_file", ""));
-        assertEquals(6, hits.size());
+    void testGetExactMatchFromSubDirectory() {
+        HashMap<String, DirectoryElementInfos> allDirs = createFiles();
+        UUID currentDir = allDirs.get("sub_sub_directory1_2").getId();
+        List<DirectoryElementInfos> hitsCommunFile = directoryElementInfosService.searchElements("common_file", currentDir.toString());
+        assertEquals(6, hitsCommunFile.size());
+        assertEquals(hitsCommunFile.get(0).getParentId(), currentDir); // we get first the element in the current directory
+
+        //now using another current dir , we expect similar results
+        currentDir = allDirs.get("sub_sub_directory2_2").getId();
+        hitsCommunFile = directoryElementInfosService.searchElements("common_file", currentDir.toString());
+        assertEquals(6, hitsCommunFile.size());
+        assertEquals(hitsCommunFile.get(0).getParentId(), currentDir); // we get first the element in the current directory
     }
 
     @Test
-    void testGetExactMatchFromOtherDirectory(){
+    void testGetExactMatchFromOtherDirectory() {
+        HashMap<String, DirectoryElementInfos> allDirs = createFiles();
+        UUID currentDir = allDirs.get("sub_sub_directory1_2").getId();
+        List<DirectoryElementInfos> hits = directoryElementInfosService.searchElements("file3", currentDir.toString());
+        assertEquals(1, hits.size());
+        assertEquals(hits.get(0).getParentId(), allDirs.get("sub_directory3").getId());
+        assertEquals("file3", hits.get(0).getName());
+    }
 
+    /*
+        root_directory
+        ├── sub_directory1
+        ....
+        ├── sub_directory2
+        │   .....
+        │   ├── sub_sub_directory2_2
+        │   │   ├── new-file ** file to find
+        └── sub_directory3
+            ├── sub_sub_directory3_1
+            ├── new-file
+        ...
+     */
+    @Test
+    void testGetExactMatchingParentDirectory() { // when a file is in a sub directory of the current directory
+        HashMap<String, DirectoryElementInfos> allDirs = createFiles();
+        UUID currentDir = allDirs.get("sub_directory2").getId();
+        var newFile2 = makeFile("new-file", allDirs.get("sub_sub_directory2_2").getId());
+        var newFile3 = makeFile("new-file", allDirs.get("sub_sub_directory3_1").getId());
+        repositoryService.saveElementsInfos(List.of(newFile2, newFile3));
+
+        //we want to have the file in the sub_sub_directory2_2 first then the file in the sub_sub_directory3_1
+        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("new-file", currentDir.toString());
+        assertEquals(2, hitsFile.size());
+        assertEquals(newFile2, hitsFile.get(0));
+        assertEquals(newFile3, hitsFile.get(1));
     }
 
     @Test
-    void testGetExactMatchinParentDirectory(){
-
+    void testGetPartialMatchFromSubDirectory() {
+        HashMap<String, DirectoryElementInfos> allDirs = createFiles();
+        UUID currentDir = allDirs.get("sub_sub_directory1_2").getId();
+        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("file", currentDir.toString());
+        assertEquals(9, hitsFile.size());
+        assertEquals(hitsFile.get(0).getParentId(), currentDir); // we get first the element in the current directory
     }
 }
