@@ -256,7 +256,7 @@ class DirectoryElementInfosServiceTest {
         UUID currentDir = allDirs.get("sub_sub_directory1_2").getId();
         List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("file", currentDir.toString());
         assertEquals(9, hitsFile.size());
-        assertEquals(hitsFile.get(0).getParentId(), currentDir); // we get first the elements in the current directory
-        assertEquals(hitsFile.get(1).getName(), "file1"); // we get second the elements in the path
+        assertEquals(currentDir, hitsFile.get(0).getParentId()); // we get first the elements in the current directory
+        assertEquals("file1", hitsFile.get(1).getName()); // we get second the elements in the path
     }
 }

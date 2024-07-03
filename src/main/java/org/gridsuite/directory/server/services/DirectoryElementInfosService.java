@@ -6,7 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 package org.gridsuite.directory.server.services;
 
-//import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import lombok.Getter;
 import lombok.NonNull;
@@ -69,19 +69,12 @@ public class DirectoryElementInfosService {
         )._toQuery();
 
         // the element is in path
-//        TermsQueryField termsQueryField = new TermsQueryField.Builder()
-//                .value(List.of(FieldValue.of(currentDirectoryUuid)))
-//                .build();
-//        Query fullPathQuery = TermsQuery.of(t -> t
-//                .field(FULL_PATH_UUID)
-//                .terms(termsQueryField)
-//                .boost(1.0f)
-//        )._toQuery();
-
-        // the element is in path
-        Query fullPathQuery = MatchQuery.of(m -> m
-                .field("fullPathUuid")
-                .query("*" + currentDirectoryUuid + "*")
+        TermsQueryField termsQueryField = new TermsQueryField.Builder()
+                .value(List.of(FieldValue.of(currentDirectoryUuid)))
+                .build();
+        Query fullPathQuery = TermsQuery.of(t -> t
+                .field(FULL_PATH_UUID)
+                .terms(termsQueryField)
                 .boost(1.0f)
         )._toQuery();
 

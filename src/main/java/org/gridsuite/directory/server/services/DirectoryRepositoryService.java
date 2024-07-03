@@ -70,7 +70,6 @@ public class DirectoryRepositoryService {
         return elementEntity;
     }
 
-    // TODO : remove the entity return
     public DirectoryElementEntity saveElement(DirectoryElementEntity elementEntity) {
         return saveElementsInfo(directoryElementRepository.save(elementEntity));
     }
