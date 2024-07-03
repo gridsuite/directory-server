@@ -590,7 +590,13 @@ public class DirectoryService {
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
-        return directoryElementInfosService.searchElements(userInput, directoryUuid);
+        return directoryElementInfosService.searchElements(userInput, directoryUuid)
+                .stream().filter(element -> isElementExists(element.getParentId())) // filter the Orphan elements
+                .toList();
+    }
+
+    boolean isElementExists(UUID parentDirectoryUuid) {
+        return !repositoryService.findAllByIdIn(List.of(parentDirectoryUuid)).isEmpty();
     }
 
     public boolean areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {
