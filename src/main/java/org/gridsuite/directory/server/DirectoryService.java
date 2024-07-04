@@ -17,7 +17,6 @@ import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.util.Pair;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -465,12 +464,10 @@ public class DirectoryService {
      * @return ElementAttributes of element and all it's parents up to root directory
      */
     public List<ElementAttributes> getPath(UUID elementUuid) {
-        DirectoryElementEntity currentElement = repositoryService.getElementEntity(elementUuid)
-                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
-
-        List<ElementAttributes> path = new ArrayList<>(List.of(toElementAttributes(currentElement)));
-        path.addAll(repositoryService.findAllAscendants(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList());
-
+        List<ElementAttributes> path = repositoryService.findElementHierarchy(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList();
+        if (path.isEmpty()) {
+            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+        }
         return path;
     }
 
@@ -508,6 +505,10 @@ public class DirectoryService {
         return elementEntities.stream()
                 .map(attribute -> toElementAttributes(attribute, subElementsCount.getOrDefault(attribute.getId(), 0L)))
                 .toList();
+    }
+
+    public int getCasesCount(String userId) {
+        return directoryElementRepository.getCasesCountByOwner(userId);
     }
 
     public void notify(@NonNull String notificationName, @NonNull UUID elementUuid, @NonNull String userId) {
@@ -569,34 +570,27 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    private Pair<List<UUID>, List<String>> getUuidsAndNamesFromPath(List<ElementAttributes> elementAttributesList) {
-        List<UUID> uuids = new ArrayList<>(elementAttributesList.size());
-        List<String> names = new ArrayList<>(elementAttributesList.size());
-        elementAttributesList.stream()
-                .filter(elementAttributes -> Objects.equals(elementAttributes.getType(), DIRECTORY))
-                .forEach(e -> {
-                    uuids.add(e.getElementUuid());
-                    names.add(e.getElementName());
-                });
-        return Pair.of(uuids, names);
-    }
-
-    @Transactional
-    public void reindexAllElements() {
-        repositoryService.reindexAllElements();
-    }
-
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput) {
         return directoryElementInfosService.searchElements(userInput)
-                .stream()
-                .map(e -> {
-                    List<ElementAttributes> path = getPath(e.getParentId());
-                    Pair<List<UUID>, List<String>> uuidsAndNames = getUuidsAndNamesFromPath(path);
-                    e.setPathUuid(uuidsAndNames.getFirst());
-                    e.setPathName(uuidsAndNames.getSecond());
-                    return e;
-                })
-                .toList();
+                    .stream()
+                    .map(this::populatePathInfo)
+                    .filter(Objects::nonNull)
+                    .toList();
+    }
+
+    private DirectoryElementInfos populatePathInfo(DirectoryElementInfos elementInfos) {
+        try {
+            List<ElementAttributes> path = getPath(elementInfos.getParentId());
+            elementInfos.setPathUuid(path.stream().map(ElementAttributes::getElementUuid).toList());
+            elementInfos.setPathName(path.stream().map(ElementAttributes::getElementName).toList());
+            return elementInfos;
+        } catch (DirectoryException ex) {
+            if (ex.getType() == DirectoryException.Type.NOT_FOUND) {
+                LOGGER.error("Error retrieving path for element: '{}' : {}", elementInfos, ex.getMessage());
+                return null;
+            }
+            throw ex;
+        }
     }
 
     public boolean areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {

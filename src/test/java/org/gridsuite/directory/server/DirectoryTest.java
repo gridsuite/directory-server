@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -92,6 +93,9 @@ public class DirectoryTest {
     public static final String RECOLLEMENT = "recollement";
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
+
+    @Value("${spring.data.elasticsearch.embedded.port:}")
+    private String expectedEsPort;
 
     @Autowired
     ObjectMapper objectMapper;
@@ -212,14 +216,16 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory2UUID, study1Attributes);
         SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(study1UUID, "Doe");
-        assertRequestsCount(1, 0, 0, 0);
+
+        //There is only recursive query and SQLStatementCountValidator ignore them
+        assertRequestsCount(0, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
                 path.stream()
                     .map(ElementAttributes::getElementUuid)
                     .collect(Collectors.toList()),
-                Arrays.asList(study1UUID, directory2UUID, directory1UUID, rootDirUuid)
+                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, study1UUID)
         );
     }
 
@@ -244,14 +250,16 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory2UUID, study1Attributes);
         SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(filter1UUID, "Doe");
-        assertRequestsCount(1, 0, 0, 0);
+
+        //There is only recursive query and SQLStatementCountValidator ignore them
+        assertRequestsCount(0, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
         assertEquals(
                 path.stream()
                     .map(ElementAttributes::getElementUuid)
                     .collect(Collectors.toList()),
-                Arrays.asList(filter1UUID, directory2UUID, directory1UUID, rootDirUuid)
+                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, filter1UUID)
         );
     }
 
@@ -291,7 +299,9 @@ public class DirectoryTest {
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
         SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(rootDirUuid, "Doe");
-        assertRequestsCount(1, 0, 0, 0);
+
+        //There is only recursive query and SQLStatementCountValidator ignore them
+        assertRequestsCount(0, 0, 0, 0);
 
         assertEquals(
                 path.stream()
@@ -1165,6 +1175,60 @@ public class DirectoryTest {
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
     }
 
+    @Test
+    public void testSupervision() throws Exception {
+        MvcResult mvcResult;
+        // Test get elasticsearch host
+        mvcResult = mockMvc.perform(get("/v1/supervision/elasticsearch-host"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals("localhost:" + expectedEsPort, mvcResult.getResponse().getContentAsString());
+
+        // Test get indexed elements index name
+        mvcResult = mockMvc.perform(get("/v1/supervision/elements/index-name"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals("directory-elements", mvcResult.getResponse().getContentAsString());
+
+        // create some elements here
+        // Insert a public root directory user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir", "userId");
+
+        UUID dirUuid = UUID.randomUUID();
+        ElementAttributes directoryAttributes = toElementAttributes(dirUuid, "directory", DIRECTORY, "userId");
+        insertAndCheckSubElement(rootDirUuid, directoryAttributes);
+        ElementAttributes subdirectoryAttributes = toElementAttributes(UUID.randomUUID(), "subdirectory", DIRECTORY, "userId");
+        insertAndCheckSubElement(dirUuid, subdirectoryAttributes);
+        ElementAttributes studyAttributes = toElementAttributes(UUID.randomUUID(), "study", STUDY, "userId");
+        insertAndCheckSubElement(rootDirUuid, studyAttributes);
+
+        // Test get indexed elements counts
+        mvcResult = mockMvc.perform(get("/v1/supervision/elements/indexation-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        // Test indexed elements deletion
+        mvcResult = mockMvc.perform(delete("/v1/supervision/elements/indexation"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+
+        // reindex
+        mockMvc.perform(post("/v1/supervision/elements/reindex"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        mvcResult = mockMvc.perform(get("/v1/supervision/elements/indexation-count"))
+            .andExpect(status().isOk())
+            .andReturn();
+        assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+    }
+
     private List<ElementAttributes> getPath(UUID elementUuid, String userId) throws Exception {
         String response = mockMvc.perform(get("/v1/elements/" + elementUuid + "/path")
                         .header("userId", userId))
@@ -1593,24 +1657,6 @@ public class DirectoryTest {
     }
 
     @Test
-    @SneakyThrows
-    public void testReindexAll() {
-        Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", DIRECTORY, "userId", "description", now, now, "userId", false, null);
-        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "name", STUDY, "userId", "description", now, now, "userId", false, null);
-
-        directoryElementRepository.saveAll(List.of(dirEntity, studyEntity));
-
-        assertNbElementsInRepositories(2, 0);
-
-        mockMvc.perform(post("/v1/elements/reindex-all")).andExpect(status().isOk());
-
-        assertNbElementsInRepositories(2, 2);
-
-        output.clear();
-    }
-
-    @Test
     public void testSearch() throws Exception {
 
         //                          root (userId2)
@@ -1721,5 +1767,76 @@ public class DirectoryTest {
         } finally {
             output.clear(); // purge in order to not fail the other tests
         }
+    }
+
+    @Test
+    public void testCountUserCases() throws Exception {
+        checkRootDirectoriesList("userId", List.of());
+        // Insert a root directory
+        ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewDirectory = newDirectory.getElementUuid();
+
+        // Insert a sub-elements of type cases
+        ElementAttributes caseAttributes1 = toElementAttributes(null, "case1", CASE, USER_ID);
+        insertAndCheckSubElement(uuidNewDirectory, caseAttributes1);
+        ElementAttributes caseAttributes2 = toElementAttributes(null, "case2", CASE, USER_ID);
+        insertAndCheckSubElement(uuidNewDirectory, caseAttributes2);
+        ElementAttributes caseAttributes3 = toElementAttributes(null, "case3", CASE, USER_ID);
+        insertAndCheckSubElement(uuidNewDirectory, caseAttributes3);
+        ElementAttributes caseAttribute4 = toElementAttributes(null, "case4", CASE, "NOT_SAME_USER");
+        insertAndCheckSubElement(uuidNewDirectory, caseAttribute4);
+        checkDirectoryContent(uuidNewDirectory, USER_ID, List.of(caseAttributes1, caseAttributes2, caseAttributes3, caseAttribute4));
+
+        //get the number of cases for user "userId" and expect 3
+        MvcResult result = mockMvc
+                .perform(get("/v1/users/{userId}/cases/count", USER_ID))
+                .andExpectAll(status().isOk()).andReturn();
+        assertEquals("3", result.getResponse().getContentAsString());
+
+        //get the number of cases for user "NOT_SAME_USER" and expect 1
+        result = mockMvc
+                .perform(get("/v1/users/{userId}/cases/count", "NOT_SAME_USER"))
+                .andExpectAll(status().isOk()).andReturn();
+        assertEquals("1", result.getResponse().getContentAsString());
+    }
+
+    @Test
+    public void testSearchWithOrphans() throws Exception {
+        //     root
+        //   /       \
+        // dir1     dir2
+        ElementAttributes rootDirectory = retrieveInsertAndCheckRootDirectory("directory", USERID_1);
+        UUID rootDirectoryUuid = rootDirectory.getElementUuid();
+        // dir1
+        UUID subDirUuid1 = UUID.randomUUID();
+        ElementAttributes subDirAttributes1 = toElementAttributes(subDirUuid1, "newSubDir1", DIRECTORY, USERID_1);
+        insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes1);
+        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
+        // dir2
+        UUID subDirUuid2 = UUID.randomUUID();
+        ElementAttributes subDirAttributes2 = toElementAttributes(subDirUuid2, "newSubDir2", DIRECTORY, USERID_1);
+        insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes2);
+        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
+
+        MvcResult mvcResult = mockMvc
+              .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
+              .andExpectAll(status().isOk()).andReturn();
+        List<Object> result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(2, result.size());
+        output.clear();
+
+        //                              root
+        //                    /                           \
+        // dir1 (deleted but keeping its sub-elements)     dir2
+        directoryElementRepository.deleteById(subDirUuid1);
+
+        mvcResult = mockMvc
+              .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
+              .andExpectAll(status().isOk()).andReturn();
+        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
+        });
+        assertEquals(1, result.size());
+        output.clear();
     }
 }

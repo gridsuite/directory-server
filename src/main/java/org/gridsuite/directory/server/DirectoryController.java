@@ -163,6 +163,15 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getElements(ids, strictMode, types));
     }
 
+    @GetMapping(value = "/users/{userId}/cases/count")
+    @Operation(summary = "Get the cases count of the given user")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The cases count"),
+    })
+    public ResponseEntity<Integer> getCasesCount(@PathVariable("userId") String userId) {
+        return ResponseEntity.ok().body(service.getCasesCount(userId));
+    }
+
     @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
     @Operation(summary = "Control elements access permissions for a user")
     @ApiResponses(value = {
@@ -239,14 +248,6 @@ public class DirectoryController {
                                                     @PathVariable("type") String type) {
         HttpStatus status = repositoryService.isElementExists(directoryUuid, elementName, type) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
-    }
-
-    @PostMapping(value = "/elements/reindex-all")
-    @Operation(summary = "reindex the element")
-    @ApiResponse(responseCode = "200", description = "Elements reindexed")
-    public ResponseEntity<Void> reindexAllElements() {
-        service.reindexAllElements();
-        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/elements/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)

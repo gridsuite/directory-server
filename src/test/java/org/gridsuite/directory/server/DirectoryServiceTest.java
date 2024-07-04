@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
 import static org.mockito.Mockito.*;
@@ -33,10 +34,10 @@ class DirectoryServiceTest {
     @MockBean
     NotificationService notificationService;
 
-    DirectoryElementEntity parentDirectory = createRootElement("root", "DIRECTORY", "user1");
+    DirectoryElementEntity parentDirectory = createRootElement("root", DIRECTORY, "user1");
     UUID parentDirectoryUuid = parentDirectory.getId();
 
-    DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", "DIRECTORY", "user1");
+    DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", DIRECTORY, "user1");
     DirectoryElementEntity filter1 = createElement(parentDirectoryUuid, "filter1", "FILTER", "user1");
     DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", "STUDY", "user1");
     DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", "STUDY", "user1");
@@ -60,7 +61,7 @@ class DirectoryServiceTest {
         // - elements having a parent directory different from the one passed as parameter
 
         List<DirectoryElementEntity> elementsExpectedToDelete = elementsToDelete.stream()
-            .filter(e -> !"DIRECTORY".equals(e.getType()))
+            .filter(e -> !DIRECTORY.equals(e.getType()))
             .filter(e -> e.getParentId().equals(parentDirectoryUuid))
             .toList();
 
@@ -68,7 +69,7 @@ class DirectoryServiceTest {
 
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
         when(directoryElementRepository.findAllByIdInAndStashed(elementToDeleteUuids, false)).thenReturn(elementsToDelete);
-        when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(elementToDeleteUuids, parentDirectoryUuid, "DIRECTORY", false))
+        when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(elementToDeleteUuids, parentDirectoryUuid, DIRECTORY, false))
             .thenReturn(elementsExpectedToDelete);
 
         // actual service call
