@@ -78,10 +78,10 @@ class DirectoryServiceTest {
         verify(directoryElementRepository, times(1)).deleteAllById(elementExpectedToDeleteUuids);
         verify(directoryElementInfosRepository, times(1)).deleteAllById(elementExpectedToDeleteUuids);
 
-        // notifications should be sent for each deleted study
-        verify(notificationService, times(1)).emitDeletedStudy(study1.getId(), "user1");
-        verify(notificationService, times(1)).emitDeletedStudy(study2.getId(), "user1");
-
+        // notifications should be sent for each deleted element
+        verify(notificationService, times(1)).emitDeletedElement(study1.getId(), "user1");
+        verify(notificationService, times(1)).emitDeletedElement(study2.getId(), "user1");
+        verify(notificationService, times(1)).emitDeletedElement(filter1.getId(), "user1");
         // notification for updated directory
         verify(notificationService, times(1)).emitDirectoryChanged(parentDirectoryUuid, null, "user1", null, false, NotificationType.UPDATE_DIRECTORY);
 

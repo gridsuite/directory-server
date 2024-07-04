@@ -184,7 +184,7 @@ public class DirectoryTest {
         // Test children number of root directory
         checkRootDirectoriesList("userId", List.of(toElementAttributes(uuidNewDirectory, "newName", DIRECTORY, "userId", 1L, null, creationDateNewDirectory, creationDateNewDirectory, "userId")));
 
-        deleteElement(uuidNewDirectory, uuidNewDirectory, "userId", true, false, 0);
+        deleteElement(uuidNewDirectory, uuidNewDirectory, "userId", true, false, 3);
         checkRootDirectoriesList("userId", List.of());
 
         checkElementNotFound(newSubDirAttributes.getElementUuid(), "userId");
@@ -813,7 +813,7 @@ public class DirectoryTest {
 
         assertNbElementsInRepositories(5);
 
-        deleteElement(rootDirUuid, rootDirUuid, "userId", true, false, 3);
+        deleteElement(rootDirUuid, rootDirUuid, "userId", true, false, 5);
 
         checkElementNotFound(rootDirUuid, "userId");
         checkElementNotFound(study1Attributes.getElementUuid(), "userId");
@@ -1427,27 +1427,27 @@ public class DirectoryTest {
                         .andExpect(status().is(expectedStatus.value()));
     }
 
-    private void deleteElement(UUID elementUuidToBeDeleted, UUID elementUuidHeader, String userId, boolean isRoot, boolean isStudy, int numberOfChildStudies) throws Exception {
+    private void deleteElement(UUID elementUuidToBeDeleted, UUID elementUuidHeader, String userId, boolean isRoot, boolean isStudy, int numberOfElements) throws Exception {
         mockMvc.perform(delete("/v1/elements/" + elementUuidToBeDeleted)
                 .header("userId", userId))
                         .andExpect(status().isOk());
 
         Message<byte[]> message;
         MessageHeaders headers;
-        // assert that the broker message has been sent a delete study
-        if (isStudy) {
+        // assert that the broker message has been sent a delete element
+        if (numberOfElements == 0) {
             message = output.receive(TIMEOUT, directoryUpdateDestination);
             assertEquals("", new String(message.getPayload()));
             headers = message.getHeaders();
             assertEquals(userId, headers.get(HEADER_USER_ID));
-            assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
-            assertEquals(elementUuidToBeDeleted, headers.get(HEADER_STUDY_UUID));
+            assertEquals(UPDATE_TYPE_ELEMENT_DELETE, headers.get(HEADER_UPDATE_TYPE));
+            assertEquals(elementUuidToBeDeleted, headers.get(HEADER_ELEMENT_UUID));
         } else {
             //empty the queue of all delete study notif
-            for (int i = 0; i < numberOfChildStudies; i++) {
+            for (int i = 0; i < numberOfElements; i++) {
                 message = output.receive(TIMEOUT, directoryUpdateDestination);
                 headers = message.getHeaders();
-                assertEquals(UPDATE_TYPE_STUDY_DELETE, headers.get(HEADER_UPDATE_TYPE));
+                assertEquals(UPDATE_TYPE_ELEMENT_DELETE, headers.get(HEADER_UPDATE_TYPE));
                 assertEquals(userId, headers.get(HEADER_USER_ID));
             }
         }
