@@ -30,7 +30,7 @@ class DirectoryElementRepositoryTest {
     DirectoryElementRepository directoryElementRepository;
 
     @Test
-    void testFindAllByIdInAndParentIdAndTypeNot() {
+    void findAllByIdInAndParentIdAndTypeNot() {
         DirectoryElementEntity parentDirectory = directoryElementRepository.save(
             createRootElement("root", DIRECTORY, "user1")
         );
@@ -47,10 +47,9 @@ class DirectoryElementRepositoryTest {
         List<DirectoryElementEntity> expectedResult = insertedElement.stream()
             .filter(e -> !DIRECTORY.equals(e.getType()))
             .filter(e -> parentDirectoryUuid.equals(e.getParentId()))
-            .filter(e -> !e.isStashed())
             .toList();
 
-        assertThat(expectedResult).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(insertedElement.stream().map(e -> e.getId()).toList(), parentDirectoryUuid, DIRECTORY, false));
+        assertThat(expectedResult).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(directoryElementRepository.findAllByIdInAndParentIdAndTypeNot(insertedElement.stream().map(e -> e.getId()).toList(), parentDirectoryUuid, DIRECTORY));
     }
 
     @Test

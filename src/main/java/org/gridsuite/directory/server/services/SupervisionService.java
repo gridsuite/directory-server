@@ -30,8 +30,8 @@ public class SupervisionService {
         this.directoryElementInfosRepository = directoryElementInfosRepository;
     }
 
-    public List<ElementAttributes> getStashedElementsAttributes() {
-        List<DirectoryElementEntity> entities = getStashedElements();
+    public List<ElementAttributes> getElementsAttributes() {
+        List<DirectoryElementEntity> entities = getElements();
         return entities.stream()
             .map(entity -> toElementAttributes(entity))
             .toList();
@@ -42,8 +42,8 @@ public class SupervisionService {
         repositoryService.deleteElements(uuids);
     }
 
-    public List<DirectoryElementEntity> getStashedElements() {
-        return directoryElementRepository.findAllByStashed(true);
+    public List<DirectoryElementEntity> getElements() {
+        return directoryElementRepository.findAll();
     }
 
     public long getIndexedDirectoryElementsCount() {
