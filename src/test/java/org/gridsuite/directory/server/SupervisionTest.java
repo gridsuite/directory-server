@@ -49,14 +49,6 @@ class SupervisionTest {
         new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", "user2", null, Instant.now(), Instant.now(), "user2")
     );
 
-/*    @Test
-    void testGetStashedElements() { ££maissa
-        when(directoryElementRepository.findAllByStashed(true)).thenReturn(expectedElements);
-        assertEquals(3, supervisionService.getElementsAttributes().size());
-
-        verify(directoryElementRepository, times(1)).findAllByStashed(true);
-    }*/
-
     @Test
     void testDeleteElements() {
         List<UUID> uuidsToDelete = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());

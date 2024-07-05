@@ -49,7 +49,7 @@ class DirectoryElementRepositoryTest {
             .filter(e -> parentDirectoryUuid.equals(e.getParentId()))
             .toList();
 
-        assertThat(expectedResult).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(directoryElementRepository.findAllByIdInAndParentIdAndTypeNot(insertedElement.stream().map(e -> e.getId()).toList(), parentDirectoryUuid, DIRECTORY));
+        assertThat(expectedResult).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(directoryElementRepository.findAllByIdInAndParentIdAndTypeNot(insertedElement.stream().map(DirectoryElementEntity::getId).toList(), parentDirectoryUuid, DIRECTORY));
     }
 
     @Test

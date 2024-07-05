@@ -39,14 +39,6 @@ public class SupervisionController {
         this.elasticsearchClientConfiguration = elasticsearchClientConfiguration;
     }
 
-/*    @GetMapping(value = "/elements/stash")
-    @Operation(summary = "Get the list of elements in the trash") ££maissa
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "the list of elements in the trash")})
-    public ResponseEntity<List<ElementAttributes>> getStashedElements() {
-        return ResponseEntity.ok().body(service.getElementsAttributes());
-    }*/
-
     @DeleteMapping(value = "/elements")
     @Operation(summary = "Delete list of elements without checking owner")
     @ApiResponses(value = {
