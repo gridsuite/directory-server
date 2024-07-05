@@ -85,7 +85,6 @@ public class DirectoryService {
                     Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
                     String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
                     if (error != null && elementName != null) {
-                        //TODO: check this after
                         deleteElement(studyUuid, userId);
                     }
                     notificationService.emitDirectoryChanged(parentUuid, elementName, userId, error, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
