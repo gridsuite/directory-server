@@ -68,8 +68,8 @@ class DirectoryServiceTest {
         List<UUID> elementExpectedToDeleteUuids = elementsExpectedToDelete.stream().map(e -> e.getId()).toList();
 
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
-        when(directoryElementRepository.findAllByIdInAndStashed(elementToDeleteUuids, false)).thenReturn(elementsToDelete);
-        when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(elementToDeleteUuids, parentDirectoryUuid, DIRECTORY, false))
+        when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(elementsToDelete);
+        when(directoryElementRepository.findAllByIdInAndParentIdAndTypeNot(elementToDeleteUuids, parentDirectoryUuid, DIRECTORY))
             .thenReturn(elementsExpectedToDelete);
 
         // actual service call
@@ -94,7 +94,7 @@ class DirectoryServiceTest {
         List<UUID> elementToDeleteUuids = List.of(study3).stream().map(e -> e.getId()).toList();
         UUID study3Uuid = study3.getId();
         when(directoryElementRepository.findById(study3.getId())).thenReturn(Optional.of(study3));
-        when(directoryElementRepository.findAllByIdInAndStashed(elementToDeleteUuids, false)).thenReturn(List.of(study3));
+        when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(List.of(study3));
 
         // study3 was created by user2,so it can not be deleted by user1
         DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, study3Uuid, "user1"));
