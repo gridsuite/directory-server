@@ -59,12 +59,6 @@ public class DirectoryElementEntity {
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
 
-    @Column(name = "stashed")
-    private boolean stashed;
-
-    @Column(name = "stash_date", columnDefinition = "timestamptz")
-    private Instant stashDate;
-
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
         if (isElementNameUpdated) {

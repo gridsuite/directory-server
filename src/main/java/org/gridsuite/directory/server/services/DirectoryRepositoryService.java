@@ -44,7 +44,7 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> getElementEntities(List<UUID> uuids, UUID parentUuid) {
-        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNotAndStashed(uuids, parentUuid, DIRECTORY, false);
+        return directoryElementRepository.findAllByIdInAndParentIdAndTypeNot(uuids, parentUuid, DIRECTORY);
     }
 
     public boolean isRootDirectory(UUID directoryUuid) {
@@ -56,7 +56,7 @@ public class DirectoryRepositoryService {
     }
 
     public boolean isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
-        return !directoryElementRepository.findByNameAndParentIdAndTypeAndStashed(elementName, parentDirectoryUuid, type, false).isEmpty();
+        return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
     }
 
     public void saveElementsInfos(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
@@ -106,11 +106,11 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids) {
-        return directoryElementRepository.findAllByIdInAndStashed(uuids, false);
+        return directoryElementRepository.findAllByIdIn(uuids);
     }
 
     public List<DirectoryElementEntity> findAllByParentId(UUID parentId) {
-        return directoryElementRepository.findAllByParentIdAndStashed(parentId, false);
+        return directoryElementRepository.findAllByParentId(parentId);
     }
 
     public List<DirectoryElementEntity> findRootDirectories() {
