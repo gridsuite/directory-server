@@ -268,15 +268,15 @@ class DirectoryElementInfosServiceTest {
         UUID currentDirUuid = allDirs.get("sub_sub_directory1_2").getId();
         String fileName = "new-file";
         var newFile = makeElementFile(fileName, allDirs.get("sub_sub_directory1_2").getId());
-        var newFile1 = makeElementFile(fileName+"1", allDirs.get("sub_sub_directory1_2").getId());
-        var newFile2 = makeElementFile("1"+fileName+"2", allDirs.get("sub_sub_directory1_2").getId());
+        var newFile1 = makeElementFile(fileName + "1", allDirs.get("sub_sub_directory1_2").getId());
+        var newFile2 = makeElementFile("1" + fileName + "2", allDirs.get("sub_sub_directory1_2").getId());
         repositoryService.saveElementsInfos(List.of(newFile1, newFile, newFile2));
 
         List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements(fileName, currentDirUuid.toString());
         assertEquals(3, hitsFile.size());
         assertEquals(fileName, hitsFile.get(0).getName());
-        assertEquals(fileName+"1", hitsFile.get(1).getName());
-        assertEquals("1"+fileName+"2", hitsFile.get(2).getName());
+        assertEquals(fileName + "1", hitsFile.get(1).getName());
+        assertEquals("1" + fileName + "2", hitsFile.get(2).getName());
     }
 
 }
