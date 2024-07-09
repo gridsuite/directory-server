@@ -6,7 +6,6 @@
  */
 package org.gridsuite.directory.server;
 
-import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -15,8 +14,6 @@ import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -26,8 +23,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
@@ -45,9 +42,6 @@ class SupervisionTest {
 
     @MockBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
-
-    @Captor
-    private ArgumentCaptor<List<DirectoryElementInfos>> captor;
 
     List<DirectoryElementEntity> expectedElements = List.of(
         new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", "user1", null, Instant.now(), Instant.now(), "user1"),
@@ -90,11 +84,10 @@ class SupervisionTest {
 
         supervisionService.reindexElements();
 
+        List<DirectoryElementEntity> elementPath = List.of(); // No need path for tests
         verify(directoryElementRepository, times(1)).findAll();
-        verify(directoryElementRepository, times(4)).findElementHierarchy(any());
-        verify(directoryElementInfosRepository).saveAll(captor.capture());
-
-        assertEquals(4, captor.getValue().size());
+        verify(directoryElementInfosRepository, times(1)).saveAll(allElements.stream().map(e -> e.toDirectoryElementInfos(elementPath)).toList());
+        verify(directoryElementRepository, times(3)).findElementHierarchy(any(UUID.class));
     }
 
     void assertException(Exception expectedException, Executable executable) {

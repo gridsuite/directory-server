@@ -6,8 +6,10 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 package org.gridsuite.directory.server.services;
 
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import lombok.Getter;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
@@ -16,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
+import org.springframework.data.elasticsearch.client.elc.Queries;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.stereotype.Service;
@@ -35,8 +38,8 @@ public class DirectoryElementInfosService {
     private final ElasticsearchOperations elasticsearchOperations;
 
     private static final String ELEMENT_NAME = "name.fullascii";
-    private static final String FULL_PATH_UUID = "fullPathUuid";
-    private static final String PARENT_ID = "parentId";
+    private static final String FULL_PATH_UUID = "fullPathUuid.keyword";
+    private static final String PARENT_ID = "parentId.keyword";
     static final String ELEMENT_TYPE = "type.keyword";
 
     @Value(ESConfig.DIRECTORY_ELEMENT_INFOS_INDEX_NAME)
@@ -48,47 +51,45 @@ public class DirectoryElementInfosService {
     }
 
     public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String currentDirectoryUuid) {
+        float defaultBoostValue = 1.0f;
 
-        // We dont want to show the directories
-        Query directory = TermQuery.of(m -> m
-                .field(ELEMENT_TYPE)
-                .value(DIRECTORY)
-        )._toQuery();
+        // We don't want to show the directories
+        Query directoryQuery = Queries.termQuery(ELEMENT_TYPE, DIRECTORY)._toQuery();
 
-        // This query is used to search for elements whose name contains the user input.
-        Query elementNameContainSearchTerm = WildcardQuery.of(m -> m
-                .field(ELEMENT_NAME)
-                .wildcard("*" + escapeLucene(userInput) + "*")
-        )._toQuery();
+        // The documents whose name contains the user input
+        Query matchNameWilcardQuery = Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*")._toQuery();
 
-        // This query is used to search for elements whose name exactly matches the user input.
-        Query exactMatchName = MatchQuery.of(m -> m
-                .field(ELEMENT_NAME)
-                .query(escapeLucene(userInput))
-                .boost(4.0f)
-        )._toQuery();
-
-        // the element is in path
-        TermsQueryField termsQueryField = new TermsQueryField.Builder()
-                .value(List.of(FieldValue.of(currentDirectoryUuid)))
-                .build();
-        Query fullPathQuery = TermsQuery.of(t -> t
+        // The document is in path
+        Query fullPathQuery = TermQuery.of(m -> m
                 .field(FULL_PATH_UUID)
-                .terms(termsQueryField)
-                .boost(1.0f)
+                .value(currentDirectoryUuid)
+                .boost(defaultBoostValue)
         )._toQuery();
 
-        // boost the result if the element is in the current search directory
+        // The document is in the current search directory
         Query parentIdQuery = MatchQuery.of(m -> m
                 .field(PARENT_ID)
                 .query(currentDirectoryUuid)
-                .boost(1.0f)
+                .boost(defaultBoostValue)
+        )._toQuery();
+
+        // All queries with default default value
+        List<Query> queriesWithDefaultBoostValue = List.of(parentIdQuery, fullPathQuery);
+
+        // The documents whose name exactly matches the user input
+        // If parentIdQuery match then fullPathQuery will also match
+        // So exactMatchNameQuery defaultBoostValue value need to be greater than the two others
+        Query exactMatchNameQuery = MatchQuery.of(m -> m
+                .field(ELEMENT_NAME)
+                .query(userInput)
+                .boost(2 * defaultBoostValue * queriesWithDefaultBoostValue.size())
         )._toQuery();
 
         BoolQuery query = new BoolQuery.Builder()
-                .mustNot(directory)
-                .must(elementNameContainSearchTerm) // if a doccument doesn’t match the must clause, it will be filtered out.
-                .should(fullPathQuery, parentIdQuery, exactMatchName) // boost the query the document match
+                .mustNot(directoryQuery)
+                .must(matchNameWilcardQuery)
+                .should(queriesWithDefaultBoostValue) // All queries with default default value
+                .should(exactMatchNameQuery)
                 .build();
 
         NativeQuery nativeQuery = new NativeQueryBuilder()

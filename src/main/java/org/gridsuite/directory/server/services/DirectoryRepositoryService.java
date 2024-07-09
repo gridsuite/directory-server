@@ -130,7 +130,8 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> findElementHierarchy(UUID elementId) {
-        return directoryElementRepository.findElementHierarchy(elementId);
+        // Test null for root directories
+        return elementId == null ? List.of() : directoryElementRepository.findElementHierarchy(elementId);
     }
 
 }
