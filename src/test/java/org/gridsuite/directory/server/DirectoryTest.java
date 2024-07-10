@@ -17,7 +17,6 @@ import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.gridsuite.directory.server.services.StudyService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
 import org.junit.After;
@@ -28,13 +27,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
@@ -52,14 +49,11 @@ import java.util.stream.Collectors;
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
-import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -75,13 +69,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class DirectoryTest {
+    public static final String TYPE_01 = "TYPE_01";
+    public static final String TYPE_02 = "TYPE_02";
+    public static final String TYPE_03 = "TYPE_03";
+    public static final String TYPE_04 = "TYPE_04";
+    public static final String TYPE_05 = "TYPE_05";
+    public static final String DIRECTORY = "DIRECTORY";
+    public static final String CASE= "CASE";
 
     private static final long TIMEOUT = 1000;
-    private static final UUID STUDY_RENAME_UUID = UUID.randomUUID();
-    private static final UUID STUDY_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
-    private static final UUID STUDY_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
-    private static final UUID FILTER_UUID = UUID.randomUUID();
-    private static final UUID CONTINGENCY_LIST_UUID = UUID.randomUUID();
+    private static final UUID TYPE_01_RENAME_UUID = UUID.randomUUID();
+    private static final UUID TYPE_01_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
+    private static final UUID TYPE_01_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
+    private static final UUID TYPE_03_UUID = UUID.randomUUID();
+    private static final UUID TYPE_02_UUID = UUID.randomUUID();
 
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
@@ -102,9 +103,6 @@ public class DirectoryTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @MockBean
-    private StudyService studyService;
 
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
@@ -153,20 +151,20 @@ public class DirectoryTest {
         insertAndCheckSubElement(uuidNewDirectory, subDirAttributes);
         checkDirectoryContent(uuidNewDirectory, "userId", List.of(subDirAttributes));
 
-        // Insert a  sub-element of type STUDY
-        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, "userId", "descr study");
-        insertAndCheckSubElement(uuidNewDirectory, subEltAttributes);
-        checkDirectoryContent(uuidNewDirectory, "userId", List.of(subDirAttributes, subEltAttributes));
+        // Insert a  sub-element of type TYPE_01
+        ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_01, "userId", "descr element");
+        insertAndCheckSubElement(uuidNewDirectory, elementAttributes);
+        checkDirectoryContent(uuidNewDirectory, "userId", List.of(subDirAttributes, elementAttributes));
 
-        checkElementNameExistInDirectory(uuidNewDirectory, "newStudy", STUDY, HttpStatus.OK);
-        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", STUDY, HttpStatus.NO_CONTENT);
+        checkElementNameExistInDirectory(uuidNewDirectory, "elementName", TYPE_01, HttpStatus.OK);
+        checkElementNameExistInDirectory(uuidNewDirectory, "tutu", TYPE_01, HttpStatus.NO_CONTENT);
 
         // Delete the sub-directory newSubDir
         deleteElement(subDirAttributes.getElementUuid(), uuidNewDirectory, "userId", false, false, 0);
-        checkDirectoryContent(uuidNewDirectory, "userId", List.of(subEltAttributes));
+        checkDirectoryContent(uuidNewDirectory, "userId", List.of(elementAttributes));
 
-        // Delete the sub-element newStudy
-        deleteElement(subEltAttributes.getElementUuid(), uuidNewDirectory, "userId", false, true, 0);
+        // Delete the sub-element elementName
+        deleteElement(elementAttributes.getElementUuid(), uuidNewDirectory, "userId", false, true, 0);
         assertDirectoryIsEmpty(uuidNewDirectory, "userId");
 
         // Rename the root directory
@@ -196,7 +194,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfStudy() throws Exception {
+    public void testGetPathOfElementType01() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
@@ -210,12 +208,12 @@ public class DirectoryTest {
         ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, "Doe");
         insertAndCheckSubElement(directory1UUID, directory2Attributes);
 
-        // Insert a study in the directory2
-        UUID study1UUID = UUID.randomUUID();
-        ElementAttributes study1Attributes = toElementAttributes(study1UUID, "study1", STUDY, "Doe");
-        insertAndCheckSubElement(directory2UUID, study1Attributes);
+        // Insert an element of type TYPE_01 in the directory2
+        UUID elementUUID = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUUID, "type01", TYPE_01, "Doe");
+        insertAndCheckSubElement(directory2UUID, elementAttributes);
         SQLStatementCountValidator.reset();
-        List<ElementAttributes> path = getPath(study1UUID, "Doe");
+        List<ElementAttributes> path = getPath(elementUUID, "Doe");
 
         //There is only recursive query and SQLStatementCountValidator ignore them
         assertRequestsCount(0, 0, 0, 0);
@@ -225,12 +223,12 @@ public class DirectoryTest {
                 path.stream()
                     .map(ElementAttributes::getElementUuid)
                     .collect(Collectors.toList()),
-                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, study1UUID)
+                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, elementUUID)
         );
     }
 
     @Test
-    public void testGetPathOfFilter() throws Exception {
+    public void testGetPathOfElementType03() throws Exception {
        // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
@@ -244,12 +242,12 @@ public class DirectoryTest {
         ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, "Doe");
         insertAndCheckSubElement(directory1UUID, directory2Attributes);
 
-        // Insert a filter in the directory2
-        UUID filter1UUID = UUID.randomUUID();
-        ElementAttributes study1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, "Doe");
-        insertAndCheckSubElement(directory2UUID, study1Attributes);
+        // Insert an element of type TYPE_03 in the directory2
+        UUID elementUUID = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUUID, "elementName", TYPE_03, "Doe");
+        insertAndCheckSubElement(directory2UUID, elementAttributes);
         SQLStatementCountValidator.reset();
-        List<ElementAttributes> path = getPath(filter1UUID, "Doe");
+        List<ElementAttributes> path = getPath(elementUUID, "Doe");
 
         //There is only recursive query and SQLStatementCountValidator ignore them
         assertRequestsCount(0, 0, 0, 0);
@@ -259,7 +257,7 @@ public class DirectoryTest {
                 path.stream()
                     .map(ElementAttributes::getElementUuid)
                     .collect(Collectors.toList()),
-                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, filter1UUID)
+                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, elementUUID)
         );
     }
 
@@ -278,12 +276,12 @@ public class DirectoryTest {
         ElementAttributes directory2Attributes = toElementAttributes(directory2UUID, "directory2", DIRECTORY, "Doe");
         insertAndCheckSubElement(directory1UUID, directory2Attributes);
 
-        // Insert a filter in the directory2
-        UUID filter1UUID = UUID.randomUUID();
-        ElementAttributes filter1Attributes = toElementAttributes(filter1UUID, "filter1", FILTER, "Doe");
-        insertAndCheckSubElement(directory2UUID, filter1Attributes);
+        // Insert an element of type TYPE_03 in the directory2
+        UUID elementUUID = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUUID, "elementName", TYPE_03, "Doe");
+        insertAndCheckSubElement(directory2UUID, elementAttributes);
 
-        mockMvc.perform(get("/v1/elements/" + filter1UUID + "/path")
+        mockMvc.perform(get("/v1/elements/" + elementUUID + "/path")
                    .header("userId", "User"))
             .andExpect(status().isOk());
 
@@ -360,17 +358,17 @@ public class DirectoryTest {
         ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, directory20Attributes);
 
-        // Insert a filter in the last subdirectory
-        UUID filterUuid = UUID.randomUUID();
-        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, "Doe");
-        insertAndCheckSubElement(directory21UUID, filterAttributes);
+        // Insert an element of type TYPE_03 in the last subdirectory
+        UUID elementUuid = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUuid, "type03", TYPE_03, "Doe");
+        insertAndCheckSubElement(directory21UUID, elementAttributes);
 
         assertNbElementsInRepositories(4);
 
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+                        .content(objectMapper.writeValueAsString(List.of(elementUuid))))
                 .andExpect(status().isOk());
 
         assertNbElementsInRepositories(4);
@@ -397,7 +395,7 @@ public class DirectoryTest {
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
-        checkElementNameExistInDirectory(rootDir10Uuid, "filter", FILTER, HttpStatus.OK);
+        checkElementNameExistInDirectory(rootDir10Uuid, "type03", TYPE_03, HttpStatus.OK);
     }
 
     @Test
@@ -412,10 +410,10 @@ public class DirectoryTest {
         ElementAttributes directory20Attributes = toElementAttributes(directory21PrivateUUID, "directory20", DIRECTORY, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, directory20Attributes);
 
-        // Insert a filter in the last subdirectory
-        UUID filterUuid = UUID.randomUUID();
-        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, "Doe");
-        insertAndCheckSubElement(directory21PrivateUUID, filterAttributes);
+        // Insert an element of type TYPE_03 in the last subdirectory
+        UUID elementUuid = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUuid, "type03", TYPE_03, "Doe");
+        insertAndCheckSubElement(directory21PrivateUUID, elementAttributes);
 
         assertNbElementsInRepositories(4);
 
@@ -423,7 +421,7 @@ public class DirectoryTest {
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
                         .header("userId", "Roger")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+                        .content(objectMapper.writeValueAsString(List.of(elementUuid))))
                 .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(4);
@@ -432,7 +430,7 @@ public class DirectoryTest {
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+                        .content(objectMapper.writeValueAsString(List.of(elementUuid))))
                 .andExpect(status().isOk());
 
         assertNbElementsInRepositories(4);
@@ -458,7 +456,7 @@ public class DirectoryTest {
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
-        checkElementNameExistInDirectory(rootDir10Uuid, "filter", FILTER, HttpStatus.OK);
+        checkElementNameExistInDirectory(rootDir10Uuid, "type03", TYPE_03, HttpStatus.OK);
     }
 
     @Test
@@ -473,17 +471,17 @@ public class DirectoryTest {
         ElementAttributes directory20Attributes = toElementAttributes(directory21PrivateUUID, "directory20", DIRECTORY, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, directory20Attributes);
 
-        // Insert a filter in the last subdirectory
-        UUID filterUuid = UUID.randomUUID();
-        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, "Doe");
-        insertAndCheckSubElement(directory21PrivateUUID, filterAttributes);
+        // Insert an element of type TYPE_03 in the last subdirectory
+        UUID elementUuid = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUuid, "elementName", TYPE_03, "Doe");
+        insertAndCheckSubElement(directory21PrivateUUID, elementAttributes);
 
         assertNbElementsInRepositories(4);
 
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
                         .header("userId", "Unallowed User")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+                .content(objectMapper.writeValueAsString(List.of(elementUuid))))
                 .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(4);
@@ -493,9 +491,9 @@ public class DirectoryTest {
     public void testMoveElementNotFound() throws Exception {
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
 
-        UUID filterUuid = UUID.randomUUID();
-        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, "Doe");
-        insertAndCheckSubElement(rootDir20Uuid, filterAttributes);
+        UUID elementUuid = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUuid, "type03", TYPE_03, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, elementAttributes);
 
         assertNbElementsInRepositories(2);
 
@@ -510,7 +508,7 @@ public class DirectoryTest {
         mockMvc.perform(put("/v1/elements/?targetDirectoryUuid=" + unknownUuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(filterUuid))))
+                        .content(objectMapper.writeValueAsString(List.of(elementUuid))))
                 .andExpect(status().isNotFound());
 
         assertNbElementsInRepositories(2);
@@ -521,27 +519,27 @@ public class DirectoryTest {
         // Insert root20 directory
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
 
-        // Insert a filter in this directory
-        UUID filterUuid = UUID.randomUUID();
-        ElementAttributes filterAttributes = toElementAttributes(filterUuid, "filter", FILTER, "Doe");
-        insertAndCheckSubElement(rootDir20Uuid, filterAttributes);
+        // Insert an element of type TYPE_03 in this directory
+        UUID elementUuid = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUuid, "elementName", TYPE_03, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, elementAttributes);
 
         // Insert a subDirectory20 in the root20 directory
         UUID directory21UUID = UUID.randomUUID();
         ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, "Doe");
         insertAndCheckSubElement(rootDir20Uuid, directory20Attributes);
 
-        // Insert a filter in the last subdirectory with the same name and type as the 1st one
-        UUID filterwithSameNameAndTypeUuid = UUID.randomUUID();
-        ElementAttributes filterwithSameNameAndTypeAttributes = toElementAttributes(filterwithSameNameAndTypeUuid, "filter", FILTER, "Doe");
-        insertAndCheckSubElement(directory21UUID, filterwithSameNameAndTypeAttributes);
+        // Insert an element of type TYPE_03 in the last subdirectory with the same name and type as the 1st one
+        UUID elementWithSameNameAndTypeUuid = UUID.randomUUID();
+        ElementAttributes elementwithSameNameAndTypeAttributes = toElementAttributes(elementWithSameNameAndTypeUuid, "elementName", TYPE_03, "Doe");
+        insertAndCheckSubElement(directory21UUID, elementwithSameNameAndTypeAttributes);
 
         assertNbElementsInRepositories(4);
 
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir20Uuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(filterwithSameNameAndTypeUuid))))
+                        .content(objectMapper.writeValueAsString(List.of(elementWithSameNameAndTypeUuid))))
                 .andExpect(status().isForbidden());
 
         assertNbElementsInRepositories(4);
@@ -551,20 +549,20 @@ public class DirectoryTest {
     public void testMoveElementToNotDirectory() throws Exception {
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
 
-        UUID filter1Uuid = UUID.randomUUID();
-        ElementAttributes filter1Attributes = toElementAttributes(filter1Uuid, "filter1", FILTER, "Doe");
-        insertAndCheckSubElement(rootDir20Uuid, filter1Attributes);
+        UUID element1Uuid = UUID.randomUUID();
+        ElementAttributes element1Attributes = toElementAttributes(element1Uuid, "elementName1", TYPE_03, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, element1Attributes);
 
-        UUID filter2Uuid = UUID.randomUUID();
-        ElementAttributes filter2Attributes = toElementAttributes(filter2Uuid, "filter2", FILTER, "Doe");
-        insertAndCheckSubElement(rootDir20Uuid, filter2Attributes);
+        UUID element2Uuid = UUID.randomUUID();
+        ElementAttributes element2Attributes = toElementAttributes(element2Uuid, "elementName2", TYPE_03, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, element2Attributes);
 
         assertNbElementsInRepositories(3);
 
-        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + filter2Uuid)
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + element2Uuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(filter1Uuid)))
+                        .content(objectMapper.writeValueAsString(List.of(element1Uuid)))
                 )
                 .andExpect(status().isForbidden());
 
@@ -591,22 +589,21 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveStudy() throws Exception {
-        when(studyService.notifyStudyUpdate(any(), any())).thenReturn(ResponseEntity.of(Optional.empty()));
+    public void testElementMove() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", "Doe");
 
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
 
-        UUID study21UUID = UUID.randomUUID();
-        ElementAttributes study21Attributes = toElementAttributes(study21UUID, "Study21", STUDY, "Doe");
-        insertAndCheckSubElement(rootDir20Uuid, study21Attributes);
+        UUID elementUUID = UUID.randomUUID();
+        ElementAttributes elementAttributes = toElementAttributes(elementUUID, "type01", TYPE_01, "Doe");
+        insertAndCheckSubElement(rootDir20Uuid, elementAttributes);
 
         assertNbElementsInRepositories(3);
 
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(study21UUID)))
+                        .content(objectMapper.writeValueAsString(List.of(elementUUID)))
                 )
                 .andExpect(status().isOk());
 
@@ -705,30 +702,30 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoStudiesInPublicDirectory() throws Exception {
+    public void testTwoUsersTwoElementsInPublicDirectory() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, "user1");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(UUID.randomUUID(), "nameType01", TYPE_01, "user1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, "user2", "descr study2");
-        insertAndCheckSubElement(rootDirUuid, study2Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes element2Attributes = toElementAttributes(UUID.randomUUID(), "nameType02", TYPE_01, "user2", "descr element2");
+        insertAndCheckSubElement(rootDirUuid, element2Attributes);
 
-        // check user1 visible studies
-        checkDirectoryContent(rootDirUuid, "user1", List.of(study1Attributes, study2Attributes));
+        // check user1 visible elements
+        checkDirectoryContent(rootDirUuid, "user1", List.of(element1Attributes, element2Attributes));
 
-        // check user2 visible studies
-        checkDirectoryContent(rootDirUuid, "user2", List.of(study1Attributes, study2Attributes));
-        deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, true, 0);
-        checkElementNotFound(study1Attributes.getElementUuid(), "user1");
+        // check user2 visible elements
+        checkDirectoryContent(rootDirUuid, "user2", List.of(element1Attributes, element2Attributes));
+        deleteElement(element1Attributes.getElementUuid(), rootDirUuid, "user1", false, true, 0);
+        checkElementNotFound(element1Attributes.getElementUuid(), "user1");
 
-        deleteElement(study2Attributes.getElementUuid(), rootDirUuid, "user2", false, true, 0);
-        checkElementNotFound(study2Attributes.getElementUuid(), "user2");
+        deleteElement(element2Attributes.getElementUuid(), rootDirUuid, "user2", false, true, 0);
+        checkElementNotFound(element2Attributes.getElementUuid(), "user2");
 
         deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false, 0);
         checkElementNotFound(rootDirUuid, "Doe");
@@ -741,57 +738,57 @@ public class DirectoryTest {
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, "user1");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(UUID.randomUUID(), "elementName1", TYPE_01, "user1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
-        // Insert a study with the same name in the root directory by the user1 and expect a 403
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, "user1");
-        insertExpectFail(rootDirUuid, study2Attributes);
+        // Insert an element of type TYPE_01 with the same name in the root directory by the user1 and expect a 403
+        ElementAttributes element2Attributes = toElementAttributes(UUID.randomUUID(), "elementName1", TYPE_01, "user1");
+        insertExpectFail(rootDirUuid, element2Attributes);
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study3Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, "user1");
-        insertAndCheckSubElement(rootDirUuid, study3Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes element3Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "user1");
+        insertAndCheckSubElement(rootDirUuid, element3Attributes);
 
-        // Insert a study with the same name in the root directory by the user1 and expect a 403
-        ElementAttributes study4Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, "user1");
-        insertExpectFail(rootDirUuid, study4Attributes);
+        // Insert an element of type TYPE_01 with the same name in the root directory by the user1 and expect a 403
+        ElementAttributes element4Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "user1");
+        insertExpectFail(rootDirUuid, element4Attributes);
 
-        // Insert a filter with the same name in the root directory by the user1 and expect ok since it's not the same type
-        ElementAttributes filterAttributes = toElementAttributes(UUID.randomUUID(), "study3", FILTER, "user1");
-        insertAndCheckSubElement(rootDirUuid, filterAttributes);
+        // Insert an element of type TYPE_03 with the same name in the root directory by the user1 and expect ok since it's not the same type
+        ElementAttributes element5Attributes = toElementAttributes(UUID.randomUUID(), "elementName3", TYPE_03, "user1");
+        insertAndCheckSubElement(rootDirUuid, element5Attributes);
 
-        // Insert a study with the same name in the root directory by the user2 should not work even if the study by user 1 is private
-        ElementAttributes study5Attributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, "user3");
-        insertExpectFail(rootDirUuid, study5Attributes);
+        // Insert an element of type TYPE_01 with the same name in the root directory by the user2 should not work.
+        ElementAttributes element6Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "user3");
+        insertExpectFail(rootDirUuid, element6Attributes);
     }
 
     @Test
-    public void testTwoUsersTwoStudies() throws Exception {
+    public void testTwoUsersTwoElements() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory by Doe
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, "user1");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(UUID.randomUUID(), "elementName1", TYPE_01, "user1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
-        // Insert a study in the root directory by the user2
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, "user2");
-        insertAndCheckSubElement(rootDirUuid, study2Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user2
+        ElementAttributes element2Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "user2");
+        insertAndCheckSubElement(rootDirUuid, element2Attributes);
 
         // check user1 visible studies
-        checkDirectoryContent(rootDirUuid, "user1", List.of(study1Attributes, study2Attributes));
+        checkDirectoryContent(rootDirUuid, "user1", List.of(element1Attributes, element2Attributes));
 
         // check user2 visible studies
-        checkDirectoryContent(rootDirUuid, "user2", List.of(study1Attributes, study2Attributes));
+        checkDirectoryContent(rootDirUuid, "user2", List.of(element1Attributes, element2Attributes));
 
-        deleteElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", false, true, 0);
-        checkElementNotFound(study1Attributes.getElementUuid(), "user1");
+        deleteElement(element1Attributes.getElementUuid(), rootDirUuid, "user1", false, true, 0);
+        checkElementNotFound(element1Attributes.getElementUuid(), "user1");
 
-        deleteElement(study2Attributes.getElementUuid(), rootDirUuid, "user2", false, true, 0);
-        checkElementNotFound(study2Attributes.getElementUuid(), "user2");
+        deleteElement(element2Attributes.getElementUuid(), rootDirUuid, "user2", false, true, 0);
+        checkElementNotFound(element2Attributes.getElementUuid(), "user2");
 
         deleteElement(rootDirUuid, rootDirUuid, "Doe", true, false, 0);
         checkElementNotFound(rootDirUuid, "Doe");
@@ -804,87 +801,85 @@ public class DirectoryTest {
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "userId");
 
-        // Insert a study in the root directory by the userId
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, "userId", "descr study1");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the userId
+        ElementAttributes element1Attributes = toElementAttributes(UUID.randomUUID(), "elementName1", TYPE_01, "userId", "descr elementName1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
-        // Insert a study in the root directory by the userId;
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, "userId");
-        insertAndCheckSubElement(rootDirUuid, study2Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the userId;
+        ElementAttributes element2Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "userId");
+        insertAndCheckSubElement(rootDirUuid, element2Attributes);
 
         // Insert a subDirectory
         ElementAttributes subDirAttributes = toElementAttributes(UUID.randomUUID(), "subDir", DIRECTORY, "userId");
         insertAndCheckSubElement(rootDirUuid, subDirAttributes);
 
-        // Insert a study in the root directory by the userId
-        ElementAttributes subDirStudyAttributes = toElementAttributes(UUID.randomUUID(), "study3", STUDY, "userId", "descr study3");
+        // Insert an element of type TYPE_01 in the root directory by the userId
+        ElementAttributes subDirElementAttributes = toElementAttributes(UUID.randomUUID(), "elementName3", TYPE_01, "userId", "descr elementName3");
 
-        insertAndCheckSubElement(subDirAttributes.getElementUuid(), subDirStudyAttributes);
+        insertAndCheckSubElement(subDirAttributes.getElementUuid(), subDirElementAttributes);
 
         assertNbElementsInRepositories(5);
 
         deleteElement(rootDirUuid, rootDirUuid, "userId", true, false, 5);
 
         checkElementNotFound(rootDirUuid, "userId");
-        checkElementNotFound(study1Attributes.getElementUuid(), "userId");
-        checkElementNotFound(study2Attributes.getElementUuid(), "userId");
+        checkElementNotFound(element1Attributes.getElementUuid(), "userId");
+        checkElementNotFound(element2Attributes.getElementUuid(), "userId");
         checkElementNotFound(subDirAttributes.getElementUuid(), "userId");
-        checkElementNotFound(subDirStudyAttributes.getElementUuid(), "userId");
+        checkElementNotFound(subDirElementAttributes.getElementUuid(), "userId");
 
         assertNbElementsInRepositories(0);
     }
 
     @Test
-    public void testRenameStudy() throws Exception {
-        when(studyService.notifyStudyUpdate(any(), any())).thenReturn(ResponseEntity.of(Optional.empty()));
+    public void testRenameElement() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory by user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_UUID, "study1", STUDY, "user1");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(TYPE_01_RENAME_UUID, "elementName1", TYPE_01, "user1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
         assertNbElementsInRepositories(2);
 
-        renameElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", "newName1", false);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "newName1", STUDY, "user1", null, study1Attributes.getCreationDate(), study1Attributes.getLastModificationDate(), "user1")));
+        renameElement(element1Attributes.getElementUuid(), rootDirUuid, "user1", "newElementName1", false);
+        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_01, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(), "user1")));
 
         assertNbElementsInRepositories(2);
     }
 
     @Test
-    public void testRenameStudyToSameName() throws Exception {
-        when(studyService.notifyStudyUpdate(any(), any())).thenReturn(ResponseEntity.of(Optional.empty()));
+    public void testRenameElementToSameName() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_UUID, "study1", STUDY, "user1");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(TYPE_01_RENAME_UUID, "elementName1", TYPE_01, "user1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
         // Updating to same name should not send error
-        renameElement(study1Attributes.getElementUuid(), rootDirUuid, "user1", "study1", false);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, "user1", null, study1Attributes.getCreationDate(), study1Attributes.getLastModificationDate(), "user1")));
+        renameElement(element1Attributes.getElementUuid(), rootDirUuid, "user1", "elementName1", false);
+        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(element1Attributes.getElementUuid(), "elementName1", TYPE_01, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(), "user1")));
     }
 
     @Test
-    public void testRenameStudyForbiddenFail() throws Exception {
+    public void testRenameElementForbiddenFail() throws Exception {
         checkRootDirectoriesList("user1", List.of());
 
         // Insert a root directory by user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(STUDY_RENAME_FORBIDDEN_UUID, "study1", STUDY, "user1");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(TYPE_01_RENAME_FORBIDDEN_UUID, "elementName1", TYPE_01, "user1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
         //the name should not change
-        renameElementExpectFail(study1Attributes.getElementUuid(), "user2", "newName1", 403);
-        checkDirectoryContent(rootDirUuid, "user2", List.of(study1Attributes));
+        renameElementExpectFail(element1Attributes.getElementUuid(), "user2", "newElementName1", 403);
+        checkDirectoryContent(rootDirUuid, "user2", List.of(element1Attributes));
     }
 
     @Test
@@ -892,16 +887,16 @@ public class DirectoryTest {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
-        // Insert a study1 in the root directory by Doe
-        ElementAttributes study1Attributes = toElementAttributes(UUID.randomUUID(), "study1", STUDY, "Doe");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
+        // Insert an element of type TYPE_01 in the root directory by Doe
+        ElementAttributes element1Attributes = toElementAttributes(UUID.randomUUID(), "elementName1", TYPE_01, "Doe");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
-        // Insert a study2 in the root directory by Doe;
-        ElementAttributes study2Attributes = toElementAttributes(UUID.randomUUID(), "study2", STUDY, "Doe");
-        insertAndCheckSubElement(rootDirUuid, study2Attributes);
+        // Insert an element of type TYPE_01 in the root directory by Doe;
+        ElementAttributes element2Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "Doe");
+        insertAndCheckSubElement(rootDirUuid, element2Attributes);
 
         // Renaming file to an already existing name should fail
-        renameElementExpectFail(study1Attributes.getElementUuid(), "Doe", "study2", 403);
+        renameElementExpectFail(element1Attributes.getElementUuid(), "Doe", "elementName2", 403);
     }
 
     @Test
@@ -923,16 +918,16 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testDirectoryContentAfterInsertStudy() throws Exception {
+    public void testDirectoryContentAfterInsertElement() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
-        // Insert a study in the root directory by the user1
-        ElementAttributes study1Attributes = toElementAttributes(STUDY_UPDATE_ACCESS_RIGHT_UUID, "study1", STUDY, "user1");
-        insertAndCheckSubElement(rootDirUuid, study1Attributes);
-        checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(study1Attributes.getElementUuid(), "study1", STUDY, "user1", null, study1Attributes.getCreationDate(), study1Attributes.getLastModificationDate(), "user1")));
+        // Insert an element of type TYPE_01 in the root directory by the user1
+        ElementAttributes elementAttributes = toElementAttributes(TYPE_01_UPDATE_ACCESS_RIGHT_UUID, "elementName1", TYPE_01, "user1");
+        insertAndCheckSubElement(rootDirUuid, elementAttributes);
+        checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(elementAttributes.getElementUuid(), "elementName1", TYPE_01, "user1", null, elementAttributes.getCreationDate(), elementAttributes.getLastModificationDate(), "user1")));
     }
 
     @Test
@@ -955,11 +950,11 @@ public class DirectoryTest {
         // Insert a root directory by the user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
-        // Insert a contingency list in the root directory by the user1
-        ElementAttributes contingencyListAttributes = toElementAttributes(UUID.randomUUID(), "CL1", CONTINGENCY_LIST, "Doe");
-        insertAndCheckSubElement(rootDirUuid, contingencyListAttributes);
+        // Insert an element of type TYPE_02 in the root directory by the user1
+        ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_02, "Doe");
+        insertAndCheckSubElement(rootDirUuid, elementAttributes);
 
-        mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=update_directory", contingencyListAttributes.getElementUuid()))
+        mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=update_directory", elementAttributes.getElementUuid()))
                         .header("userId", "Doe"))
                 .andExpect(status().isOk());
 
@@ -975,7 +970,7 @@ public class DirectoryTest {
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         // Test unknown type notification
-        mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=bad_type", contingencyListAttributes.getElementUuid()))
+        mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=bad_type", elementAttributes.getElementUuid()))
                         .header("userId", "Doe"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(new IsEqual<>(objectMapper.writeValueAsString(UNKNOWN_NOTIFICATION))));
@@ -987,69 +982,69 @@ public class DirectoryTest {
         // Insert a root directory by the user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
 
-        // Insert a contingency list in the root directory by the user1
-        ElementAttributes contingencyAttributes = toElementAttributes(CONTINGENCY_LIST_UUID, "Contingency", CONTINGENCY_LIST, "user1");
-        insertAndCheckSubElement(rootDirUuid, contingencyAttributes);
+        // Insert an element of type TYPE_02 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(TYPE_02_UUID, "elementName1", TYPE_02, "user1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
-        // Insert a filter in the root directory by the user1
-        ElementAttributes filterAttributes = toElementAttributes(FILTER_UUID, "Filter", FILTER, "user1");
-        insertAndCheckSubElement(rootDirUuid, filterAttributes);
+        // Insert an element of type TYPE_03 in the root directory by the user1
+        ElementAttributes element2Attributes = toElementAttributes(TYPE_03_UUID, "elementName2", TYPE_03, "user1");
+        insertAndCheckSubElement(rootDirUuid, element2Attributes);
 
-        // Insert a script in the root directory by the user1
-        ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, "user1");
-        insertAndCheckSubElement(rootDirUuid, scriptAttributes);
+        // Insert an element of type TYPE_03 in the root directory by the user1
+        ElementAttributes element3Attributes = toElementAttributes(UUID.randomUUID(), "elementName3", TYPE_03, "user1");
+        insertAndCheckSubElement(rootDirUuid, element3Attributes);
 
-        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), UUID.randomUUID()), "user1", true, 404);
+        var res = getElements(List.of(element1Attributes.getElementUuid(), element2Attributes.getElementUuid(), UUID.randomUUID()), "user1", true, 404);
         assertTrue(res.isEmpty());
 
-        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), UUID.randomUUID()), "user1", false, 200);
+        res = getElements(List.of(element1Attributes.getElementUuid(), element2Attributes.getElementUuid(), UUID.randomUUID()), "user1", false, 200);
         assertEquals(2, res.size());
         ToStringVerifier.forClass(ElementAttributes.class).verify();
 
-        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
+        res = getElements(List.of(element1Attributes.getElementUuid(), element2Attributes.getElementUuid(), element3Attributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
         ToStringVerifier.forClass(ElementAttributes.class).verify();
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
-        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(contingencyAttributes, filterAttributes, scriptAttributes)));
+        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(element1Attributes, element2Attributes, element3Attributes)));
 
-        renameElement(contingencyAttributes.getElementUuid(), rootDirUuid, "user1", "newContingency", false);
-        renameElement(filterAttributes.getElementUuid(), rootDirUuid, "user1", "newFilter", false);
-        renameElement(scriptAttributes.getElementUuid(), rootDirUuid, "user1", "newScript", false);
-        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
+        renameElement(element1Attributes.getElementUuid(), rootDirUuid, "user1", "newElementName1", false);
+        renameElement(element2Attributes.getElementUuid(), rootDirUuid, "user1", "newElementName2", false);
+        renameElement(element3Attributes.getElementUuid(), rootDirUuid, "user1", "newElementName3", false);
+        res = getElements(List.of(element1Attributes.getElementUuid(), element2Attributes.getElementUuid(), element3Attributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
-        ElementAttributes newContingency = toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, "user1", null, contingencyAttributes.getCreationDate(), contingencyAttributes.getLastModificationDate(), "user1");
-        ElementAttributes newFilter = toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1");
-        ElementAttributes newScript = toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1");
+        ElementAttributes newElement1Attributes = toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_02, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(), "user1");
+        ElementAttributes newElement2Attributes = toElementAttributes(element2Attributes.getElementUuid(), "newElementName2", TYPE_03, "user1", null, element2Attributes.getCreationDate(), element2Attributes.getLastModificationDate(), "user1");
+        ElementAttributes newElement3Attributes = toElementAttributes(element3Attributes.getElementUuid(), "newElementName3", TYPE_03, "user1", null, element3Attributes.getCreationDate(), element3Attributes.getLastModificationDate(), "user1");
 
-        assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(newContingency, newFilter, newScript));
+        assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(newElement1Attributes, newElement2Attributes, newElement3Attributes));
 
         ElementAttributes directory = retrieveInsertAndCheckRootDirectory("testDir", "user1");
-        List<ElementAttributes> result = getElements(List.of(FILTER_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(FILTER), 200);
+        List<ElementAttributes> result = getElements(List.of(TYPE_03_UUID, UUID.randomUUID(), directory.getElementUuid()), "user1", false, List.of(TYPE_03), 200);
         assertEquals(2, result.size());
         result.sort(Comparator.comparing(ElementAttributes::getElementName));
 
         result.sort(Comparator.comparing(ElementAttributes::getElementName));
         assertThat(result).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(
-                toElementAttributes(FILTER_UUID, "newFilter", FILTER, "user1", 0, null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
+                toElementAttributes(TYPE_03_UUID, "newElementName2", TYPE_03, "user1", 0, null, element2Attributes.getCreationDate(), element2Attributes.getLastModificationDate(), "user1"),
                 directory
         ));
 
         ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, "user1");
         insertAndCheckSubElement(rootDirUuid, subDirAttributes);
-        insertAndCheckSubElement(subDirAttributes.getElementUuid(), toElementAttributes(null, "subDirContingency", CONTINGENCY_LIST, "user1"));
-        checkDirectoryContent(rootDirUuid, "user1", List.of(newContingency, newFilter, newScript, subDirAttributes));
+        insertAndCheckSubElement(subDirAttributes.getElementUuid(), toElementAttributes(null, "subDirElementType02", TYPE_02, "user1"));
+        checkDirectoryContent(rootDirUuid, "user1", List.of(newElement1Attributes, newElement2Attributes, newElement3Attributes, subDirAttributes));
         subDirAttributes.setSubdirectoriesCount(1L);
-        checkDirectoryContent(rootDirUuid, "user1", List.of(CONTINGENCY_LIST), List.of(newContingency, subDirAttributes));
+        checkDirectoryContent(rootDirUuid, "user1", List.of(TYPE_02), List.of(newElement1Attributes, subDirAttributes));
 
         ElementAttributes rootDirectory = getElements(List.of(rootDirUuid), "user1", false, 200).get(0);
 
         checkRootDirectoriesList("user1", List.of(rootDirectory, directory));
 
         rootDirectory.setSubdirectoriesCount(3L);
-        checkRootDirectoriesList("user1", List.of(FILTER), List.of(rootDirectory, directory));
+        checkRootDirectoriesList("user1", List.of(TYPE_03), List.of(rootDirectory, directory));
 
         assertNbElementsInRepositories(7);
     }
@@ -1060,36 +1055,36 @@ public class DirectoryTest {
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
 
-        // Insert a contingency list in the root directory by the user1
-        ElementAttributes contingencyAttributes = toElementAttributes(CONTINGENCY_LIST_UUID, "Contingency", CONTINGENCY_LIST, "user1");
-        insertAndCheckSubElement(rootDirUuid, contingencyAttributes);
+        // Insert an element of type TYPE_02 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(TYPE_02_UUID, "elementName1", TYPE_02, "user1");
+        insertAndCheckSubElement(rootDirUuid, element1Attributes);
 
-        // Insert a filter in the root directory by the user1
-        ElementAttributes filterAttributes = toElementAttributes(FILTER_UUID, "Filter", FILTER, "user1");
-        insertAndCheckSubElement(rootDirUuid, filterAttributes);
+        // Insert an element of type TYPE_03 in the root directory by the user1
+        ElementAttributes element2Attributes = toElementAttributes(TYPE_03_UUID, "elementName2", TYPE_03, "user1");
+        insertAndCheckSubElement(rootDirUuid, element2Attributes);
 
-        // Insert a script in the root directory by the user1
-        ElementAttributes scriptAttributes = toElementAttributes(UUID.randomUUID(), "Script", FILTER, "user1");
-        insertAndCheckSubElement(rootDirUuid, scriptAttributes);
+        // Insert an element of type TYPE_03 in the root directory by the user1
+        ElementAttributes element3Attributes = toElementAttributes(UUID.randomUUID(), "elementName3", TYPE_03, "user1");
+        insertAndCheckSubElement(rootDirUuid, element3Attributes);
 
-        var res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
+        var res = getElements(List.of(element1Attributes.getElementUuid(), element2Attributes.getElementUuid(), element3Attributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
         ToStringVerifier.forClass(ElementAttributes.class).verify();
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
-        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(contingencyAttributes, filterAttributes, scriptAttributes)));
+        org.hamcrest.MatcherAssert.assertThat(res, new MatcherJson<>(objectMapper, List.of(element1Attributes, element2Attributes, element3Attributes)));
 
-        renameElement(contingencyAttributes.getElementUuid(), rootDirUuid, "user1", "newContingency", false);
-        renameElement(filterAttributes.getElementUuid(), rootDirUuid, "user1", "newFilter", false);
-        renameElement(scriptAttributes.getElementUuid(), rootDirUuid, "user1", "newScript", false);
-        res = getElements(List.of(contingencyAttributes.getElementUuid(), filterAttributes.getElementUuid(), scriptAttributes.getElementUuid()), "user1", true, 200);
+        renameElement(element1Attributes.getElementUuid(), rootDirUuid, "user1", "newElementName1", false);
+        renameElement(element2Attributes.getElementUuid(), rootDirUuid, "user1", "newElementName2", false);
+        renameElement(element3Attributes.getElementUuid(), rootDirUuid, "user1", "newElementName3", false);
+        res = getElements(List.of(element1Attributes.getElementUuid(), element2Attributes.getElementUuid(), element3Attributes.getElementUuid()), "user1", true, 200);
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
         assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(
-                toElementAttributes(contingencyAttributes.getElementUuid(), "newContingency", CONTINGENCY_LIST, "user1", null, contingencyAttributes.getCreationDate(), contingencyAttributes.getLastModificationDate(), "user1"),
-                toElementAttributes(filterAttributes.getElementUuid(), "newFilter", FILTER, "user1", null, filterAttributes.getCreationDate(), filterAttributes.getLastModificationDate(), "user1"),
-                toElementAttributes(scriptAttributes.getElementUuid(), "newScript", FILTER, "user1", null, scriptAttributes.getCreationDate(), scriptAttributes.getLastModificationDate(), "user1")
+                toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_02, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(), "user1"),
+                toElementAttributes(element2Attributes.getElementUuid(), "newElementName2", TYPE_03, "user1", null, element2Attributes.getCreationDate(), element2Attributes.getLastModificationDate(), "user1"),
+                toElementAttributes(element3Attributes.getElementUuid(), "newElementName3", TYPE_03, "user1", null, element3Attributes.getCreationDate(), element3Attributes.getLastModificationDate(), "user1")
         ));
     }
 
@@ -1133,13 +1128,13 @@ public class DirectoryTest {
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", "user1");
 
-        // Insert a study with empty name in the root directory and expect a 403
-        ElementAttributes studyWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", STUDY, "user1");
-        insertExpectFail(rootDirUuid, studyWithoutNameAttributes);
+        // Insert an element of type TYPE_01 with empty name in the root directory and expect a 403
+        ElementAttributes element1WithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", TYPE_01, "user1");
+        insertExpectFail(rootDirUuid, element1WithoutNameAttributes);
 
-       // Insert a filter with empty name in the root directory and expect a 403
-        ElementAttributes filterWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", FILTER, "user1");
-        insertExpectFail(rootDirUuid, filterWithoutNameAttributes);
+       // Insert an element of type TYPE_03 with empty name in the root directory and expect a 403
+        ElementAttributes element2WithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", TYPE_03, "user1");
+        insertExpectFail(rootDirUuid, element2WithoutNameAttributes);
 
         assertNbElementsInRepositories(1);
     }
@@ -1150,8 +1145,8 @@ public class DirectoryTest {
         ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", "userId");
         UUID uuidNewDirectory = newDirectory.getElementUuid();
 
-        // Insert a  sub-element of type STUDY
-        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "newStudy", STUDY, "userId", "descr study");
+        // Insert a  sub-element of type TYPE_01
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "subElementName", TYPE_01, "userId", "descr subElementName");
         insertAndCheckSubElement(uuidNewDirectory, subEltAttributes);
 
         Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
@@ -1201,8 +1196,8 @@ public class DirectoryTest {
         insertAndCheckSubElement(rootDirUuid, directoryAttributes);
         ElementAttributes subdirectoryAttributes = toElementAttributes(UUID.randomUUID(), "subdirectory", DIRECTORY, "userId");
         insertAndCheckSubElement(dirUuid, subdirectoryAttributes);
-        ElementAttributes studyAttributes = toElementAttributes(UUID.randomUUID(), "study", STUDY, "userId");
-        insertAndCheckSubElement(rootDirUuid, studyAttributes);
+        ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_01, "userId");
+        insertAndCheckSubElement(rootDirUuid, elementAttributes);
 
         // Test get indexed elements counts
         mvcResult = mockMvc.perform(get("/v1/supervision/elements/indexation-count"))
@@ -1507,7 +1502,7 @@ public class DirectoryTest {
             assertEquals(UPDATE_TYPE_ELEMENT_DELETE, headers.get(HEADER_UPDATE_TYPE));
             assertEquals(elementUuidToBeDeleted, headers.get(HEADER_ELEMENT_UUID));
         } else {
-            //empty the queue of all delete study notif
+            //empty the queue of all delete element notif
             for (int i = 0; i < numberOfElements; i++) {
                 message = output.receive(TIMEOUT, directoryUpdateDestination);
                 headers = message.getHeaders();
@@ -1549,22 +1544,22 @@ public class DirectoryTest {
 
         var directoryId = insertAndCheckRootDirectory("newDir", "userId");
 
-        mockMvc.perform(get("/v1/directories/" + directoryId + "/" + "pouet" + "/newNameCandidate?type=" + STUDY)
+        mockMvc.perform(get("/v1/directories/" + directoryId + "/" + "pouet" + "/newNameCandidate?type=" + TYPE_01)
                 .header("userId", "youplaboum"))
             .andExpect(status().isOk());
 
-        var name = "newStudy";
+        var name = "elementName";
         // check when no elements is corresponding (empty folder
-        assertEquals("newStudy", candidateName(directoryId, name, STUDY));
-        var element = toElementAttributes(UUID.randomUUID(), name, STUDY, "userId");
+        assertEquals("elementName", candidateName(directoryId, name, TYPE_01));
+        var element = toElementAttributes(UUID.randomUUID(), name, TYPE_01, "userId");
         insertAndCheckSubElement(directoryId, element);
-        var newCandidateName = candidateName(directoryId, name, STUDY);
-        assertEquals("newStudy(1)", newCandidateName);
+        var newCandidateName = candidateName(directoryId, name, TYPE_01);
+        assertEquals("elementName(1)", newCandidateName);
         element.setElementName(newCandidateName);
         element.setElementUuid(UUID.randomUUID());
         insertAndCheckSubElement(directoryId, element);
-        assertEquals("newStudy(2)", candidateName(directoryId, name, STUDY));
-        assertEquals("newStudy", candidateName(directoryId, name, CONTINGENCY_LIST));
+        assertEquals("elementName(2)", candidateName(directoryId, name, TYPE_01));
+        assertEquals("elementName", candidateName(directoryId, name, TYPE_02));
     }
 
     @Test
@@ -1572,8 +1567,8 @@ public class DirectoryTest {
     public void testCreateElementInDirectory() {
         String userId = "user";
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
-        ElementAttributes caseElement = ElementAttributes.toElementAttributes(UUID.randomUUID(), "caseName", "CASE", "user", null, now, now, userId);
-        String requestBody = objectMapper.writeValueAsString(caseElement);
+        ElementAttributes elementAttributes = ElementAttributes.toElementAttributes(UUID.randomUUID(), "elementName", TYPE_05, "user", null, now, now, userId);
+        String requestBody = objectMapper.writeValueAsString(elementAttributes);
         mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
                         .header("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -1596,10 +1591,10 @@ public class DirectoryTest {
         assertEquals(dir1Uuid, dir2.getParentId());
         UUID dir2Uuid = dir2.getId();
 
-        DirectoryElementEntity insertedCaseElement = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getName().equals("caseName")).findFirst().orElseThrow();
-        assertEquals("CASE", insertedCaseElement.getType());
+        DirectoryElementEntity insertedElement = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getName().equals("elementName")).findFirst().orElseThrow();
+        assertEquals(TYPE_05, insertedElement.getType());
         //the element is in dir2
-        assertEquals(dir2Uuid, insertedCaseElement.getParentId());
+        assertEquals(dir2Uuid, insertedElement.getParentId());
 
         assertNbElementsInRepositories(3);
 
@@ -1610,13 +1605,13 @@ public class DirectoryTest {
     @Test
     public void duplicateElementTest() throws Exception {
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir", "user1");
-        ElementAttributes caseElement = toElementAttributes(UUID.randomUUID(), "caseName", "CASE", "user1");
-        insertAndCheckSubElement(rootDirUuid, caseElement);
-        UUID elementUUID = caseElement.getElementUuid();
+        ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_05, "user1");
+        insertAndCheckSubElement(rootDirUuid, elementAttributes);
+        UUID elementUUID = elementAttributes.getElementUuid();
         UUID newElementUuid = UUID.randomUUID();
         // duplicate the element
         ElementAttributes duplicatedElement = directoryService.duplicateElement(elementUUID, newElementUuid, null, "user1");
-        assertEquals("caseName(1)", duplicatedElement.getElementName());
+        assertEquals("elementName(1)", duplicatedElement.getElementName());
         assertEquals(newElementUuid, duplicatedElement.getElementUuid());
 
         List<DirectoryElementEntity> directoryElementList = directoryElementRepository.findAll();
@@ -1640,18 +1635,18 @@ public class DirectoryTest {
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirModif", userId);
 
         // insert a new element
-        final String modifElementName = "modif";
-        ElementAttributes modifAttributes = toElementAttributes(UUID.randomUUID(), modifElementName, MODIFICATION, userId);
-        insertAndCheckSubElement(rootDirUuid, modifAttributes);
+        final String elementName = "elementName";
+        ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), elementName, TYPE_04, userId);
+        insertAndCheckSubElement(rootDirUuid, elementAttributes);
 
         // insert another new element having the same existing name, allowing duplication with a new name
-        ElementAttributes anotherModifAttributes = toElementAttributes(UUID.randomUUID(), modifElementName, MODIFICATION, userId);
-        insertSubElement(rootDirUuid, anotherModifAttributes, true);
+        ElementAttributes element2Attributes = toElementAttributes(UUID.randomUUID(), elementName, TYPE_04, userId);
+        insertSubElement(rootDirUuid, element2Attributes, true);
         // expecting "incremental name"
-        anotherModifAttributes.setElementName(modifElementName + "(1)");
-        assertElementIsProperlyInserted(anotherModifAttributes);
+        element2Attributes.setElementName(elementName + "(1)");
+        assertElementIsProperlyInserted(element2Attributes);
 
-        checkDirectoryContent(rootDirUuid, userId, List.of(MODIFICATION), List.of(modifAttributes, anotherModifAttributes));
+        checkDirectoryContent(rootDirUuid, userId, List.of(TYPE_04), List.of(elementAttributes, element2Attributes));
 
         assertNbElementsInRepositories(3);
     }
@@ -1689,15 +1684,15 @@ public class DirectoryTest {
         insertAndCheckSubElement(subDirUuid1, subDirAttributes4);
         insertAndCheckSubElement(subDirUuid3, subDirAttributes5);
 
-        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
+        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
 
-        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_2, ""));
+        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_2, ""));
 
-        insertAndCheckSubElement(subDirUuid3, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_3, ""));
+        insertAndCheckSubElement(subDirUuid3, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_3, ""));
 
-        insertAndCheckSubElement(subDirUuid4, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
+        insertAndCheckSubElement(subDirUuid4, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
 
-        insertAndCheckSubElement(subDirUuid5, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_3, ""));
+        insertAndCheckSubElement(subDirUuid5, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_3, ""));
 
         MvcResult mvcResult;
 
@@ -1770,7 +1765,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testCountUserCases() throws Exception {
+    public void testCountUserElementOfType05() throws Exception {
         checkRootDirectoriesList("userId", List.of());
         // Insert a root directory
         ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
@@ -1811,12 +1806,12 @@ public class DirectoryTest {
         UUID subDirUuid1 = UUID.randomUUID();
         ElementAttributes subDirAttributes1 = toElementAttributes(subDirUuid1, "newSubDir1", DIRECTORY, USERID_1);
         insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes1);
-        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
+        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
         // dir2
         UUID subDirUuid2 = UUID.randomUUID();
         ElementAttributes subDirAttributes2 = toElementAttributes(subDirUuid2, "newSubDir2", DIRECTORY, USERID_1);
         insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes2);
-        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
+        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
 
         MvcResult mvcResult = mockMvc
               .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))

@@ -38,15 +38,11 @@ import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttr
  */
 @Service
 public class DirectoryService {
-    public static final String STUDY = "STUDY";
-    public static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
-    public static final String FILTER = "FILTER";
-    public static final String MODIFICATION = "MODIFICATION";
     public static final String DIRECTORY = "DIRECTORY";
-    public static final String CASE = "CASE";
     public static final String ELEMENT = "ELEMENT";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String UPDATE_TYPE_STUDIES = "studies";
+    public static final String HEADER_STUDY_UUID = "studyUuid";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
 

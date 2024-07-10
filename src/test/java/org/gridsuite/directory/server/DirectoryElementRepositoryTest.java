@@ -55,6 +55,8 @@ class DirectoryElementRepositoryTest {
 
     @Test
     void testCountCasesByUser() {
+        //TODO: the specific types such as study and filter are kipper on purpose
+        // It's will be removed later
         String userId1 = "user1";
         DirectoryElementEntity parentDirectory = directoryElementRepository.save(
                 createRootElement("root", "DIRECTORY", userId1)

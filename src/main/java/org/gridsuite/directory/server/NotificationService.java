@@ -34,7 +34,6 @@ public class NotificationService {
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NOTIFICATION_TYPE = "notificationType";
     public static final String HEADER_ELEMENT_NAME = "elementName";
-    public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
     private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";

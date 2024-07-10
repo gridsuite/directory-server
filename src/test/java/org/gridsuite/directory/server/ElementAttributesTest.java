@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertThrows;
@@ -41,6 +40,7 @@ import static org.junit.Assert.assertThrows;
 public class ElementAttributesTest {
 
     private static final UUID ELEMENT_UUID = UUID.randomUUID();
+    public static final String TYPE_01 = "TYPE_01";
 
     @Autowired
     ObjectMapper mapper;
@@ -57,7 +57,7 @@ public class ElementAttributesTest {
         Instant localCreationDate = Instant.now();
 
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
-        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", STUDY, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
+        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", TYPE_01, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
 
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), "userId"));
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().build(), "userId"));
@@ -65,7 +65,7 @@ public class ElementAttributesTest {
 
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().build(), "userId2"));
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementUuid(UUID.randomUUID()).build(), "userId"));
-        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().type(STUDY).build(), "userId"));
+        assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().type(TYPE_01).build(), "userId"));
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().owner("newUser").build(), "userId"));
         assertFalse(elementEntity.isAttributesUpdatable(ElementAttributes.builder().subdirectoriesCount(1L).build(), "userId"));
 
