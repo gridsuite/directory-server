@@ -87,8 +87,8 @@ public class ElementAttributesTest {
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", "description"));
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId"));
 
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId", false, null)));
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId", false, null), 1L));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId")));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId"), 1L));
         verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", "userId", "description", creationDate, creationDate, "userId")));
 
         assertThrows(NullPointerException.class, () -> toElementAttributes((DirectoryElementEntity) null));

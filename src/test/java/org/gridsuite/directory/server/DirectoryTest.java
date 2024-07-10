@@ -1765,7 +1765,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testCountUserElementOfType05() throws Exception {
+    public void testCountUserCases() throws Exception {
         checkRootDirectoriesList("userId", List.of());
         // Insert a root directory
         ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
