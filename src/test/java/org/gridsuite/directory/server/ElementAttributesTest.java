@@ -56,8 +56,8 @@ public class ElementAttributesTest {
     public void testElementEntityUpdate() {
         Instant localCreationDate = Instant.now();
 
-        DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
-        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", TYPE_01, "userId", "description", localCreationDate, localCreationDate, "userId", false, null);
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", localCreationDate, localCreationDate, "userId");
+        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", TYPE_01, "userId", "description", localCreationDate, localCreationDate, "userId");
 
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), "userId"));
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().build(), "userId"));

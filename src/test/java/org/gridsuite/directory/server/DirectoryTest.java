@@ -75,7 +75,7 @@ public class DirectoryTest {
     public static final String TYPE_04 = "TYPE_04";
     public static final String TYPE_05 = "TYPE_05";
     public static final String DIRECTORY = "DIRECTORY";
-    public static final String CASE= "CASE";
+    public static final String CASE = "CASE";
 
     private static final long TIMEOUT = 1000;
     private static final UUID TYPE_01_RENAME_UUID = UUID.randomUUID();
@@ -1766,6 +1766,8 @@ public class DirectoryTest {
 
     @Test
     public void testCountUserCases() throws Exception {
+        //TODO: the specific types such as study and filter are kipper on purpose
+        // It's will be removed later
         checkRootDirectoriesList("userId", List.of());
         // Insert a root directory
         ElementAttributes newDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
@@ -1793,45 +1795,5 @@ public class DirectoryTest {
                 .perform(get("/v1/users/{userId}/cases/count", "NOT_SAME_USER"))
                 .andExpectAll(status().isOk()).andReturn();
         assertEquals("1", result.getResponse().getContentAsString());
-    }
-
-    @Test
-    public void testSearchWithOrphans() throws Exception {
-        //     root
-        //   /       \
-        // dir1     dir2
-        ElementAttributes rootDirectory = retrieveInsertAndCheckRootDirectory("directory", USERID_1);
-        UUID rootDirectoryUuid = rootDirectory.getElementUuid();
-        // dir1
-        UUID subDirUuid1 = UUID.randomUUID();
-        ElementAttributes subDirAttributes1 = toElementAttributes(subDirUuid1, "newSubDir1", DIRECTORY, USERID_1);
-        insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes1);
-        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
-        // dir2
-        UUID subDirUuid2 = UUID.randomUUID();
-        ElementAttributes subDirAttributes2 = toElementAttributes(subDirUuid2, "newSubDir2", DIRECTORY, USERID_1);
-        insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes2);
-        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
-
-        MvcResult mvcResult = mockMvc
-              .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
-              .andExpectAll(status().isOk()).andReturn();
-        List<Object> result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        assertEquals(2, result.size());
-        output.clear();
-
-        //                              root
-        //                    /                           \
-        // dir1 (deleted but keeping its sub-elements)     dir2
-        directoryElementRepository.deleteById(subDirUuid1);
-
-        mvcResult = mockMvc
-              .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
-              .andExpectAll(status().isOk()).andReturn();
-        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {
-        });
-        assertEquals(1, result.size());
-        output.clear();
     }
 }

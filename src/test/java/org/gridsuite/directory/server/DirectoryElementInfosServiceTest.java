@@ -137,7 +137,7 @@ class DirectoryElementInfosServiceTest {
     }
 
     private DirectoryElementInfos makeElementFile(String name, UUID parentId) {
-        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(STUDY).owner("admin").parentId(parentId).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(TYPE_01).owner("admin").parentId(parentId).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
     /*
         Directory Structure:
