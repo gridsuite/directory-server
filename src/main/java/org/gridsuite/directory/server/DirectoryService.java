@@ -190,9 +190,7 @@ public class DirectoryService {
                         elementAttributes.getDescription(),
                         now,
                         now,
-                        elementAttributes.getOwner(),
-                        false,
-                        null
+                        elementAttributes.getOwner()
                 )
         );
     }

@@ -23,13 +23,11 @@ import java.util.UUID;
 @Repository
 public interface DirectoryElementRepository extends JpaRepository<DirectoryElementEntity, UUID> {
 
-    List<DirectoryElementEntity> findAllByStashed(boolean stashed);
+    List<DirectoryElementEntity> findAllByParentId(UUID parentId);
 
-    List<DirectoryElementEntity> findAllByParentIdAndStashed(UUID parentId, boolean stashed);
+    List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids);
 
-    List<DirectoryElementEntity> findAllByIdInAndStashed(List<UUID> uuids, boolean stashed);
-
-    List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNotAndStashed(List<UUID> uuids, UUID parentUuid, String type, boolean stashed);
+    List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNot(List<UUID> uuids, UUID parentUuid, String type);
 
     @Modifying
     @Transactional
@@ -38,17 +36,16 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     @Query("SELECT d FROM DirectoryElementEntity d " +
             "WHERE d.parentId IS NULL " +
-            "AND d.type = 'DIRECTORY' " +
-            "AND d.stashed = false")
+            "AND d.type = 'DIRECTORY'")
     List<DirectoryElementEntity> findRootDirectories();
 
-    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND d.name=:name and d.stashed = false ")
+    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.parentId IS NULL AND d.type = 'DIRECTORY' AND d.name=:name")
     List<DirectoryElementEntity> findRootDirectoriesByName(String name);
 
-    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.type = 'DIRECTORY' AND d.name=:name AND d.parentId=:parentId AND d.stashed = false")
+    @Query("SELECT d FROM DirectoryElementEntity d  WHERE d.type = 'DIRECTORY' AND d.name=:name AND d.parentId=:parentId")
     List<DirectoryElementEntity> findDirectoriesByNameAndParentId(String name, UUID parentId);
 
-    @Query("SELECT name FROM DirectoryElementEntity WHERE parentId=:parentId AND type=:type AND name like :name% and stashed = false ")
+    @Query("SELECT name FROM DirectoryElementEntity WHERE parentId=:parentId AND type=:type AND name like :name%")
     List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
 
     //We also count when type = study because every study is linked to a case that is not visible in DB
@@ -63,13 +60,13 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
         Long getCount();
     }
 
-    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) AND d.stashed = FALSE GROUP BY d.parentId")
+    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) GROUP BY d.parentId")
     List<SubDirectoryCount> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes);
 
     @Transactional
     void deleteById(UUID id);
 
-    List<DirectoryElementEntity> findByNameAndParentIdAndTypeAndStashed(String name, UUID parentId, String type, boolean stashed);
+    List<DirectoryElementEntity> findByNameAndParentIdAndType(String name, UUID parentId, String type);
 
 
     //When using UNION, there is no guarantee order in which the rows are actually returned
