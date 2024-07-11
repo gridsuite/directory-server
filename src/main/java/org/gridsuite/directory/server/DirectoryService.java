@@ -64,6 +64,7 @@ public class DirectoryService {
     }
 
     /* notifications */
+    //TODO: this consumer is the kept here at the moment, but it will be moved to explore server later on
     @Bean
     public Consumer<Message<String>> consumeStudyUpdate() {
         LOGGER.info(CATEGORY_BROKER_INPUT);

@@ -1766,7 +1766,7 @@ public class DirectoryTest {
 
     @Test
     public void testCountUserCases() throws Exception {
-        //TODO: the specific types such as study and filter are kipper on purpose for this test
+        //TODO: the specific types such as study and filter... are kept on purpose for this test
         // It's will be removed later
         checkRootDirectoriesList("userId", List.of());
         // Insert a root directory
