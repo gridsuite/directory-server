@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.Message;
@@ -592,9 +591,9 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
+    public Page<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
         Pageable pageRequest = PageRequest.of(0, ES_PAGE_MAX_SIZE);
-        return  directoryElementInfosService.searchElements(userInput, directoryUuid, pageRequest);
+        return directoryElementInfosService.searchElements(userInput, directoryUuid, pageRequest);
     }
 
     public boolean areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {
