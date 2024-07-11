@@ -1,17 +1,21 @@
 [
-{
-  "name":"[Ljava.util.UUID;"
-},
-{
-  "name":"org.springframework.core.env.AbstractEnvironment",
-  "methods":[{"name":"getProperty","parameterTypes":["java.lang.String"]}]
-},
-{
-  "name":"co.elastic.clients.elasticsearch._types.mapping.TypeMapping",
-  "fields":[{"name":"_DESERIALIZER"}]
-},
-{
-  "name":"co.elastic.clients.elasticsearch.indices.IndexSettings",
-  "fields":[{"name":"_DESERIALIZER"}]
-}
+  {
+    "condition":{"typeReachable":"org.hibernate.loader.ast.internal.MultiIdEntityLoaderArrayParam"},
+    "name":"[Ljava.util.UUID;"
+  },
+  {
+    "condition":{"typeReachable":"org.springframework.core.env.AbstractEnvironment"},
+    "name":"org.springframework.core.env.AbstractEnvironment",
+    "methods":[{"name":"getProperty","parameterTypes":["java.lang.String"]}]
+  },
+  {
+    "condition":{"typeReachable":"co.elastic.clients.elasticsearch._types.mapping.TypeMapping"},
+    "name":"co.elastic.clients.elasticsearch._types.mapping.TypeMapping",
+    "fields":[{"name":"_DESERIALIZER"}]
+  },
+  {
+    "condition":{"typeReachable":"co.elastic.clients.elasticsearch.indices.IndexSettings"},
+    "name":"co.elastic.clients.elasticsearch.indices.IndexSettings",
+    "fields":[{"name":"_DESERIALIZER"}]
+  }
 ]
