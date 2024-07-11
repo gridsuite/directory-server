@@ -49,6 +49,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     List<String> getNameByTypeAndParentIdAndNameStartWith(String type, UUID parentId, String name);
 
     //We also count when type = study because every study is linked to a case that is not visible in DB
+    //TODO: this will be changed on another US
     @Query("SELECT count(*) FROM DirectoryElementEntity WHERE owner=:owner AND (type='CASE' OR type='STUDY')")
     int getCasesCountByOwner(String owner);
 

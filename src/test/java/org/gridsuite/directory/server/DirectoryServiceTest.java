@@ -22,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @DisableElasticsearch
 class DirectoryServiceTest {
+    public static final String TYPE_01 = "TYPE_01";
+    public static final String TYPE_02 = "TYPE_02";
     @Autowired
     DirectoryService directoryService;
 
@@ -38,19 +40,19 @@ class DirectoryServiceTest {
     UUID parentDirectoryUuid = parentDirectory.getId();
 
     DirectoryElementEntity dir1 = createElement(parentDirectoryUuid, "dir1", DIRECTORY, "user1");
-    DirectoryElementEntity filter1 = createElement(parentDirectoryUuid, "filter1", "FILTER", "user1");
-    DirectoryElementEntity study1 = createElement(parentDirectoryUuid, "study1", "STUDY", "user1");
-    DirectoryElementEntity study2 = createElement(parentDirectoryUuid, "study2", "STUDY", "user1");
-    DirectoryElementEntity studyFromOtherDir = createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", "user1");
+    DirectoryElementEntity element0 = createElement(parentDirectoryUuid, "elementName0", TYPE_02, "user1");
+    DirectoryElementEntity element1 = createElement(parentDirectoryUuid, "elementName1", TYPE_01, "user1");
+    DirectoryElementEntity element2 = createElement(parentDirectoryUuid, "elementName2", TYPE_01, "user1");
+    DirectoryElementEntity elementFromOtherDir = createElement(UUID.randomUUID(), "elementName3", TYPE_01, "user1");
 
-    DirectoryElementEntity study3 = createElement(parentDirectoryUuid, "study3", "STUDY", "user2");
+    DirectoryElementEntity element3 = createElement(parentDirectoryUuid, "elementName4", TYPE_01, "user2");
 
     List<DirectoryElementEntity> elementsToDelete = List.of(
         dir1,
-        filter1,
-        study1,
-        study2,
-        studyFromOtherDir
+            element0,
+            element1,
+            element2,
+            elementFromOtherDir
     );
 
     @Test
@@ -80,9 +82,9 @@ class DirectoryServiceTest {
         verify(directoryElementInfosRepository, times(1)).deleteAllById(elementExpectedToDeleteUuids);
 
         // notifications should be sent for each deleted element
-        verify(notificationService, times(1)).emitDeletedElement(study1.getId(), "user1");
-        verify(notificationService, times(1)).emitDeletedElement(study2.getId(), "user1");
-        verify(notificationService, times(1)).emitDeletedElement(filter1.getId(), "user1");
+        verify(notificationService, times(1)).emitDeletedElement(element1.getId(), "user1");
+        verify(notificationService, times(1)).emitDeletedElement(element2.getId(), "user1");
+        verify(notificationService, times(1)).emitDeletedElement(element0.getId(), "user1");
         // notification for updated directory
         verify(notificationService, times(1)).emitDirectoryChanged(parentDirectoryUuid, null, "user1", null, false, NotificationType.UPDATE_DIRECTORY);
 
@@ -91,13 +93,13 @@ class DirectoryServiceTest {
 
     @Test
     void testDeleteFromForbiddenDirectory() {
-        List<UUID> elementToDeleteUuids = List.of(study3).stream().map(e -> e.getId()).toList();
-        UUID study3Uuid = study3.getId();
-        when(directoryElementRepository.findById(study3.getId())).thenReturn(Optional.of(study3));
-        when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(List.of(study3));
+        List<UUID> elementToDeleteUuids = List.of(element3).stream().map(e -> e.getId()).toList();
+        UUID element3Uuid = element3.getId();
+        when(directoryElementRepository.findById(element3.getId())).thenReturn(Optional.of(element3));
+        when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(List.of(element3));
 
-        // study3 was created by user2,so it can not be deleted by user1
-        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, study3Uuid, "user1"));
+        // element3 was created by user2,so it can not be deleted by user1
+        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, element3Uuid, "user1"));
         assertEquals(DirectoryException.Type.NOT_ALLOWED.name(), exception.getMessage());
     }
 }
