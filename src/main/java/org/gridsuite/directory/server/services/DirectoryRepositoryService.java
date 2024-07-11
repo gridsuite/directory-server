@@ -8,7 +8,6 @@ package org.gridsuite.directory.server.services;
 
 import com.google.common.collect.Lists;
 import lombok.NonNull;
-
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -16,11 +15,11 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -66,10 +65,13 @@ public class DirectoryRepositoryService {
                 .forEach(directoryElementInfosRepository::saveAll);
     }
 
+    private DirectoryElementEntity saveElementsInfo(DirectoryElementEntity elementEntity) {
+        directoryElementInfosRepository.save(elementEntity.toDirectoryElementInfos(findElementHierarchy(elementEntity.getParentId())));
+        return elementEntity;
+    }
+
     public DirectoryElementEntity saveElement(DirectoryElementEntity elementEntity) {
-        DirectoryElementEntity savedElementEntity = directoryElementRepository.save(elementEntity);
-        directoryElementInfosRepository.save(savedElementEntity.toDirectoryElementInfos());
-        return savedElementEntity;
+        return saveElementsInfo(directoryElementRepository.save(elementEntity));
     }
 
     public void deleteElement(UUID elementUuid) {
@@ -88,8 +90,8 @@ public class DirectoryRepositoryService {
 
     public void reindexElements() {
         saveElementsInfos(directoryElementRepository.findAll().stream()
-            .map(DirectoryElementEntity::toDirectoryElementInfos)
-            .toList());
+                .map(directoryElementEntity -> directoryElementEntity.toDirectoryElementInfos(findElementHierarchy(directoryElementEntity.getParentId())))
+                .toList());
     }
 
     public UUID getParentUuid(UUID elementUuid) {
@@ -128,6 +130,8 @@ public class DirectoryRepositoryService {
     }
 
     public List<DirectoryElementEntity> findElementHierarchy(UUID elementId) {
-        return directoryElementRepository.findElementHierarchy(elementId);
+        // Test null for root directories
+        return elementId == null ? List.of() : directoryElementRepository.findElementHierarchy(elementId);
     }
+
 }

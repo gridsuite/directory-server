@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
@@ -84,8 +84,10 @@ class SupervisionTest {
 
         supervisionService.reindexElements();
 
+        List<DirectoryElementEntity> elementPath = List.of(); // No need path for tests
         verify(directoryElementRepository, times(1)).findAll();
-        verify(directoryElementInfosRepository, times(1)).saveAll(allElements.stream().map(DirectoryElementEntity::toDirectoryElementInfos).toList());
+        verify(directoryElementInfosRepository, times(1)).saveAll(allElements.stream().map(e -> e.toDirectoryElementInfos(elementPath)).toList());
+        verify(directoryElementRepository, times(3)).findElementHierarchy(any(UUID.class));
     }
 
     void assertException(Exception expectedException, Executable executable) {
