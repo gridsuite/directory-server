@@ -54,7 +54,7 @@ public class DirectoryService {
     public static final String UPDATE_TYPE_STUDIES = "studies";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
-    private static final int ES_PAGE_MAX_SIZE = 10;
+    private static final int ES_PAGE_MAX_SIZE = 50;
 
     private final StudyService studyService;
 

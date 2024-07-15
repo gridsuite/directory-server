@@ -34,7 +34,7 @@ public class DirectoryElementInfosService {
     private final ElasticsearchOperations elasticsearchOperations;
 
     private static final String ELEMENT_NAME = "name.fullascii";
-    private static final String FULL_PATH_UUID = "fullPathUuid.keyword";
+    private static final String PATH_UUID = "pathUuid.keyword";
     private static final String PARENT_ID = "parentId.keyword";
     static final String ELEMENT_TYPE = "type.keyword";
 
@@ -64,7 +64,7 @@ public class DirectoryElementInfosService {
 
         // The document is in path
         Query fullPathQuery = TermQuery.of(m -> m
-                .field(FULL_PATH_UUID)
+                .field(PATH_UUID)
                 .value(currentDirectoryUuid)
                 .boost(defaultBoostValue)
         )._toQuery();
