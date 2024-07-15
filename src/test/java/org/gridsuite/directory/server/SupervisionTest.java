@@ -68,9 +68,9 @@ class SupervisionTest {
         DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId");
         DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId");
         DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId");
-        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE", "userId", "description", Instant.now(), Instant.now(), "userId");
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE", "userId", "description", Instant.now(), Instant.now(), "userId");
 
-        List<DirectoryElementEntity> allElements = List.of(rootDir, dirEntity, subdirEntity, studyEntity);
+        List<DirectoryElementEntity> allElements = List.of(rootDir, dirEntity, subdirEntity, elementEntity);
         when(directoryElementRepository.findAll()).thenReturn(allElements);
 
         supervisionService.reindexElements();
