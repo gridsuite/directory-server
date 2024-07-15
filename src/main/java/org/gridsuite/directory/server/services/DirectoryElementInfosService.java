@@ -6,10 +6,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 package org.gridsuite.directory.server.services;
 
-import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
-import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import lombok.Getter;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
@@ -58,6 +55,13 @@ public class DirectoryElementInfosService {
         // The documents whose name contains the user input
         Query matchNameWilcardQuery = Queries.wildcardQuery(ELEMENT_NAME, "*" + escapeLucene(userInput) + "*")._toQuery();
 
+        // Boosting the relevance of starts with input text
+        Query prefixQuery = PrefixQuery.of(m -> m
+                .field(ELEMENT_NAME)
+                .value(userInput)
+                .boost(defaultBoostValue))
+                ._toQuery();
+
         // The document is in path
         Query fullPathQuery = TermQuery.of(m -> m
                 .field(FULL_PATH_UUID)
@@ -73,7 +77,7 @@ public class DirectoryElementInfosService {
         )._toQuery();
 
         // All queries with default default value
-        List<Query> queriesWithDefaultBoostValue = List.of(parentIdQuery, fullPathQuery);
+        List<Query> queriesWithDefaultBoostValue = List.of(parentIdQuery, fullPathQuery, prefixQuery);
 
         // The documents whose name exactly matches the user input
         // If parentIdQuery match then fullPathQuery will also match
