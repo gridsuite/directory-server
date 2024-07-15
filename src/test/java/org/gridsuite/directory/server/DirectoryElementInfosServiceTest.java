@@ -279,4 +279,37 @@ class DirectoryElementInfosServiceTest {
         assertEquals("common_file", hitsFile.get(0).getName());
         assertEquals("file1", hitsFile.get(1).getName()); // we get second the elements in the path
     }
+
+
+    /*
+      root_directory
+      ├── sub_directory1
+      ....
+      ├── sub_directory2
+      │   ├── bnew-filebbbb
+      │   ├── anew-file
+      │   ├── new-file
+      │   ├── test-new-file
+      ...
+   */
+    @Test
+    void testTermStartByUserInput() { // when a file start with search term
+        Map<String, DirectoryElementInfos> allDirs = createFilesElements();
+        UUID currentDirUuid = allDirs.get("sub_directory2").getId();
+        var anewFile1 = makeElementFile("anew-file", allDirs.get("sub_directory2").getId());
+        var newFile2 = makeElementFile("new-file-Ok", allDirs.get("sub_directory2").getId());
+        var bNewFile = makeElementFile("bnew-filebbbb", allDirs.get("sub_directory2").getId());
+        var testNewFile = makeElementFile("test-new-file", allDirs.get("sub_directory2").getId());
+        repositoryService.saveElementsInfos(List.of(bNewFile, newFile2, anewFile1, testNewFile));
+
+        //we want to have the files in the current directory if any
+        // then the files in the path of the current directory (sub directories and parent directories)
+        // then the files in the other directories
+        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("new-file", currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
+        assertEquals(4, hitsFile.size());
+        assertEquals(newFile2, hitsFile.get(0));
+        assertEquals(bNewFile, hitsFile.get(1));
+        assertEquals(anewFile1, hitsFile.get(2));
+        assertEquals(testNewFile, hitsFile.get(3));
+    }
 }
