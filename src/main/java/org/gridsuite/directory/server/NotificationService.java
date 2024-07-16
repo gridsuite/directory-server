@@ -40,11 +40,11 @@ public class NotificationService {
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
     @Autowired
-    private StreamBridge studyUpdatePublisher;
+    private StreamBridge directoryUpdatePublisher;
 
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
-        studyUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
+        directoryUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
