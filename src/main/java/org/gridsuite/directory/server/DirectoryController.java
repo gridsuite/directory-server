@@ -259,4 +259,13 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(service.searchElements(userInput, directoryUuid));
     }
+
+    @GetMapping(value = "/directories/uuid", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get uuid from directory described by the path")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The directory uuid"),
+    })
+    public ResponseEntity<UUID> getDirectoryUuidFromPath(@RequestParam("directoryPath") String directoryPath) {
+        return ResponseEntity.ok().body(service.getDirectoryUuidFromPath(directoryPath));
+    }
 }

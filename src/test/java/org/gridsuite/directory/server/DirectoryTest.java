@@ -1799,4 +1799,57 @@ public class DirectoryTest {
                 .andExpectAll(status().isOk()).andReturn();
         assertEquals("1", result.getResponse().getContentAsString());
     }
+
+    @Test
+    public void testGetDirectoryFromPath() throws Exception {
+
+        //                          root (userId2)
+        //         /                          |               \
+        //       dir1 (userId1)      dir2 (userId2)          dir3 (userId3)
+        //        |                                                    |
+        //       dir4 (userId1)                                       dir5 (userId3)
+
+        ElementAttributes rootDirectory = retrieveInsertAndCheckRootDirectory("root", USERID_2);
+        UUID rootDirectoryUuid = rootDirectory.getElementUuid();
+        UUID subDirUuid1 = UUID.randomUUID();
+        ElementAttributes subDirAttributes1 = toElementAttributes(subDirUuid1, "dir1", DIRECTORY, USERID_1);
+        UUID subDirUuid2 = UUID.randomUUID();
+        ElementAttributes subDirAttributes2 = toElementAttributes(subDirUuid2, "dir2", DIRECTORY, USERID_2);
+        UUID subDirUuid3 = UUID.randomUUID();
+        ElementAttributes subDirAttributes3 = toElementAttributes(subDirUuid3, "dir3", DIRECTORY, USERID_3);
+        UUID subDirUuid4 = UUID.randomUUID();
+        ElementAttributes subDirAttributes4 = toElementAttributes(subDirUuid4, "dir4", DIRECTORY, USERID_1);
+        UUID subDirUuid5 = UUID.randomUUID();
+        ElementAttributes subDirAttributes5 = toElementAttributes(subDirUuid5, "dir5", DIRECTORY, USERID_3);
+
+        insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes1);
+        insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes2);
+        insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes3);
+        insertAndCheckSubElement(subDirUuid1, subDirAttributes4);
+        insertAndCheckSubElement(subDirUuid3, subDirAttributes5);
+
+        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
+        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_2, ""));
+        insertAndCheckSubElement(subDirUuid3, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_3, ""));
+        insertAndCheckSubElement(subDirUuid4, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
+        insertAndCheckSubElement(subDirUuid5, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_3, ""));
+
+        MvcResult mvcResult;
+
+        // existing directory
+        mvcResult = mockMvc
+            .perform(get("/v1/directories/uuid?directoryPath=" + "root/dir1/dir4")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpectAll(status().isOk()).andReturn();
+        UUID resultUuid = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
+        assertEquals(resultUuid, subDirAttributes4.getElementUuid());
+        output.clear();
+
+        // unexisting directory
+        mockMvc
+            .perform(get("/v1/directories/uuid?directoryPath=" + "root/dir1/dir5")
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpectAll(status().isNotFound()).andReturn();
+        output.clear();
+    }
 }
