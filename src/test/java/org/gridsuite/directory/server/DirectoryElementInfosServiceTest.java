@@ -103,7 +103,7 @@ class DirectoryElementInfosServiceTest {
     void searchPagedElementInfos() {
         List<DirectoryElementInfos> elements = new ArrayList<>(20);
         for (int i = 0; i < 20; i++) {
-            elements.add(createFilter("filter" + i));
+            elements.add(createElements("filter" + i));
         }
         repositoryService.saveElementsInfos(elements);
         Page<DirectoryElementInfos> pagedHits = directoryElementInfosService.searchElements("filter", "", PageRequest.of(0, 10));
@@ -141,7 +141,7 @@ class DirectoryElementInfosServiceTest {
         assertEquals(1, directoryElementInfosService.searchElements(pat, "", PageRequest.of(0, 10)).getTotalElements());
     }
 
-    private DirectoryElementInfos createFilter(String name) {
+    private DirectoryElementInfos createElements(String name) {
         return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(FILTER).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
 
