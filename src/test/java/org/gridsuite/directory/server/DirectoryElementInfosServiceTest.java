@@ -280,6 +280,21 @@ class DirectoryElementInfosServiceTest {
         assertEquals("file1", hitsFile.get(1).getName()); // we get second the elements in the path
     }
 
+    @Test
+    void testExactMatchInCurrentDir() {
+        Map<String, DirectoryElementInfos> allDirs = createFilesElements();
+        UUID currentDirUuid = allDirs.get("sub_sub_directory1_2").getId();
+        String fileName = "new-file";
+        var newFile = makeElementFile(fileName, allDirs.get("sub_sub_directory1_2").getId());
+        var newFile1 = makeElementFile(fileName + "1", allDirs.get("sub_sub_directory1_2").getId());
+        var newFile2 = makeElementFile("1" + fileName + "2", allDirs.get("sub_sub_directory1_2").getId());
+        repositoryService.saveElementsInfos(List.of(newFile, newFile2, newFile1));
+        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements(fileName, currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
+        assertEquals(3, hitsFile.size());
+        assertEquals(fileName, hitsFile.get(0).getName());
+        assertEquals(fileName + "1", hitsFile.get(1).getName());
+        assertEquals("1" + fileName + "2", hitsFile.get(2).getName());
+    }
 
     /*
       root_directory
