@@ -142,7 +142,7 @@ class DirectoryElementInfosServiceTest {
     }
 
     private DirectoryElementInfos createElements(String name) {
-        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(FILTER).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type("TYPE_01").owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
 
     private DirectoryElementInfos makeElementDir(String name) {
