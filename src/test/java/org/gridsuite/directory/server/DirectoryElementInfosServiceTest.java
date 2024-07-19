@@ -33,6 +33,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class DirectoryElementInfosServiceTest {
+    public static final String TYPE_01 = "TYPE_01";
+    public static final String TYPE_02 = "TYPE_02";
+    public static final String TYPE_03 = "TYPE_03";
+    public static final String TYPE_04 = "TYPE_04";
+    public static final String DIRECTORY = "DIRECTORY";
     @Autowired
     DirectoryRepositoryService repositoryService;
 
@@ -53,22 +58,22 @@ class DirectoryElementInfosServiceTest {
 
     @Test
     void testAddDeleteElementInfos() {
-        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type("STUDY").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type("FILTER").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type("DIRECTORY").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type("CONTINGENCY_LIST").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element1Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName1").type(TYPE_01).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element2Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName2").type(TYPE_02).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element3Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName3").type(TYPE_03).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
 
         // Add
-        List<DirectoryElementInfos> infos = List.of(studyInfos, filterInfos, directoryInfos, contingencyListInfos);
+        List<DirectoryElementInfos> infos = List.of(element1Infos, element2Infos, directoryInfos, element3Infos);
         repositoryService.saveElementsInfos(infos);
         List<DirectoryElementInfos> infosDB = IterableUtils.toList(directoryElementInfosRepository.findAll());
         assertEquals(4, infosDB.size());
         assertEquals(infos, infosDB);
 
         // Modify
-        studyInfos.setName("newName");
-        directoryElementInfosRepository.save(studyInfos);
-        assertEquals(studyInfos, directoryElementInfosRepository.findById(studyInfos.getId()).orElseThrow());
+        element1Infos.setName("newName");
+        directoryElementInfosRepository.save(element1Infos);
+        assertEquals(element1Infos, directoryElementInfosRepository.findById(element1Infos.getId()).orElseThrow());
 
         // Delete
         directoryElementInfosRepository.deleteAll();
@@ -78,20 +83,20 @@ class DirectoryElementInfosServiceTest {
     @Test
     void searchElementInfos() {
         var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aStudy").type(STUDY).owner("admin1").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var caseInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aCase").type(CASE).owner("admin1").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var filterInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aFilter").type(FILTER).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var contingencyListInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aContingencyList").type(CONTINGENCY_LIST).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element1Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName1").type(TYPE_01).owner("admin1").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element4Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName4").type(TYPE_04).owner("admin1").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element2Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName2").type(TYPE_02).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element3Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName3").type(TYPE_03).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
 
-        List<DirectoryElementInfos> infos = List.of(directoryInfos, filterInfos, studyInfos, caseInfos, contingencyListInfos);
+        List<DirectoryElementInfos> infos = List.of(directoryInfos, element2Infos, element1Infos, element4Infos, element3Infos);
         repositoryService.saveElementsInfos(infos);
 
         Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", ""));
         assertEquals(4, hits.size());
-        assertTrue(hits.contains(studyInfos));
-        assertTrue(hits.contains(caseInfos));
-        assertTrue(hits.contains(filterInfos));
-        assertTrue(hits.contains(contingencyListInfos));
+        assertTrue(hits.contains(element1Infos));
+        assertTrue(hits.contains(element4Infos));
+        assertTrue(hits.contains(element2Infos));
+        assertTrue(hits.contains(element3Infos));
 
         hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory", ""));
         assertEquals(0, hits.size());
@@ -100,7 +105,7 @@ class DirectoryElementInfosServiceTest {
     @Test
     void searchSpecialChars() {
         var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("s+Ss+ss'sp&pn(n n)ne{e e}et<t t>te|eh-ht.th/hl\\lk[k k]k")
-                .type(STUDY).owner("admin1").parentId(UUID.randomUUID())
+                .type(TYPE_01).owner("admin1").parentId(UUID.randomUUID())
                 .subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
         repositoryService.saveElementsInfos(List.of(studyInfos));
 
@@ -132,7 +137,7 @@ class DirectoryElementInfosServiceTest {
     }
 
     private DirectoryElementInfos makeElementFile(String name, UUID parentId) {
-        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(STUDY).owner("admin").parentId(parentId).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(TYPE_01).owner("admin").parentId(parentId).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
     /*
         Directory Structure:

@@ -13,7 +13,6 @@ import org.gridsuite.directory.server.services.SupervisionService;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -23,8 +22,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
@@ -42,12 +39,6 @@ class SupervisionTest {
 
     @MockBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
-
-    List<DirectoryElementEntity> expectedElements = List.of(
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "dir1", "DIRECTORY", "user1", null, Instant.now(), Instant.now(), "user1"),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "filter1", "FILTER", "user1", null, Instant.now(), Instant.now(), "user1"),
-        new DirectoryElementEntity(UUID.randomUUID(), UUID.randomUUID(), "study", "STUDY", "user2", null, Instant.now(), Instant.now(), "user2")
-    );
 
     @Test
     void testDeleteElements() {
@@ -77,9 +68,9 @@ class SupervisionTest {
         DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId");
         DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId");
         DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId");
-        DirectoryElementEntity studyEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE", "userId", "description", Instant.now(), Instant.now(), "userId");
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE", "userId", "description", Instant.now(), Instant.now(), "userId");
 
-        List<DirectoryElementEntity> allElements = List.of(rootDir, dirEntity, subdirEntity, studyEntity);
+        List<DirectoryElementEntity> allElements = List.of(rootDir, dirEntity, subdirEntity, elementEntity);
         when(directoryElementRepository.findAll()).thenReturn(allElements);
 
         supervisionService.reindexElements();
@@ -88,11 +79,6 @@ class SupervisionTest {
         verify(directoryElementRepository, times(1)).findAll();
         verify(directoryElementInfosRepository, times(1)).saveAll(allElements.stream().map(e -> e.toDirectoryElementInfos(elementPath)).toList());
         verify(directoryElementRepository, times(3)).findElementHierarchy(any(UUID.class));
-    }
-
-    void assertException(Exception expectedException, Executable executable) {
-        Exception exception = assertThrows(expectedException.getClass(), executable);
-        assertEquals(expectedException.getMessage(), exception.getMessage());
     }
 
     @AfterEach

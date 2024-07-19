@@ -7,7 +7,6 @@
 package org.gridsuite.directory.server;
 
 import lombok.NonNull;
-import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
@@ -15,7 +14,6 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
-import org.gridsuite.directory.server.services.StudyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -40,19 +38,13 @@ import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttr
  */
 @Service
 public class DirectoryService {
-    public static final String STUDY = "STUDY";
-    public static final String CONTINGENCY_LIST = "CONTINGENCY_LIST";
-    public static final String FILTER = "FILTER";
-    public static final String MODIFICATION = "MODIFICATION";
     public static final String DIRECTORY = "DIRECTORY";
-    public static final String CASE = "CASE";
     public static final String ELEMENT = "ELEMENT";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String UPDATE_TYPE_STUDIES = "studies";
+    public static final String HEADER_STUDY_UUID = "studyUuid";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
-
-    private final StudyService studyService;
 
     private final NotificationService notificationService;
 
@@ -62,18 +54,17 @@ public class DirectoryService {
     private final DirectoryElementInfosService directoryElementInfosService;
 
     public DirectoryService(DirectoryRepositoryService repositoryService,
-                            StudyService studyService,
                             NotificationService notificationService,
                             DirectoryElementRepository directoryElementRepository,
                             DirectoryElementInfosService directoryElementInfosService) {
         this.repositoryService = repositoryService;
-        this.studyService = studyService;
         this.notificationService = notificationService;
         this.directoryElementRepository = directoryElementRepository;
         this.directoryElementInfosService = directoryElementInfosService;
     }
 
     /* notifications */
+    //TODO: this consumer is the kept here at the moment, but it will be moved to explore server later on
     @Bean
     public Consumer<Message<String>> consumeStudyUpdate() {
         LOGGER.info(CATEGORY_BROKER_INPUT);
@@ -310,11 +301,6 @@ public class DirectoryService {
                 elementEntity.getParentId() == null,
                 NotificationType.UPDATE_DIRECTORY
         );
-
-        //true if we updated a study name
-        if (elementEntity.getType().equals(STUDY) && StringUtils.isNotBlank(newElementAttributes.getElementName())) {
-            studyService.notifyStudyUpdate(elementUuid, userId);
-        }
     }
 
     @Transactional
@@ -344,7 +330,6 @@ public class DirectoryService {
         updateElementParentDirectory(element, newDirectoryUuid);
         emitDirectoryChangedNotifications(element, oldDirectory, userId);
 
-        notifyStudyUpdateIfApplicable(element, userId);
     }
 
     private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
@@ -365,12 +350,6 @@ public class DirectoryService {
     private void emitDirectoryChangedNotifications(DirectoryElementEntity element, DirectoryElementEntity oldDirectory, String userId) {
         notificationService.emitDirectoryChanged(element.getParentId(), element.getName(), userId, null, repositoryService.isRootDirectory(element.getId()), NotificationType.UPDATE_DIRECTORY);
         notificationService.emitDirectoryChanged(oldDirectory.getId(), element.getName(), userId, null, repositoryService.isRootDirectory(element.getId()), NotificationType.UPDATE_DIRECTORY);
-    }
-
-    private void notifyStudyUpdateIfApplicable(DirectoryElementEntity element, String userId) {
-        if (element.getType().equals(STUDY)) {
-            studyService.notifyStudyUpdate(element.getId(), userId);
-        }
     }
 
     private void validateNewDirectory(UUID newDirectoryUuid) {
@@ -427,9 +406,7 @@ public class DirectoryService {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
         repositoryService.deleteElement(elementAttributes.getElementUuid());
-        if (STUDY.equals(elementAttributes.getType())) {
-            notificationService.emitDeletedStudy(elementAttributes.getElementUuid(), userId);
-        }
+        notificationService.emitDeletedElement(elementAttributes.getElementUuid(), userId);
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
@@ -459,10 +436,10 @@ public class DirectoryService {
         // deleting all elements
         repositoryService.deleteElements(elementsAttributesToDelete.stream().map(ElementAttributes::getElementUuid).toList());
 
-        // extracting studyUuids from this list, to send specific notifications
+        // extracting elementUuids from this list, to send element deletion notifications
         elementsAttributesToDelete.stream()
-            .filter(element -> STUDY.equals(element.getType())).map(ElementAttributes::getElementUuid)
-            .forEach(studyUuid -> notificationService.emitDeletedStudy(studyUuid, userId));
+            .map(ElementAttributes::getElementUuid)
+            .forEach(elementUuid -> notificationService.emitDeletedElement(elementUuid, userId));
 
         // sending directory update notification
         notificationService.emitDirectoryChanged(

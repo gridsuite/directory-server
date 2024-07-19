@@ -26,6 +26,8 @@ import static org.assertj.core.api.Assertions.*;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class DirectoryElementRepositoryTest {
+    public static final String TYPE_01 = "TYPE_01";
+    public static final String TYPE_02 = "TYPE_02";
     @Autowired
     DirectoryElementRepository directoryElementRepository;
 
@@ -38,10 +40,10 @@ class DirectoryElementRepositoryTest {
 
         List<DirectoryElementEntity> insertedElement = directoryElementRepository.saveAll(List.of(
             createElement(parentDirectoryUuid, "dir1", DIRECTORY, "user1"),
-            createElement(parentDirectoryUuid, "filter1", "FILTER", "user1"),
-            createElement(parentDirectoryUuid, "study1", "STUDY", "user2"),
-            createElement(parentDirectoryUuid, "study2", "STUDY", "user2"),
-            createElement(UUID.randomUUID(), "studyFromOtherDir", "STUDY", "user2")
+            createElement(parentDirectoryUuid, "elementName1", TYPE_02, "user1"),
+            createElement(parentDirectoryUuid, "elementName2", TYPE_01, "user2"),
+            createElement(parentDirectoryUuid, "elementName3", TYPE_01, "user2"),
+            createElement(UUID.randomUUID(), "elementFromOtherDir", TYPE_01, "user2")
         ));
 
         List<DirectoryElementEntity> expectedResult = insertedElement.stream()
@@ -54,6 +56,8 @@ class DirectoryElementRepositoryTest {
 
     @Test
     void testCountCasesByUser() {
+        //TODO: the specific types such as study and filter... are kept on purpose
+        // It's will be removed later
         String userId1 = "user1";
         DirectoryElementEntity parentDirectory = directoryElementRepository.save(
                 createRootElement("root", "DIRECTORY", userId1)
