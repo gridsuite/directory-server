@@ -25,7 +25,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -93,7 +92,7 @@ class DirectoryElementInfosServiceTest {
         List<DirectoryElementInfos> infos = List.of(directoryInfos, element2Infos, element1Infos, element4Infos, element3Infos);
         repositoryService.saveElementsInfos(infos);
 
-        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", ""));
+        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", "", PageRequest.of(0, 10)).stream().toList());
         assertEquals(4, hits.size());
         assertTrue(hits.contains(element1Infos));
         assertTrue(hits.contains(element4Infos));
@@ -101,10 +100,10 @@ class DirectoryElementInfosServiceTest {
         assertTrue(hits.contains(element3Infos));
         Page<DirectoryElementInfos> pagedHits = directoryElementInfosService.searchElements("a", "", PageRequest.of(0, 10));
         assertEquals(4, pagedHits.getTotalElements());
-        assertTrue(pagedHits.getContent().contains(studyInfos));
-        assertTrue(pagedHits.getContent().contains(caseInfos));
-        assertTrue(pagedHits.getContent().contains(filterInfos));
-        assertTrue(pagedHits.getContent().contains(contingencyListInfos));
+        assertTrue(pagedHits.getContent().contains(element1Infos));
+        assertTrue(pagedHits.getContent().contains(element4Infos));
+        assertTrue(pagedHits.getContent().contains(element2Infos));
+        assertTrue(pagedHits.getContent().contains(element3Infos));
 
         pagedHits = directoryElementInfosService.searchElements("aDirectory", "", PageRequest.of(0, 10));
         assertEquals(0, pagedHits.getTotalElements());
