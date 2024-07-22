@@ -7,13 +7,16 @@
 package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -1699,21 +1702,21 @@ public class DirectoryTest {
         mvcResult = mockMvc
                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_1))
                 .andExpectAll(status().isOk()).andReturn();
-        List<Object> result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        List<DirectoryElementInfos> result = mvcResultToList(mvcResult);
         assertEquals(5, result.size());
         output.clear();
 
         mvcResult = mockMvc
                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_2))
                 .andExpectAll(status().isOk()).andReturn();
-        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        result = mvcResultToList(mvcResult);
         assertEquals(5, result.size());
         output.clear();
 
         mvcResult = mockMvc
                 .perform(get("/v1/elements/indexation-infos?userInput={request}", "r").header(USER_ID, USERID_3))
                 .andExpectAll(status().isOk()).andReturn();
-        result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
+        result = mvcResultToList(mvcResult);
         assertEquals(5, result.size());
         output.clear();
     }
@@ -1795,5 +1798,11 @@ public class DirectoryTest {
                 .perform(get("/v1/users/{userId}/cases/count", "NOT_SAME_USER"))
                 .andExpectAll(status().isOk()).andReturn();
         assertEquals("1", result.getResponse().getContentAsString());
+    }
+
+    private <T> List<T> mvcResultToList(MvcResult mvcResult) throws Exception {
+        JsonNode resultJson = objectMapper.readTree(mvcResult.getResponse().getContentAsString());
+        ObjectReader resultReader = objectMapper.readerFor(new TypeReference<>() { });
+        return resultReader.readValue(resultJson.get("content"));
     }
 }

@@ -17,6 +17,9 @@ import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +48,7 @@ public class DirectoryService {
     public static final String HEADER_STUDY_UUID = "studyUuid";
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
+    private static final int ES_PAGE_MAX_SIZE = 50;
 
     private final NotificationService notificationService;
 
@@ -564,8 +568,9 @@ public class DirectoryService {
         return nameCandidate(elementName, i);
     }
 
-    public List<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
-        return directoryElementInfosService.searchElements(userInput, directoryUuid);
+    public Page<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
+        Pageable pageRequest = PageRequest.of(0, ES_PAGE_MAX_SIZE);
+        return directoryElementInfosService.searchElements(userInput, directoryUuid, pageRequest);
     }
 
     public boolean areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {

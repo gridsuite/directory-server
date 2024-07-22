@@ -17,13 +17,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-import static org.gridsuite.directory.server.DirectoryService.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -91,15 +92,33 @@ class DirectoryElementInfosServiceTest {
         List<DirectoryElementInfos> infos = List.of(directoryInfos, element2Infos, element1Infos, element4Infos, element3Infos);
         repositoryService.saveElementsInfos(infos);
 
-        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", ""));
+        Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", "", PageRequest.of(0, 10)).stream().toList());
         assertEquals(4, hits.size());
         assertTrue(hits.contains(element1Infos));
         assertTrue(hits.contains(element4Infos));
         assertTrue(hits.contains(element2Infos));
         assertTrue(hits.contains(element3Infos));
+        Page<DirectoryElementInfos> pagedHits = directoryElementInfosService.searchElements("a", "", PageRequest.of(0, 10));
+        assertEquals(4, pagedHits.getTotalElements());
+        assertTrue(pagedHits.getContent().contains(element1Infos));
+        assertTrue(pagedHits.getContent().contains(element4Infos));
+        assertTrue(pagedHits.getContent().contains(element2Infos));
+        assertTrue(pagedHits.getContent().contains(element3Infos));
 
-        hits = new HashSet<>(directoryElementInfosService.searchElements("aDirectory", ""));
-        assertEquals(0, hits.size());
+        pagedHits = directoryElementInfosService.searchElements("aDirectory", "", PageRequest.of(0, 10));
+        assertEquals(0, pagedHits.getTotalElements());
+    }
+
+    @Test
+    void searchPagedElementInfos() {
+        List<DirectoryElementInfos> elements = new ArrayList<>(20);
+        for (int i = 0; i < 20; i++) {
+            elements.add(createElements("filter" + i));
+        }
+        repositoryService.saveElementsInfos(elements);
+        Page<DirectoryElementInfos> pagedHits = directoryElementInfosService.searchElements("filter", "", PageRequest.of(0, 10));
+        assertEquals(20, pagedHits.getTotalElements());
+        assertEquals(10, pagedHits.getContent().size());
     }
 
     @Test
@@ -129,7 +148,11 @@ class DirectoryElementInfosServiceTest {
     }
 
     private void testNameFullAscii(String pat) {
-        assertEquals(1, directoryElementInfosService.searchElements(pat, "").size());
+        assertEquals(1, directoryElementInfosService.searchElements(pat, "", PageRequest.of(0, 10)).getTotalElements());
+    }
+
+    private DirectoryElementInfos createElements(String name) {
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type("TYPE_01").owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
 
     private DirectoryElementInfos makeElementDir(String name) {
@@ -200,14 +223,14 @@ class DirectoryElementInfosServiceTest {
     void testExactMatchFromSubDirectory() {
         Map<String, DirectoryElementInfos> allDirs = createFilesElements();
         UUID currentDirUuid = allDirs.get("sub_sub_directory1_2").getId();
-        List<DirectoryElementInfos> hitsCommunFile = directoryElementInfosService.searchElements("common_file", currentDirUuid.toString());
+        List<DirectoryElementInfos> hitsCommunFile = directoryElementInfosService.searchElements("common_file", currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
         assertEquals(6, hitsCommunFile.size());
         assertEquals(currentDirUuid, hitsCommunFile.get(0).getParentId()); // we get first the element in the current directory
         assertEquals("common_file", hitsCommunFile.get(0).getName());
 
         //now using another current dir , we expect similar results
         currentDirUuid = allDirs.get("sub_sub_directory2_2").getId();
-        hitsCommunFile = directoryElementInfosService.searchElements("common_file", currentDirUuid.toString());
+        hitsCommunFile = directoryElementInfosService.searchElements("common_file", currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
         assertEquals(6, hitsCommunFile.size());
         assertEquals(currentDirUuid, hitsCommunFile.get(0).getParentId()); // we get first the element in the current directory
         assertEquals("common_file", hitsCommunFile.get(0).getName());
@@ -217,7 +240,7 @@ class DirectoryElementInfosServiceTest {
     void testExactMatchFromOtherDirectory() {
         Map<String, DirectoryElementInfos> allDirs = createFilesElements();
         UUID currentDirUuid = allDirs.get("sub_sub_directory1_2").getId();
-        List<DirectoryElementInfos> hits = directoryElementInfosService.searchElements("file3", currentDirUuid.toString());
+        List<DirectoryElementInfos> hits = directoryElementInfosService.searchElements("file3", currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
         assertEquals(1, hits.size());
         assertEquals(allDirs.get("sub_directory3").getId(), hits.get(0).getParentId());
         assertEquals("file3", hits.get(0).getName());
@@ -249,7 +272,7 @@ class DirectoryElementInfosServiceTest {
         //we want to have the files in the current directory if any
         // then the files in the path of the current directory (sub directories and parent directories)
         // then the files in the other directories
-        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("new-file", currentDirUuid.toString());
+        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("new-file", currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
         assertEquals(3, hitsFile.size());
         assertEquals(newFile1, hitsFile.get(0));
         assertEquals(newFile2, hitsFile.get(1));
@@ -260,7 +283,7 @@ class DirectoryElementInfosServiceTest {
     void testPartialMatchFromSubDirectory() {
         HashMap<String, DirectoryElementInfos> allDirs = createFilesElements();
         UUID currentDirUuid = allDirs.get("sub_sub_directory1_2").getId();
-        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("file", currentDirUuid.toString());
+        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("file", currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
         assertEquals(9, hitsFile.size());
         assertEquals(currentDirUuid, hitsFile.get(0).getParentId()); // we get first the elements in the current directory
         assertEquals("common_file", hitsFile.get(0).getName());
@@ -269,19 +292,49 @@ class DirectoryElementInfosServiceTest {
 
     @Test
     void testExactMatchInCurrentDir() {
-        HashMap<String, DirectoryElementInfos> allDirs = createFilesElements();
+        Map<String, DirectoryElementInfos> allDirs = createFilesElements();
         UUID currentDirUuid = allDirs.get("sub_sub_directory1_2").getId();
         String fileName = "new-file";
         var newFile = makeElementFile(fileName, allDirs.get("sub_sub_directory1_2").getId());
         var newFile1 = makeElementFile(fileName + "1", allDirs.get("sub_sub_directory1_2").getId());
         var newFile2 = makeElementFile("1" + fileName + "2", allDirs.get("sub_sub_directory1_2").getId());
-        repositoryService.saveElementsInfos(List.of(newFile1, newFile, newFile2));
-
-        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements(fileName, currentDirUuid.toString());
+        repositoryService.saveElementsInfos(List.of(newFile, newFile2, newFile1));
+        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements(fileName, currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
         assertEquals(3, hitsFile.size());
         assertEquals(fileName, hitsFile.get(0).getName());
         assertEquals(fileName + "1", hitsFile.get(1).getName());
         assertEquals("1" + fileName + "2", hitsFile.get(2).getName());
     }
 
+    /*
+      root_directory
+      ├── sub_directory1
+      ....
+      ├── sub_directory2
+      │   ├── bnew-filebbbb
+      │   ├── anew-file
+      │   ├── new-file
+      │   ├── test-new-file
+      ...
+   */
+    @Test
+    void testTermStartByUserInput() { // when a file start with search term
+        Map<String, DirectoryElementInfos> allDirs = createFilesElements();
+        UUID currentDirUuid = allDirs.get("sub_directory2").getId();
+        var anewFile1 = makeElementFile("anew-file", allDirs.get("sub_directory2").getId());
+        var newFile2 = makeElementFile("new-file-Ok", allDirs.get("sub_directory2").getId());
+        var bNewFile = makeElementFile("bnew-filebbbb", allDirs.get("sub_directory2").getId());
+        var testNewFile = makeElementFile("test-new-file", allDirs.get("sub_directory2").getId());
+        repositoryService.saveElementsInfos(List.of(bNewFile, newFile2, anewFile1, testNewFile));
+
+        //we want to have the files in the current directory if any
+        // then the files in the path of the current directory (sub directories and parent directories)
+        // then the files in the other directories
+        List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements("new-file", currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
+        assertEquals(4, hitsFile.size());
+        assertEquals(newFile2, hitsFile.get(0));
+        assertEquals(bNewFile, hitsFile.get(1));
+        assertEquals(anewFile1, hitsFile.get(2));
+        assertEquals(testNewFile, hitsFile.get(3));
+    }
 }
