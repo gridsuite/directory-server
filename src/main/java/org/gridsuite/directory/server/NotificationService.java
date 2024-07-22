@@ -34,17 +34,17 @@ public class NotificationService {
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NOTIFICATION_TYPE = "notificationType";
     public static final String HEADER_ELEMENT_NAME = "elementName";
-    public static final String HEADER_STUDY_UUID = "studyUuid";
-    public static final String UPDATE_TYPE_STUDY_DELETE = "deleteStudy";
+    public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
     private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
     @Autowired
-    private StreamBridge studyUpdatePublisher;
+    private StreamBridge directoryUpdatePublisher;
 
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
-        studyUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
+        directoryUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
@@ -60,11 +60,11 @@ public class NotificationService {
         sendUpdateMessage(messageBuilder.build());
     }
 
-    public void emitDeletedStudy(UUID studyUuid, String userId) {
+    public void emitDeletedElement(UUID elementUuid, String userId) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_DELETE);
+                .setHeader(HEADER_ELEMENT_UUID, elementUuid)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_ELEMENT_DELETE);
         sendUpdateMessage(messageBuilder.build());
     }
 }

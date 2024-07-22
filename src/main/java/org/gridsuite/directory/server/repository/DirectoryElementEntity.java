@@ -14,6 +14,7 @@ import jakarta.persistence.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -58,12 +59,6 @@ public class DirectoryElementEntity {
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
 
-    @Column(name = "stashed")
-    private boolean stashed;
-
-    @Column(name = "stash_date", columnDefinition = "timestamptz")
-    private Instant stashDate;
-
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
         if (isElementNameUpdated) {
@@ -101,13 +96,15 @@ public class DirectoryElementEntity {
             Objects.isNull(newElementAttributes.getLastModifiedBy());
     }
 
-    public DirectoryElementInfos toDirectoryElementInfos() {
+    public DirectoryElementInfos toDirectoryElementInfos(List<DirectoryElementEntity> path) {
         return DirectoryElementInfos.builder()
                 .id(getId())
                 .name(getName())
                 .owner(getOwner())
                 .parentId(getParentId() == null ? getId() : getParentId())
                 .type(getType())
+                .pathUuid(path.stream().map(DirectoryElementEntity::getId).toList())
+                .pathName(path.stream().map(DirectoryElementEntity::getName).toList())
                 .lastModificationDate(getLastModificationDate())
                 .build();
     }

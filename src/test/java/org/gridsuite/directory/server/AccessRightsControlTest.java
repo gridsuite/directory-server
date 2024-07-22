@@ -33,7 +33,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-import static org.gridsuite.directory.server.DirectoryService.STUDY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -57,6 +56,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class AccessRightsControlTest {
+    public static final String TYPE_01 = "TYPE_01";
 
     @Autowired
     private MockMvc mockMvc;
@@ -99,15 +99,15 @@ public class AccessRightsControlTest {
     public void testElements() throws Exception {
         checkRootDirectories("user1", List.of());
         checkRootDirectories("user2", List.of());
-        // Create directory tree for user1 : root1 -> dir1 -> study1
+        // Create directory tree for user1 : root1 -> dir1 -> element of type TYPE_01
         UUID rootUuid1 = insertRootDirectory("user1", "root1");
         UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"));
-        UUID eltUuid1 = insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, "user1"));
+        UUID eltUuid1 = insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"));
 
-        // Create directory tree for user2 : root2 -> dir2 -> study2
+        // Create directory tree for user2 : root2 -> dir2 -> element of type TYPE_01
         UUID rootUuid2 = insertRootDirectory("user2", "root2");
         UUID dirUuid2 = insertSubElement(rootUuid2, toElementAttributes(null, "dir2", DIRECTORY, "user2"));
-        UUID eltUuid2 = insertSubElement(dirUuid2, toElementAttributes(null, "study2", STUDY, "user2"));
+        UUID eltUuid2 = insertSubElement(dirUuid2, toElementAttributes(null, "elementName2", TYPE_01, "user2"));
 
         // Dir2 is created by user2 and is accessible by user1 and user2
         controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), HttpStatus.OK);
@@ -115,9 +115,9 @@ public class AccessRightsControlTest {
 
         // Dir2 is created by user2 and sub elements creation for user1
         UUID dirUuid = insertSubElement(dirUuid2, toElementAttributes(null, "dir", DIRECTORY, "user1"));
-        UUID eltUuid = insertSubElement(dirUuid2, toElementAttributes(null, "study", STUDY, "user1"));
+        UUID eltUuid = insertSubElement(dirUuid2, toElementAttributes(null, "elementName", TYPE_01, "user1"));
 
-        // Study2 is accessible by user1 and user2
+        // elementName2 is accessible by user1 and user2
         controlElementsAccess("user1", List.of(eltUuid1, eltUuid2), HttpStatus.OK);
         controlElementsAccess("user2", List.of(eltUuid1, eltUuid2), HttpStatus.OK);
 
@@ -146,8 +146,8 @@ public class AccessRightsControlTest {
         // Insert elements with same name in a directory not allowed
         UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"));
         insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"), HttpStatus.FORBIDDEN);
-        insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, "user1"));
-        insertSubElement(dirUuid1, toElementAttributes(null, "study1", STUDY, "user1"), HttpStatus.FORBIDDEN);
+        insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"));
+        insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"), HttpStatus.FORBIDDEN);
     }
 
     private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
