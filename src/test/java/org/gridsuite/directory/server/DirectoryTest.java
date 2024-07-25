@@ -1828,11 +1828,11 @@ public class DirectoryTest {
         insertAndCheckSubElement(subDirUuid1, subDirAttributes4);
         insertAndCheckSubElement(subDirUuid3, subDirAttributes5);
 
-        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
-        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_2, ""));
-        insertAndCheckSubElement(subDirUuid3, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_3, ""));
-        insertAndCheckSubElement(subDirUuid4, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_1, ""));
-        insertAndCheckSubElement(subDirUuid5, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, STUDY, USERID_3, ""));
+        insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
+        insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_2, ""));
+        insertAndCheckSubElement(subDirUuid3, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_3, ""));
+        insertAndCheckSubElement(subDirUuid4, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
+        insertAndCheckSubElement(subDirUuid5, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_3, ""));
 
         MvcResult mvcResult;
 
