@@ -577,11 +577,10 @@ public class DirectoryService {
         return getElements(elementsUuid, true, List.of()).stream().allMatch(e -> isDirectoryElementDeletable(e, userId));
     }
 
-    public UUID getDirectoryUuidFromPath(String directoryPath) {
-        String[] directoryPathSplit = directoryPath.split("/");
+    public UUID getDirectoryUuidFromPath(List<String> directoryPath) {
         UUID parentDirectoryUuid = null;
 
-        for (String s : directoryPathSplit) {
+        for (String s : directoryPath) {
             UUID currentDirectoryUuid = getDirectoryUuid(s, parentDirectoryUuid);
             if (currentDirectoryUuid == null) {
                 throw new DirectoryException(NOT_FOUND);
