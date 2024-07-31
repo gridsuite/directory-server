@@ -1808,6 +1808,8 @@ public class DirectoryTest {
         //       dir1 (userId1)      dir2 (userId2)          dir3 (userId3)
         //        |                                                    |
         //       dir4 (userId1)                                       dir5 (userId3)
+        //                                                             |
+        //                                                            &~#{[^repert (userId3)
 
         ElementAttributes rootDirectory = retrieveInsertAndCheckRootDirectory("root", USERID_2);
         UUID rootDirectoryUuid = rootDirectory.getElementUuid();
@@ -1819,14 +1821,19 @@ public class DirectoryTest {
         ElementAttributes subDirAttributes3 = toElementAttributes(subDirUuid3, "dir3", DIRECTORY, USERID_3);
         UUID subDirUuid4 = UUID.randomUUID();
         ElementAttributes subDirAttributes4 = toElementAttributes(subDirUuid4, "dir4", DIRECTORY, USERID_1);
-        UUID subDirUuid5 = UUID.randomUUID();
+        UUID subDirUuid5 = UUID.fromString("11111111-7977-4592-ba19-88027e4254e4");
         ElementAttributes subDirAttributes5 = toElementAttributes(subDirUuid5, "dir5", DIRECTORY, USERID_3);
+        UUID subDirUuid6 = UUID.fromString("22222222-7977-4592-ba19-88027e4254e4");
+        String encodedPath = "%26~%23%7B%5B%5Erepert";
+        String decodedPath = "&~#{[^repert";
+        ElementAttributes subDirAttributes6 = toElementAttributes(subDirUuid6, decodedPath, DIRECTORY, USERID_3);
 
         insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes1);
         insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes2);
         insertAndCheckSubElement(rootDirectoryUuid, subDirAttributes3);
         insertAndCheckSubElement(subDirUuid1, subDirAttributes4);
         insertAndCheckSubElement(subDirUuid3, subDirAttributes5);
+        insertSubElement(subDirUuid5, subDirAttributes6, false);
 
         insertAndCheckSubElement(subDirUuid1, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_1, ""));
         insertAndCheckSubElement(subDirUuid2, toElementAttributes(UUID.randomUUID(), RECOLLEMENT, TYPE_01, USERID_2, ""));
@@ -1842,7 +1849,7 @@ public class DirectoryTest {
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpectAll(status().isOk()).andReturn();
         UUID resultUuid = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
-        assertEquals(resultUuid, subDirAttributes4.getElementUuid());
+        assertEquals(subDirAttributes4.getElementUuid(), resultUuid);
         output.clear();
 
         // unexisting directory
@@ -1850,6 +1857,22 @@ public class DirectoryTest {
             .perform(get("/v1/directories/uuid?directoryPath=" + "root/dir1/dir5")
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpectAll(status().isNotFound()).andReturn();
+        output.clear();
+
+        // path to element (not a directory)
+        mockMvc
+            .perform(get("/v1/directories/uuid?directoryPath=" + "root/dir1/dir4/" + RECOLLEMENT)
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpectAll(status().isNotFound()).andReturn();
+        output.clear();
+
+        // existing directory with special characters in path
+        mvcResult = mockMvc
+            .perform(get("/v1/directories/uuid?directoryPath=root/dir3/dir5/" + encodedPath)
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpectAll(status().isOk()).andReturn();
+        resultUuid = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
+        assertEquals(subDirAttributes6.getElementUuid(), resultUuid);
         output.clear();
     }
 

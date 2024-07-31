@@ -264,12 +264,12 @@ public class DirectoryController {
                 .body(service.searchElements(userInput, directoryUuid));
     }
 
-    @GetMapping(value = "/directories/uuid", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get uuid from directory described by the path")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The directory uuid"),
-    })
+    @GetMapping(value = "/directories/uuid")
+    @Operation(summary = "Get directory uuid from given path")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The directory uuid"),
+        @ApiResponse(responseCode = "404", description = "The directory was not found")})
     public ResponseEntity<UUID> getDirectoryUuidFromPath(@RequestParam("directoryPath") String directoryPath) {
-        return ResponseEntity.ok().body(service.getDirectoryUuidFromPath(directoryPath));
+        String decodedDirectoryPath = URLDecoder.decode(directoryPath, StandardCharsets.UTF_8);
+        return ResponseEntity.ok().body(service.getDirectoryUuidFromPath(decodedDirectoryPath));
     }
 }
