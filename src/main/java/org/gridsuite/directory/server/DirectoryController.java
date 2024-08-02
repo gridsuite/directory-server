@@ -21,8 +21,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,8 +81,7 @@ public class DirectoryController {
     })
     public ResponseEntity<Void> createElementInDirectoryPath(@RequestParam("directoryPath") String directoryPath, @RequestBody ElementAttributes elementAttributes,
                                               @RequestHeader("userId") String userId) {
-        String decodedDirectoryPath = URLDecoder.decode(directoryPath, StandardCharsets.UTF_8);
-        service.createElementInDirectoryPath(decodedDirectoryPath, elementAttributes, userId);
+        service.createElementInDirectoryPath(directoryPath, elementAttributes, userId);
         return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).build();
     }
 
