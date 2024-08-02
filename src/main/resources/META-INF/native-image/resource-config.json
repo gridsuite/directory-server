@@ -3,6 +3,9 @@
     "includes": [
       {
         "pattern": "\\Qelasticsearch_settings.json\\E"
+      },
+      {
+        "pattern":"\\Qorg/gridsuite/directory/server/repository/DirectoryElementRepository$SubDirectoryCount.class\\E"
       }
     ]
   }
