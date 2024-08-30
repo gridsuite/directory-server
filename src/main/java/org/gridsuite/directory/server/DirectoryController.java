@@ -21,6 +21,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -259,5 +261,14 @@ public class DirectoryController {
             @Parameter(description = "Current directory UUID") @RequestParam(value = "directoryUuid", required = false, defaultValue = "") String directoryUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
                 .body(service.searchElements(userInput, directoryUuid));
+    }
+
+    @GetMapping(value = "/directories/uuid")
+    @Operation(summary = "Get directory uuid from given path")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The directory uuid"),
+        @ApiResponse(responseCode = "404", description = "The directory was not found")})
+    public ResponseEntity<UUID> getDirectoryUuidFromPath(@RequestParam("directoryPath") List<String> directoryPath) {
+        List<String> decodedDirectoryPath = directoryPath.stream().map(s -> URLDecoder.decode(s, StandardCharsets.UTF_8)).toList();
+        return ResponseEntity.ok().body(service.getDirectoryUuidFromPath(decodedDirectoryPath));
     }
 }
