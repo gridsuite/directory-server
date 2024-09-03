@@ -114,7 +114,7 @@ public class DirectoryService {
                 elementAttributes.getElementName(),
                 userId,
                 null,
-                false,
+                repositoryService.isRootDirectory(parentDirectoryUuid),
                 NotificationType.UPDATE_DIRECTORY
         );
 
@@ -143,7 +143,7 @@ public class DirectoryService {
                 elementAttributes.getElementName(),
                 userId,
                 null,
-                false,
+                repositoryService.isRootDirectory(parentDirectoryUuid),
                 NotificationType.UPDATE_DIRECTORY
         );
         return toElementAttributes(elementEntity);
@@ -353,7 +353,7 @@ public class DirectoryService {
 
     private void emitDirectoryChangedNotifications(DirectoryElementEntity element, DirectoryElementEntity oldDirectory, String userId) {
         notificationService.emitDirectoryChanged(element.getParentId(), element.getName(), userId, null, repositoryService.isRootDirectory(element.getId()), NotificationType.UPDATE_DIRECTORY);
-        notificationService.emitDirectoryChanged(oldDirectory.getId(), element.getName(), userId, null, repositoryService.isRootDirectory(element.getId()), NotificationType.UPDATE_DIRECTORY);
+        notificationService.emitDirectoryChanged(oldDirectory.getId(), element.getName(), userId, null, repositoryService.isRootDirectory(oldDirectory.getId()), NotificationType.UPDATE_DIRECTORY);
     }
 
     private void validateNewDirectory(UUID newDirectoryUuid) {
@@ -451,7 +451,7 @@ public class DirectoryService {
             null,
             userId,
             null,
-            false,
+            repositoryService.isRootDirectory(parentDirectoryUuid),
             NotificationType.UPDATE_DIRECTORY
         );
     }
