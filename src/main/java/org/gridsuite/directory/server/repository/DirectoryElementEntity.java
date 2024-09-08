@@ -30,7 +30,7 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 @NoArgsConstructor
 @Entity
 @Table(name = "element", indexes = {@Index(name = "directoryElementEntity_parentId_index", columnList = "parentId"),
-    @Index(name = "idx_directory_id_name", columnList = "parentId, name, type", unique = true)})
+    @Index(name = "directoryElementEntity_parentId_name_type_index", columnList = "parentId, name, type", unique = true)})
 public class DirectoryElementEntity {
 
     @Id
