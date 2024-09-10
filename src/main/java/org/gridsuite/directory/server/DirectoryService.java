@@ -152,7 +152,8 @@ public class DirectoryService {
 
     private void assertElementNotExist(UUID parentDirectoryUuid, String elementName, String type) {
         if (Boolean.TRUE.equals(repositoryService.isElementExists(parentDirectoryUuid, elementName, type))) {
-            throw new DirectoryException(NOT_ALLOWED);
+            throw DirectoryException.createElementNameExists(type, elementName);
+
         }
     }
 
