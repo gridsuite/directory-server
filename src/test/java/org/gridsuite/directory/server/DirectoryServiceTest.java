@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
@@ -101,5 +102,16 @@ class DirectoryServiceTest {
         // element3 was created by user2,so it can not be deleted by user1
         DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, element3Uuid, "user1"));
         assertEquals(DirectoryException.Type.NOT_ALLOWED.name(), exception.getMessage());
+    }
+
+    @Test
+    void testFailDuplicateElement(){
+        when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
+        when(directoryElementRepository.findById(element1.getId())).thenReturn(Optional.of(element1));
+        when(directoryElementRepository.save(any(DirectoryElementEntity.class))).thenThrow(new DataIntegrityViolationException("Name already exists"));
+        when(directoryElementRepository.existsByIdAndOwnerOrId(any(), any(), any())).thenReturn(true);
+
+        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.duplicateElement(element1.getId(), UUID.randomUUID(), parentDirectoryUuid, "user1"));
+        assertEquals(DirectoryException.Type.NAME_ALREADY_EXISTS.name(), exception.getType().name());
     }
 }
