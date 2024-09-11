@@ -42,6 +42,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Instant;
@@ -747,7 +748,7 @@ public class DirectoryTest {
 
         // Insert an element of type TYPE_01 with the same name in the root directory by the user1 and expect a 403
         ElementAttributes element2Attributes = toElementAttributes(UUID.randomUUID(), "elementName1", TYPE_01, "user1");
-        insertExpectFail(rootDirUuid, element2Attributes);
+        insertExpectFail(rootDirUuid, element2Attributes, status().isConflict());
 
         // Insert an element of type TYPE_01 in the root directory by the user1
         ElementAttributes element3Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "user1");
@@ -755,7 +756,7 @@ public class DirectoryTest {
 
         // Insert an element of type TYPE_01 with the same name in the root directory by the user1 and expect a 403
         ElementAttributes element4Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "user1");
-        insertExpectFail(rootDirUuid, element4Attributes);
+        insertExpectFail(rootDirUuid, element4Attributes, status().isConflict());
 
         // Insert an element of type TYPE_03 with the same name in the root directory by the user1 and expect ok since it's not the same type
         ElementAttributes element5Attributes = toElementAttributes(UUID.randomUUID(), "elementName3", TYPE_03, "user1");
@@ -763,7 +764,7 @@ public class DirectoryTest {
 
         // Insert an element of type TYPE_01 with the same name in the root directory by the user2 should not work.
         ElementAttributes element6Attributes = toElementAttributes(UUID.randomUUID(), "elementName2", TYPE_01, "user3");
-        insertExpectFail(rootDirUuid, element6Attributes);
+        insertExpectFail(rootDirUuid, element6Attributes, status().isConflict());
     }
 
     @Test
@@ -1113,7 +1114,7 @@ public class DirectoryTest {
 
         // Insert a directory with empty name in the root directory and expect a 403
         ElementAttributes directoryWithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", DIRECTORY, "user1");
-        insertExpectFail(rootDirUuid, directoryWithoutNameAttributes);
+        insertExpectFail(rootDirUuid, directoryWithoutNameAttributes, status().isForbidden());
         String requestBody = objectMapper.writeValueAsString(new RootDirectoryAttributes("", "userId", null, null, null, "userId"));
 
         // Insert a root directory by user1 with empty name and expect 403
@@ -1133,11 +1134,11 @@ public class DirectoryTest {
 
         // Insert an element of type TYPE_01 with empty name in the root directory and expect a 403
         ElementAttributes element1WithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", TYPE_01, "user1");
-        insertExpectFail(rootDirUuid, element1WithoutNameAttributes);
+        insertExpectFail(rootDirUuid, element1WithoutNameAttributes, status().isForbidden());
 
        // Insert an element of type TYPE_03 with empty name in the root directory and expect a 403
         ElementAttributes element2WithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", TYPE_03, "user1");
-        insertExpectFail(rootDirUuid, element2WithoutNameAttributes);
+        insertExpectFail(rootDirUuid, element2WithoutNameAttributes, status().isForbidden());
 
         assertNbElementsInRepositories(1);
     }
@@ -1379,13 +1380,13 @@ public class DirectoryTest {
         assertElementIsProperlyInserted(subElementAttributes);
     }
 
-    private void insertExpectFail(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
+    private void insertExpectFail(UUID parentDirectoryUUid, ElementAttributes subElementAttributes, ResultMatcher resultMatcher) throws Exception {
         // Insert a sub-element of type DIRECTORY and expect 403 forbidden
         mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
                 .header("userId", subElementAttributes.getOwner())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(subElementAttributes)))
-            .andExpect(status().isForbidden());
+            .andExpect(resultMatcher);
     }
 
     private void renameElement(UUID elementUuidToRename, UUID elementUuidHeader, String userId, String newName, boolean isRoot) throws Exception {
