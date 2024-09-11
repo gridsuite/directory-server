@@ -105,7 +105,7 @@ class DirectoryServiceTest {
     }
 
     @Test
-    void testFailDuplicateElement(){
+    void testFailDuplicateElement() {
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
         when(directoryElementRepository.findById(element1.getId())).thenReturn(Optional.of(element1));
         when(directoryElementRepository.save(any(DirectoryElementEntity.class))).thenThrow(new DataIntegrityViolationException("Name already exists"));
