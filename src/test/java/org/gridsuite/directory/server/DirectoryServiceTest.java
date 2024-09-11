@@ -110,8 +110,9 @@ class DirectoryServiceTest {
         when(directoryElementRepository.findById(element1.getId())).thenReturn(Optional.of(element1));
         when(directoryElementRepository.save(any(DirectoryElementEntity.class))).thenThrow(new DataIntegrityViolationException("Name already exists"));
         when(directoryElementRepository.existsByIdAndOwnerOrId(any(), any(), any())).thenReturn(true);
-
-        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.duplicateElement(element1.getId(), UUID.randomUUID(), parentDirectoryUuid, "user1"));
+        UUID element1Uuid = element1.getId();
+        UUID newElementUuid = UUID.randomUUID();
+        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.duplicateElement(element1Uuid, newElementUuid, parentDirectoryUuid, "user1"));
         assertEquals(DirectoryException.Type.NAME_ALREADY_EXISTS.name(), exception.getType().name());
     }
 }
