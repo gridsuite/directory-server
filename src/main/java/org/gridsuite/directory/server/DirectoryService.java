@@ -337,6 +337,10 @@ public class DirectoryService {
     }
 
     private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
+        if (Objects.equals(element.getType(), DIRECTORY) && element.getParentId() == null) {
+            throw new DirectoryException(IS_ROOT_DIRECTORY);
+        }
+
         if (!isDirectoryElementUpdatable(toElementAttributes(element), userId) ||
                 directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType())) {
             throw new DirectoryException(NOT_ALLOWED);

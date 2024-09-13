@@ -586,9 +586,29 @@ public class DirectoryTest {
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(directory21UUID))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
 
         assertNbElementsInRepositories(3);
+
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(rootDir20Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
 
     @Test
