@@ -88,7 +88,11 @@ public class DirectoryService {
                     if (error != null && elementName != null) {
                         deleteElement(studyUuid, userId);
                     }
-                    notifyDirectoryHasChanged(parentUuid, userId, elementName, error);
+                    // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
+                    // then avoid sending a notification with parentUuid=null and isRoot=true
+                    if (parentUuid != null) {
+                        notifyDirectoryHasChanged(parentUuid, userId, elementName, error);
+                    }
                 }
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
