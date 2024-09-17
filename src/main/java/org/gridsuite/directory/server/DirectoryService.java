@@ -88,7 +88,7 @@ public class DirectoryService {
                     if (error != null && elementName != null) {
                         deleteElement(studyUuid, userId);
                     }
-                    notificationService.emitDirectoryChanged(parentUuid, elementName, userId, error, parentUuid == null, NotificationType.UPDATE_DIRECTORY);
+                    notifyDirectoryHasChanged(parentUuid, userId, elementName, error);
                 }
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
@@ -109,14 +109,8 @@ public class DirectoryService {
         assertDirectoryExist(parentDirectoryUuid);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
 
-        notificationService.emitDirectoryChanged(
-                parentDirectoryUuid,
-                elementAttributes.getElementName(),
-                userId,
-                null,
-                repositoryService.isRootDirectory(parentDirectoryUuid),
-                NotificationType.UPDATE_DIRECTORY
-        );
+        // Here we know that parentDirectoryUuid can't be null
+        notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementAttributes.getElementName());
 
         return toElementAttributes(elementEntity);
     }
@@ -138,14 +132,9 @@ public class DirectoryService {
         assertDirectoryExist(parentDirectoryUuid);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
 
-        notificationService.emitDirectoryChanged(
-                parentDirectoryUuid,
-                elementAttributes.getElementName(),
-                userId,
-                null,
-                repositoryService.isRootDirectory(parentDirectoryUuid),
-                NotificationType.UPDATE_DIRECTORY
-        );
+        // Here we know that parentDirectoryUuid can't be null
+        notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementAttributes.getElementName());
+
         return toElementAttributes(elementEntity);
     }
 
@@ -193,6 +182,7 @@ public class DirectoryService {
         assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName());
         ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
 
+        // here we know a root directory has no parent
         notificationService.emitDirectoryChanged(
                 elementAttributes.getElementUuid(),
                 elementAttributes.getElementName(),
@@ -297,14 +287,7 @@ public class DirectoryService {
 
         DirectoryElementEntity elementEntity = repositoryService.saveElement(directoryElement.update(newElementAttributes));
 
-        notificationService.emitDirectoryChanged(
-                elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(),
-                elementEntity.getName(),
-                userId,
-                null,
-                elementEntity.getParentId() == null,
-                NotificationType.UPDATE_DIRECTORY
-        );
+        notifyDirectoryHasChanged(elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(), userId, elementEntity.getName());
     }
 
     @Transactional
@@ -332,7 +315,8 @@ public class DirectoryService {
 
         DirectoryElementEntity oldDirectory = repositoryService.getElementEntity(element.getParentId()).orElseThrow();
         updateElementParentDirectory(element, newDirectoryUuid);
-        emitDirectoryChangedNotifications(element, oldDirectory, userId);
+        notifyDirectoryHasChanged(element.getParentId() == null ? element.getId() : element.getParentId(), userId, element.getName());
+        notifyDirectoryHasChanged(oldDirectory.getId(), userId, element.getName());
 
     }
 
@@ -349,11 +333,6 @@ public class DirectoryService {
     private void updateElementParentDirectory(DirectoryElementEntity element, UUID newDirectoryUuid) {
         element.setParentId(newDirectoryUuid);
         repositoryService.saveElement(element);
-    }
-
-    private void emitDirectoryChangedNotifications(DirectoryElementEntity element, DirectoryElementEntity oldDirectory, String userId) {
-        notificationService.emitDirectoryChanged(element.getParentId(), element.getName(), userId, null, repositoryService.isRootDirectory(element.getId()), NotificationType.UPDATE_DIRECTORY);
-        notificationService.emitDirectoryChanged(oldDirectory.getId(), element.getName(), userId, null, repositoryService.isRootDirectory(oldDirectory.getId()), NotificationType.UPDATE_DIRECTORY);
     }
 
     private void validateNewDirectory(UUID newDirectoryUuid) {
@@ -394,15 +373,13 @@ public class DirectoryService {
         }
         UUID parentUuid = repositoryService.getParentUuid(elementUuid);
         deleteElement(elementAttributes, userId);
-
-        notificationService.emitDirectoryChanged(
-                parentUuid == null ? elementUuid : parentUuid,
-                elementAttributes.getElementName(),
-                userId,
-                null,
-                parentUuid == null,
-                parentUuid == null ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY
-        );
+        if (parentUuid == null) {
+            // We can't notify to update the parent directory of a deleted root directory
+            // Then we send a specific notification
+            notifyRootDirectoryDeleted(elementUuid, userId, elementAttributes.getElementName());
+        } else {
+            notifyDirectoryHasChanged(parentUuid, userId, elementAttributes.getElementName());
+        }
     }
 
     private void deleteElement(ElementAttributes elementAttributes, String userId) {
@@ -446,14 +423,7 @@ public class DirectoryService {
             .forEach(elementUuid -> notificationService.emitDeletedElement(elementUuid, userId));
 
         // sending directory update notification
-        notificationService.emitDirectoryChanged(
-            parentDirectoryUuid,
-            null,
-            userId,
-            null,
-            repositoryService.isRootDirectory(parentDirectoryUuid),
-            NotificationType.UPDATE_DIRECTORY
-        );
+        notifyDirectoryHasChanged(parentDirectoryUuid, userId);
     }
 
     /***
@@ -518,23 +488,13 @@ public class DirectoryService {
         }
 
         if (notification == NotificationType.UPDATE_DIRECTORY) {
-            emitDirectoryChangedNotification(elementUuid, userId);
+            ElementAttributes elementAttributes = getElement(elementUuid);
+            UUID parentUuid = repositoryService.getParentUuid(elementUuid);
+
+            notifyDirectoryHasChanged(parentUuid != null ? parentUuid : elementUuid, userId, elementAttributes.getElementName());
         } else {
             throw DirectoryException.createNotificationUnknown(notification.name());
         }
-    }
-
-    public void emitDirectoryChangedNotification(UUID elementUuid, String userId) {
-        ElementAttributes elementAttributes = getElement(elementUuid);
-        UUID parentUuid = repositoryService.getParentUuid(elementUuid);
-        notificationService.emitDirectoryChanged(
-                parentUuid,
-                elementAttributes.getElementName(),
-                userId,
-                null,
-                parentUuid == null,
-                NotificationType.UPDATE_DIRECTORY
-        );
     }
 
     public boolean areDirectoryElementsAccessible(@NonNull List<UUID> elementUuids, @NonNull String userId) {
@@ -589,5 +549,49 @@ public class DirectoryService {
             }
         }
         return parentDirectoryUuid;
+    }
+
+    // Everytime we make a change inside a directory, we must send a notification
+    // to tell the directory has changed, please update its metadata and content data (UPDATE_DIRECTORY)
+    // Note: for a root directory without parent directory, if one of its metadata changes (name,...)
+    // then we send a notification on this directory
+    private void notifyDirectoryHasChanged(UUID directoryUuid, String userId) {
+        Objects.requireNonNull(directoryUuid);
+        notifyDirectoryHasChanged(directoryUuid, userId, null, null);
+    }
+
+    private void notifyDirectoryHasChanged(UUID directoryUuid, String userId, String elementName) {
+        Objects.requireNonNull(directoryUuid);
+        notifyDirectoryHasChanged(directoryUuid, userId, elementName, null);
+    }
+
+    private void notifyDirectoryHasChanged(UUID directoryUuid, String userId, String elementName, String error) {
+        Objects.requireNonNull(directoryUuid);
+        notificationService.emitDirectoryChanged(
+                directoryUuid,
+                elementName,
+                userId,
+                error,
+                repositoryService.isRootDirectory(directoryUuid),
+                NotificationType.UPDATE_DIRECTORY
+        );
+    }
+
+    // Root directories don't have parent directories. Then if on is deleted, we must send a specific notification
+    private void notifyRootDirectoryDeleted(UUID rootDirectoryUuid, String userId, String elementName) {
+        Objects.requireNonNull(rootDirectoryUuid);
+        notifyRootDirectoryDeleted(rootDirectoryUuid, userId, elementName, null);
+    }
+
+    private void notifyRootDirectoryDeleted(UUID rootDirectoryUuid, String userId, String elementName, String error) {
+        Objects.requireNonNull(rootDirectoryUuid);
+        notificationService.emitDirectoryChanged(
+                rootDirectoryUuid,
+                elementName,
+                userId,
+                error,
+                true,
+                NotificationType.DELETE_DIRECTORY
+        );
     }
 }
