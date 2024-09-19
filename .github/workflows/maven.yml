@@ -52,13 +52,6 @@ jobs:
           -Djib.to.image=docker.io/gridsuite/directory-server:${GITHUB_REF_NAME#v}
           -Djib.to.auth.username=gridsuiteci
           -Djib.to.auth.password=${{ secrets.DOCKERHUB_TOKEN }}
-      # This has to be moved to the build-native-image job if the native image is used on the demo platform
-      - name: Broadcast update event
-        if: github.ref == 'refs/heads/main'
-        uses: gridsuite/broadcast-event@main
-        with:
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          event-type: directory_server_updated
 
   build-native-image:
     runs-on: ubuntu-latest
@@ -92,3 +85,10 @@ jobs:
           -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }}
           -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native:${GITHUB_REF_NAME#v}
           -Dspring-boot.build-image.publish=true
+
+      - name: Broadcast update event
+        if: github.ref == 'refs/heads/main'
+        uses: gridsuite/broadcast-event@main
+        with:
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          event-type: directory_server_updated
