@@ -1,17 +1,73 @@
 [
-{
-  "name":"[Ljava.util.UUID;"
-},
-{
-  "name":"org.springframework.core.env.AbstractEnvironment",
-  "methods":[{"name":"getProperty","parameterTypes":["java.lang.String"]}]
-},
-{
-  "name":"co.elastic.clients.elasticsearch._types.mapping.TypeMapping",
-  "fields":[{"name":"_DESERIALIZER"}]
-},
-{
-  "name":"co.elastic.clients.elasticsearch.indices.IndexSettings",
-  "fields":[{"name":"_DESERIALIZER"}]
-}
+  {
+    "name":"[Ljava.util.UUID;",
+    "condition": {
+      "typeReachable":"org.hibernate.loader.ast.internal.MultiIdEntityLoaderArrayParam"
+    }
+  },
+  {
+    "name":"org.springframework.core.env.AbstractEnvironment",
+    "condition": {
+      "typeReachable":"org.springframework.core.env.AbstractEnvironment"
+    },
+    "methods":[
+      {
+        "name":"getProperty",
+        "parameterTypes":[
+          "java.lang.String"
+        ]}
+    ]
+  },
+  {
+    "name": "liquibase.ui.LoggerUIService",
+    "condition": {
+      "typeReachable": "liquibase.ui.LoggerUIService"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  },
+  {
+    "name": "liquibase.database.LiquibaseTableNamesFactory",
+    "condition": {
+      "typeReachable": "liquibase.database.LiquibaseTableNamesFactory"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  },
+  {
+    "name": "liquibase.parser.SqlParserFactory",
+    "condition": {
+      "typeReachable": "liquibase.parser.SqlParserFactory"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  },
+  {
+    "name": "liquibase.report.ShowSummaryGeneratorFactory",
+    "condition": {
+      "typeReachable": "liquibase.report.ShowSummaryGeneratorFactory"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  }
 ]
