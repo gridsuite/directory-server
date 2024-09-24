@@ -6,6 +6,7 @@ spring:
     function:
       definition: consumeStudyUpdate;consumeElementUpdate
     stream:
+      default-binder: rabbit
       bindings:
         publishDirectoryUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}directory.update
