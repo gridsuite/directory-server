@@ -87,7 +87,7 @@ class DirectoryServiceTest {
         verify(notificationService, times(1)).emitDeletedElement(element2.getId(), "user1");
         verify(notificationService, times(1)).emitDeletedElement(element0.getId(), "user1");
         // notification for updated directory
-        verify(notificationService, times(1)).emitDirectoryChanged(parentDirectoryUuid, null, "user1", null, false, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(parentDirectoryUuid, null, "user1", null, true, NotificationType.UPDATE_DIRECTORY);
 
         verifyNoMoreInteractions(notificationService);
     }
