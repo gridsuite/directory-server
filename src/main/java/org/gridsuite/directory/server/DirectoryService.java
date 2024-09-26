@@ -178,10 +178,11 @@ public class DirectoryService {
 
     private DirectoryElementEntity tryInsertElement(DirectoryElementEntity elementEntity, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
         int retryCount = 0;
+        String baseElementName = elementEntity.getName();
         do {
             try {
                 if (generateNewName) {
-                    elementEntity.setName(getDuplicateNameCandidate(parentDirectoryUuid, elementEntity.getName(), elementEntity.getType(), userId));
+                    elementEntity.setName(getDuplicateNameCandidate(parentDirectoryUuid, baseElementName, elementEntity.getType(), userId));
                 }
                 return repositoryService.saveElement(elementEntity);
             } catch (DataIntegrityViolationException e) {
