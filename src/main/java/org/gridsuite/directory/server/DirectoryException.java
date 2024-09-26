@@ -36,8 +36,8 @@ public class DirectoryException extends RuntimeException {
         return new DirectoryException(Type.NOT_FOUND, String.format("%s '%s' not found !", type, uuid));
     }
 
-    public static DirectoryException createElementNameExists(@NonNull String type, @NonNull String name) {
-        return new DirectoryException(Type.NAME_ALREADY_EXISTS, String.format("Element with the same name (%s '%s') already exists the same directory!", type, name));
+    public static DirectoryException createElementNameAlreadyExists(@NonNull String name) {
+        return new DirectoryException(Type.NAME_ALREADY_EXISTS, String.format("Element with the same name '%s' already exists the same directory !", name));
     }
 
     Type getType() {

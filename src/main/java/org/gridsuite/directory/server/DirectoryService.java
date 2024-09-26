@@ -14,6 +14,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.gridsuite.directory.server.services.TimerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -32,7 +33,8 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
-import static org.gridsuite.directory.server.NotificationService.*;
+import static org.gridsuite.directory.server.NotificationService.HEADER_ERROR;
+import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 
 /**
@@ -50,6 +52,8 @@ public class DirectoryService {
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
     private static final int ES_PAGE_MAX_SIZE = 50;
+    private static final int MAX_RETRY = 3;
+    private static final int DELAY_RETRY = 50;
 
     private final NotificationService notificationService;
 
@@ -57,15 +61,18 @@ public class DirectoryService {
 
     private final DirectoryElementRepository directoryElementRepository;
     private final DirectoryElementInfosService directoryElementInfosService;
+    private final TimerService timerService;
 
     public DirectoryService(DirectoryRepositoryService repositoryService,
                             NotificationService notificationService,
                             DirectoryElementRepository directoryElementRepository,
-                            DirectoryElementInfosService directoryElementInfosService) {
+                            DirectoryElementInfosService directoryElementInfosService,
+                            TimerService timerService) {
         this.repositoryService = repositoryService;
         this.notificationService = notificationService;
         this.directoryElementRepository = directoryElementRepository;
         this.directoryElementInfosService = directoryElementInfosService;
+        this.timerService = timerService;
     }
 
     /* notifications */
@@ -102,17 +109,12 @@ public class DirectoryService {
     }
 
     /* methods */
-    public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, Boolean allowNewName) {
+    public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
         if (elementAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
-        if (Boolean.TRUE.equals(allowNewName)) {
-            // use another available name if necessary
-            elementAttributes.setElementName(getDuplicateNameCandidate(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType(), userId));
-        }
-        assertElementNotExist(parentDirectoryUuid, elementAttributes.getElementName(), elementAttributes.getType());
         assertDirectoryExist(parentDirectoryUuid);
-        DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
+        DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, generateNewName);
 
         // Here we know that parentDirectoryUuid can't be null
         notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementAttributes.getElementName());
@@ -124,30 +126,21 @@ public class DirectoryService {
         DirectoryElementEntity directoryElementEntity = directoryElementRepository.findById(elementId).orElseThrow(() -> new DirectoryException(NOT_FOUND));
         String elementType = directoryElementEntity.getType();
         UUID parentDirectoryUuid = targetDirectoryId != null ? targetDirectoryId : directoryElementEntity.getParentId();
-        String newElementName = getDuplicateNameCandidate(parentDirectoryUuid, directoryElementEntity.getName(), elementType, userId);
         ElementAttributes elementAttributes = ElementAttributes.builder()
                 .type(elementType)
                 .elementUuid(newElementId)
                 .owner(userId)
                 .description(directoryElementEntity.getDescription())
-                .elementName(newElementName)
+                .elementName(directoryElementEntity.getName())
                 .build();
 
-        assertElementNotExist(parentDirectoryUuid, newElementName, elementType);
         assertDirectoryExist(parentDirectoryUuid);
-        DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid);
+        DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, true);
 
         // Here we know that parentDirectoryUuid can't be null
         notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementAttributes.getElementName());
 
         return toElementAttributes(elementEntity);
-    }
-
-    private void assertElementNotExist(UUID parentDirectoryUuid, String elementName, String type) {
-        if (Boolean.TRUE.equals(repositoryService.isElementExists(parentDirectoryUuid, elementName, type))) {
-            throw DirectoryException.createElementNameExists(type, elementName);
-
-        }
     }
 
     private void assertRootDirectoryNotExist(String rootName) {
@@ -162,26 +155,45 @@ public class DirectoryService {
         }
     }
 
-    /* methods */
     private DirectoryElementEntity insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
+        return insertElement(elementAttributes, parentDirectoryUuid, null, false);
+    }
+
+    private DirectoryElementEntity insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
         //We need to limit the precision to avoid database precision storage limit issue (postgres has a precision of 6 digits while h2 can go to 9)
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
-        try {
-            return repositoryService.saveElement(
-                    new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
-                            parentDirectoryUuid,
-                            elementAttributes.getElementName(),
-                            elementAttributes.getType(),
-                            elementAttributes.getOwner(),
-                            elementAttributes.getDescription(),
-                            now,
-                            now,
-                            elementAttributes.getOwner()
-                    )
-            );
-        } catch (DataIntegrityViolationException e) {
-            throw DirectoryException.createElementNameExists(elementAttributes.getType(), elementAttributes.getElementName());
-        }
+
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(elementAttributes.getElementUuid() == null ? UUID.randomUUID() : elementAttributes.getElementUuid(),
+                parentDirectoryUuid,
+                elementAttributes.getElementName(),
+                elementAttributes.getType(),
+                elementAttributes.getOwner(),
+                elementAttributes.getDescription(),
+                now,
+                now,
+                elementAttributes.getOwner());
+
+        return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
+    }
+
+    private DirectoryElementEntity tryInsertElement(DirectoryElementEntity elementEntity, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
+        int retryCount = 0;
+        do {
+            try {
+                if (generateNewName) {
+                    elementEntity.setName(getDuplicateNameCandidate(parentDirectoryUuid, elementEntity.getName(), elementEntity.getType(), userId));
+                }
+                return repositoryService.saveElement(elementEntity);
+            } catch (DataIntegrityViolationException e) {
+                if (generateNewName) {
+                    retryCount++;
+                } else {
+                    break;
+                }
+            }
+        } while (retryCount < MAX_RETRY && timerService.doPause(DELAY_RETRY));
+
+        throw DirectoryException.createElementNameAlreadyExists(elementEntity.getName());
     }
 
     public ElementAttributes createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
