@@ -319,8 +319,8 @@ public class DirectoryService {
 
         DirectoryElementEntity oldDirectory = repositoryService.getElementEntity(element.getParentId()).orElseThrow();
         updateElementParentDirectory(element, newDirectoryUuid);
-        notifyDirectoryHasChanged(oldDirectory.getId(), userId, element.getName());
         notifyDirectoryHasChanged(newDirectoryUuid, userId, element.getName());
+        notifyDirectoryHasChanged(oldDirectory.getId(), userId, element.getName());
 
     }
 
