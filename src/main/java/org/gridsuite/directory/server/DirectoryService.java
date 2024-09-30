@@ -52,8 +52,8 @@ public class DirectoryService {
     private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
     private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
     private static final int ES_PAGE_MAX_SIZE = 50;
-    private static final int MAX_RETRY = 3;
-    private static final int DELAY_RETRY = 50;
+    static final int MAX_RETRY = 3;
+    static final int DELAY_RETRY = 50;
 
     private final NotificationService notificationService;
 
