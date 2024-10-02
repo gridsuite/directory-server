@@ -326,7 +326,7 @@ public class DirectoryService {
         if (oldDirectory != null) {
             notifyDirectoryHasChanged(oldDirectory.getId(), userId, element.getName(), isDirectory);
         } else {
-            notifyRootDirectoryDeleted(element.getId(), userId, element.getName());
+            notifyRootDirectoryDeleted(element.getId(), userId, element.getName(), isDirectory);
         }
         notifyDirectoryHasChanged(newDirectoryUuid, userId, element.getName(), isDirectory);
 
@@ -355,7 +355,7 @@ public class DirectoryService {
         if (isDirectory) {
             if (newDirectoryUuid == null) {
                 // We can not make directory root for the moment.
-                // To be removed when it is possible
+                // To be removed when it becomes possible
                 throw new DirectoryException(IS_ROOT_DIRECTORY);
             }
         } else {
@@ -613,10 +613,15 @@ public class DirectoryService {
     // Root directories don't have parent directories. Then if on is deleted, we must send a specific notification
     private void notifyRootDirectoryDeleted(UUID rootDirectoryUuid, String userId, String elementName) {
         Objects.requireNonNull(rootDirectoryUuid);
-        notifyRootDirectoryDeleted(rootDirectoryUuid, userId, elementName, null);
+        notifyRootDirectoryDeleted(rootDirectoryUuid, userId, elementName, false);
     }
 
-    private void notifyRootDirectoryDeleted(UUID rootDirectoryUuid, String userId, String elementName, String error) {
+    private void notifyRootDirectoryDeleted(UUID rootDirectoryUuid, String userId, String elementName, boolean isDirectoryMoving) {
+        Objects.requireNonNull(rootDirectoryUuid);
+        notifyRootDirectoryDeleted(rootDirectoryUuid, userId, elementName, null, isDirectoryMoving);
+    }
+
+    private void notifyRootDirectoryDeleted(UUID rootDirectoryUuid, String userId, String elementName, String error, boolean isDirectoryMoving) {
         Objects.requireNonNull(rootDirectoryUuid);
         notificationService.emitDirectoryChanged(
                 rootDirectoryUuid,
@@ -624,6 +629,7 @@ public class DirectoryService {
                 userId,
                 error,
                 true,
+                isDirectoryMoving,
                 NotificationType.DELETE_DIRECTORY
         );
     }
