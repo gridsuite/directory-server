@@ -88,20 +88,17 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     List<DirectoryElementEntity> findElementHierarchy(@Param("elementId") UUID elementId);
 
     @Query(nativeQuery = true, value =
-            "WITH RECURSIVE DescendantHierarchy (element_id, parent_element_id) AS (" +
-                    "  SELECT" +
-                    "    id AS element_id, parent_id AS parent_element_id" +
-                    "  FROM element where id = :elementId" +
+            "WITH RECURSIVE DescendantHierarchy (element_id, parent_element_id, depth) AS (" +
+                    "  SELECT id AS element_id, parent_id AS parent_element_id, 0 AS depth" +
+                    "  FROM element WHERE id = :elementId" +
                     "  UNION ALL" +
-                    "  select e.id AS element_id, e.parent_id AS parent_element_id" +
+                    "  SELECT e.id AS element_id, e.parent_id AS parent_element_id, dh.depth + 1" +
                     "  FROM element e" +
-                    "  INNER JOIN" +
-                    "    DescendantHierarchy dh" +
-                    "    ON dh.element_id = e.parent_id" +
-                    "    WHERE e.type = 'DIRECTORY' )" +
-                    "SELECT * FROM element e" +
-                    "JOIN" +
-                    "  DescendantHierarchy dh" +
-                    "  ON e.id = dh.element_id")
+                    "  INNER JOIN DescendantHierarchy dh ON dh.element_id = e.parent_id" +
+                    "  WHERE e.type = 'DIRECTORY')" +
+                    "SELECT * FROM element e " +
+                    "WHERE e.id IN (SELECT dh.element_id FROM DescendantHierarchy dh)"
+    )
     List<DirectoryElementEntity> findAllDescendants(@Param("elementId") UUID elementId);
+
 }

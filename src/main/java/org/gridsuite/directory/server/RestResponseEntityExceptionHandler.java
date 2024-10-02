@@ -42,6 +42,8 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION);
             case IS_ROOT_DIRECTORY:
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(IS_ROOT_DIRECTORY);
+            case IS_DESCENDENT:
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(IS_DESCENDENT);
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

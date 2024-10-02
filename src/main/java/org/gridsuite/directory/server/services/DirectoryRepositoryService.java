@@ -134,4 +134,7 @@ public class DirectoryRepositoryService {
         return elementId == null ? List.of() : directoryElementRepository.findElementHierarchy(elementId);
     }
 
+    public List<DirectoryElementEntity> findAllDescendants(UUID elementId) {
+        return elementId == null ? List.of() : directoryElementRepository.findAllDescendants(elementId);
+    }
 }

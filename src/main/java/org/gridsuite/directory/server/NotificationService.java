@@ -35,6 +35,7 @@ public class NotificationService {
     public static final String HEADER_NOTIFICATION_TYPE = "notificationType";
     public static final String HEADER_ELEMENT_NAME = "elementName";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    public static final String HEADER_IS_DIRECTORY_MOVING = "isDirectoryMoving";
     public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
     private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
@@ -48,6 +49,10 @@ public class NotificationService {
     }
 
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
+        emitDirectoryChanged(directoryUuid, elementName, userId, error, isRoot, false, notificationType);
+    }
+
+    public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, boolean isDirectoryMoving, NotificationType notificationType) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
@@ -56,6 +61,7 @@ public class NotificationService {
                 .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from borked REST request
                 .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
+                .setHeader(HEADER_IS_DIRECTORY_MOVING, isDirectoryMoving)
                 .setHeader(HEADER_ERROR, error);
         sendUpdateMessage(messageBuilder.build());
     }

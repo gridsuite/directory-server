@@ -47,5 +47,6 @@ public class DirectoryException extends RuntimeException {
         IS_DIRECTORY,
         UNKNOWN_NOTIFICATION,
         IS_ROOT_DIRECTORY,
+        IS_DESCENDENT
     }
 }

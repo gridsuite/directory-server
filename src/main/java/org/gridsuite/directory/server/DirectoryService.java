@@ -306,27 +306,38 @@ public class DirectoryService {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
-        validateNewDirectory(newDirectoryUuid);
+        List<DirectoryElementEntity> elementEntities = elementsUuids.stream().map(this::getDirectoryElementEntity).toList();
 
-        elementsUuids.forEach(elementUuid -> moveElementDirectory(elementUuid, newDirectoryUuid, userId));
+        // To validate the new directory, we need to know if the types of the elements are directories
+        boolean isDirectory = elementEntities.stream().allMatch(element -> Objects.equals(element.getType(), DIRECTORY));
+        validateNewDirectory(newDirectoryUuid, isDirectory);
+
+        elementEntities.forEach(elementUuid -> moveElementDirectory(elementUuid, newDirectoryUuid, userId, isDirectory));
     }
 
-    private void moveElementDirectory(UUID elementUuid, UUID newDirectoryUuid, String userId) {
-        DirectoryElementEntity element = repositoryService.getElementEntity(elementUuid)
-                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
-
+    private void moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId, boolean isDirectory) {
         validateElementForMove(element, newDirectoryUuid, userId);
 
-        DirectoryElementEntity oldDirectory = repositoryService.getElementEntity(element.getParentId()).orElseThrow();
+        DirectoryElementEntity oldDirectory = element.getParentId() == null ? null : repositoryService.getElementEntity(element.getParentId()).orElseThrow();
         updateElementParentDirectory(element, newDirectoryUuid);
-        notifyDirectoryHasChanged(newDirectoryUuid, userId, element.getName());
-        notifyDirectoryHasChanged(oldDirectory.getId(), userId, element.getName());
+
+        // if it has a parent, we notify it.
+        // otherwise, which means it is a root, we send a notification that a root has been deleted (in this case, it is moved under a new directory)
+        if (oldDirectory != null) {
+            notifyDirectoryHasChanged(oldDirectory.getId(), userId, element.getName(), isDirectory);
+        } else {
+            notifyRootDirectoryDeleted(element.getId(), userId, element.getName());
+        }
+        notifyDirectoryHasChanged(newDirectoryUuid, userId, element.getName(), isDirectory);
 
     }
 
     private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
-        if (Objects.equals(element.getType(), DIRECTORY) && element.getParentId() == null) {
-            throw new DirectoryException(IS_ROOT_DIRECTORY);
+        if (Objects.equals(element.getType(), DIRECTORY)) {
+            List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(element.getId());
+            if (descendents.stream().map(DirectoryElementEntity::getId).anyMatch(uuid -> Objects.equals(uuid, newDirectoryUuid))) {
+                throw new DirectoryException(IS_DESCENDENT);
+            }
         }
 
         if (!isDirectoryElementUpdatable(toElementAttributes(element), userId) ||
@@ -340,12 +351,20 @@ public class DirectoryService {
         repositoryService.saveElement(element);
     }
 
-    private void validateNewDirectory(UUID newDirectoryUuid) {
-        DirectoryElementEntity newDirectory = repositoryService.getElementEntity(newDirectoryUuid)
-                .orElseThrow(() -> DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid));
+    private void validateNewDirectory(UUID newDirectoryUuid, boolean isDirectory) {
+        if (isDirectory) {
+            if (newDirectoryUuid == null) {
+                // We can not make directory root for the moment.
+                // To be removed when it is possible
+                throw new DirectoryException(IS_ROOT_DIRECTORY);
+            }
+        } else {
+            DirectoryElementEntity newDirectory = repositoryService.getElementEntity(newDirectoryUuid)
+                    .orElseThrow(() -> DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid));
 
-        if (!newDirectory.getType().equals(DIRECTORY)) {
-            throw new DirectoryException(NOT_DIRECTORY);
+            if (!newDirectory.getType().equals(DIRECTORY)) {
+                throw new DirectoryException(NOT_DIRECTORY);
+            }
         }
     }
 
@@ -562,15 +581,23 @@ public class DirectoryService {
     // then we send a notification on this directory
     private void notifyDirectoryHasChanged(UUID directoryUuid, String userId) {
         Objects.requireNonNull(directoryUuid);
-        notifyDirectoryHasChanged(directoryUuid, userId, null, null);
+        notifyDirectoryHasChanged(directoryUuid, userId, null, null, false);
     }
 
     private void notifyDirectoryHasChanged(UUID directoryUuid, String userId, String elementName) {
+        notifyDirectoryHasChanged(directoryUuid, userId, elementName, false);
+    }
+
+    private void notifyDirectoryHasChanged(UUID directoryUuid, String userId, String elementName, boolean isDirectoryMoving) {
         Objects.requireNonNull(directoryUuid);
-        notifyDirectoryHasChanged(directoryUuid, userId, elementName, null);
+        notifyDirectoryHasChanged(directoryUuid, userId, elementName, null, isDirectoryMoving);
     }
 
     private void notifyDirectoryHasChanged(UUID directoryUuid, String userId, String elementName, String error) {
+        notifyDirectoryHasChanged(directoryUuid, userId, elementName, error, false);
+    }
+
+    private void notifyDirectoryHasChanged(UUID directoryUuid, String userId, String elementName, String error, boolean isDirectoryMoving) {
         Objects.requireNonNull(directoryUuid);
         notificationService.emitDirectoryChanged(
                 directoryUuid,
@@ -578,6 +605,7 @@ public class DirectoryService {
                 userId,
                 error,
                 repositoryService.isRootDirectory(directoryUuid),
+                isDirectoryMoving,
                 NotificationType.UPDATE_DIRECTORY
         );
     }
