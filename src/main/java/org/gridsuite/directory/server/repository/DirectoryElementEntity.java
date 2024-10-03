@@ -29,8 +29,11 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "element", indexes = {@Index(name = "directoryElementEntity_parentId_index", columnList = "parentId")})
+@Table(name = "element", indexes = {@Index(name = "directoryElementEntity_parentId_index", columnList = "parentId"),
+    @Index(name = "directoryElementEntity_parentId_name_type_index", columnList = "parentId, name, type", unique = true)
+})
 public class DirectoryElementEntity {
+
     @Id
     @Column(name = "id")
     private UUID id;
@@ -38,7 +41,7 @@ public class DirectoryElementEntity {
     @Column(name = "parentId")
     private UUID parentId;
 
-    @Column(name = "name", columnDefinition = "CLOB")
+    @Column(name = "name", length = 255, nullable = false)
     private String name;
 
     @Column(name = "type", length = 30, nullable = false)

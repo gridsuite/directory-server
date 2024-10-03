@@ -55,7 +55,7 @@ public class DirectoryController {
     @PostMapping(value = "/directories/{directoryUuid}/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Create an element in a directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
-        @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
+        @ApiResponse(responseCode = "409", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<ElementAttributes> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
                                              @Parameter(description = "if element already exists a new incremental name is provided") @RequestParam(value = "allowNewName", required = false, defaultValue = "false") Boolean allowNewName,
                                              @RequestBody ElementAttributes elementAttributes,
@@ -66,7 +66,7 @@ public class DirectoryController {
     @PostMapping(value = "/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Duplicate an element in a directory")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
-        @ApiResponse(responseCode = "403", description = "An element with the same name already exists in the directory")})
+        @ApiResponse(responseCode = "409", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<ElementAttributes> duplicateElement(
                                                            @RequestParam("duplicateFrom") UUID elementUuid,
                                                            @Parameter(description = "ID of the new element") @RequestParam("newElementUuid") UUID newElementUuid,
