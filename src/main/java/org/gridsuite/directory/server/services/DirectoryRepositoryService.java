@@ -9,6 +9,7 @@ package org.gridsuite.directory.server.services;
 import com.google.common.collect.Lists;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+import org.gridsuite.directory.server.dto.elasticsearch.Path;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
@@ -57,6 +59,10 @@ public class DirectoryRepositoryService {
 
     public boolean isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
         return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
+    }
+
+    public List<DirectoryElementInfos> getDirectoryElementInfos(List<UUID> elementUuids) {
+        return StreamSupport.stream(directoryElementInfosRepository.findAllById(elementUuids).spliterator(), false).toList();
     }
 
     public void saveElementsInfos(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
@@ -136,5 +142,15 @@ public class DirectoryRepositoryService {
 
     public List<DirectoryElementEntity> findAllDescendants(UUID elementId) {
         return elementId == null ? List.of() : directoryElementRepository.findAllDescendants(elementId);
+    }
+
+    public Path findPath(UUID elementId) {
+        List<Object[]> pathObj = directoryElementRepository.findPath(elementId);
+
+        // the first index in Object array is the id, the second is the name
+        return Path.builder()
+                .pathUuid(pathObj.stream().map(obj -> (UUID) obj[0]).toList())
+                .pathName(pathObj.stream().map(obj -> (String) obj[1]).toList())
+                .build();
     }
 }
