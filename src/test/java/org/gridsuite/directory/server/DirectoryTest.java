@@ -587,7 +587,6 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory21UUID, elementAttributes1);
         insertAndCheckSubElement(directory21UUID, elementAttributes2);
 
-
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
