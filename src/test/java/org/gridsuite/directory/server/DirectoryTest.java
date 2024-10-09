@@ -582,6 +582,11 @@ public class DirectoryTest {
         UUID directory21UUID = UUID.randomUUID();
         ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, "Doe");
         insertAndCheckSubElementInRootDir(rootDir20Uuid, directory20Attributes);
+        ElementAttributes elementAttributes1 = toElementAttributes(UUID.randomUUID(), "element1", TYPE_01, "Doe");
+        ElementAttributes elementAttributes2 = toElementAttributes(UUID.randomUUID(), "element2", TYPE_02, "Doe");
+        insertAndCheckSubElement(directory21UUID, elementAttributes1);
+        insertAndCheckSubElement(directory21UUID, elementAttributes2);
+
 
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
                         .header("userId", "Doe")
@@ -659,8 +664,6 @@ public class DirectoryTest {
     public void testDirectoryMoveError() throws Exception {
         UUID rootDir1Uuid = insertAndCheckRootDirectory("rootDir1", USER_ID);
 
-        UUID rootDir2Uuid = insertAndCheckRootDirectory("rootDir2", USER_ID);
-
         UUID elementUuid1 = UUID.randomUUID();
         ElementAttributes elementAttributes1 = toElementAttributes(elementUuid1, "dir1", DIRECTORY, USER_ID);
         insertAndCheckSubElementInRootDir(rootDir1Uuid, elementAttributes1);
@@ -669,8 +672,8 @@ public class DirectoryTest {
         ElementAttributes elementAttributes2 = toElementAttributes(elementUuid2, "dir2", DIRECTORY, USER_ID);
         insertAndCheckSubElement(elementUuid1, elementAttributes2);
 
-        // test move element to be root directory
-        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=null")
+        // test move element to be root directory targetDirectoryUuid = null
+        mockMvc.perform(put("/v1/elements")
                         .header("userId", USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(elementUuid1)))

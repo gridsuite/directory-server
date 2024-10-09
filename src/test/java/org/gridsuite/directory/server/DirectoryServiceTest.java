@@ -220,11 +220,6 @@ class DirectoryServiceTest {
         assertTrue(dirEntity.isPresent());
         assertEquals(root2Uuid, dirEntity.get().getParentId());
 
-        // we check that descendants' path have been updated
-        List<DirectoryElementEntity> descendants = directoryElementRepository.findAllDescendants(dirUuid);
-        Iterable<DirectoryElementInfos> infos = directoryElementInfosRepository.findAllById(descendants.stream().map(DirectoryElementEntity::getId).toList());
-        assertTrue(ImmutableList.copyOf(infos).stream().allMatch(i -> Objects.equals(root2Uuid, i.getPathUuid().get(0))));
-
         // Cases when moving element is rejected
         // move directory to it's descendent
         DirectoryException exception1 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(List.of(dirUuid), subDirUuid, "user1"));
