@@ -145,12 +145,11 @@ public class DirectoryRepositoryService {
     }
 
     public Path findPath(UUID elementId) {
-        List<Object[]> pathObj = directoryElementRepository.findPath(elementId);
+        List<DirectoryElementEntity> path = findElementHierarchy(elementId);
 
-        // the first index in Object array is the id, the second is the name
         return Path.builder()
-                .pathUuid(pathObj.stream().map(obj -> (UUID) obj[0]).toList())
-                .pathName(pathObj.stream().map(obj -> (String) obj[1]).toList())
+                .pathUuid(path.stream().map(DirectoryElementEntity::getId).toList())
+                .pathName(path.stream().map(DirectoryElementEntity::getName).toList())
                 .build();
     }
 }

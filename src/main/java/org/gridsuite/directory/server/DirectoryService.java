@@ -370,7 +370,7 @@ public class DirectoryService {
 
             // we check if the path of the parent already exist, otherwise we retrieve it from database
             if (!pathMap.containsKey(parentUuid)) {
-                pathMap.put(parentUuid, repositoryService.findPath(elementsUuid));
+                pathMap.put(parentUuid, repositoryService.findPath(parentUuid));
             }
 
             Path path = pathMap.get(parentUuid);

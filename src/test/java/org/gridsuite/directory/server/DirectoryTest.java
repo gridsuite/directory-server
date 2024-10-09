@@ -593,7 +593,7 @@ public class DirectoryTest {
                         .content(objectMapper.writeValueAsString(List.of(directory21UUID))))
                 .andExpect(status().isOk());
 
-        assertNbElementsInRepositories(3);
+        assertNbElementsInRepositories(5);
 
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
@@ -686,7 +686,7 @@ public class DirectoryTest {
                         .content(objectMapper.writeValueAsString(List.of(elementUuid1)))
                 )
                 .andExpect(status().isForbidden());
-        assertNbElementsInRepositories(4);
+        assertNbElementsInRepositories(3);
     }
 
     @Test
