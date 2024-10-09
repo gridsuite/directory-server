@@ -211,7 +211,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "403", description = "Not authorized execute this update")
     })
     public ResponseEntity<Void> moveElementsDirectory(
-            @RequestParam(required = false) UUID targetDirectoryUuid,
+            @RequestParam UUID targetDirectoryUuid,
             @RequestBody List<UUID> elementsUuids,
             @RequestHeader("userId") String userId) {
         service.moveElementsDirectory(elementsUuids, targetDirectoryUuid, userId);
