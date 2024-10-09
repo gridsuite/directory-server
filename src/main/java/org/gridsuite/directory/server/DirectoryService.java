@@ -344,7 +344,7 @@ public class DirectoryService {
 
         // if the moving element is directory and have descendents, we update the path for the descendents
         if (isDirectory && !descendentsUuid.isEmpty()) {
-            updateElementDescendentsInfos(elementsUuid, descendentsUuid);
+            updateElementDescendentsInfos(descendentsUuid);
         }
 
         // if it has a parent, we notify it.
@@ -358,7 +358,7 @@ public class DirectoryService {
 
     }
 
-    private void updateElementDescendentsInfos(UUID elementsUuid, List<UUID> descendentsUuids) {
+    private void updateElementDescendentsInfos(List<UUID> descendentsUuids) {
         // we store in this map all path of parent elements after the update
         Map<UUID, Path> pathMap = new HashMap<>();
 
@@ -388,12 +388,10 @@ public class DirectoryService {
     }
 
     private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, String userId, List<UUID> descendentsUuids) {
-        if (Objects.equals(element.getType(), DIRECTORY)) {
-
-            // We check if the new directory is the same or descendent of the moving element
-            if (newDirectoryUuid == element.getId() || descendentsUuids.stream().anyMatch(uuid -> Objects.equals(uuid, newDirectoryUuid))) {
-                throw new DirectoryException(IS_DESCENDENT);
-            }
+        // We check if the new directory is the same or descendent of the moving element
+        if (DIRECTORY.equals(element.getType()) &&
+                (newDirectoryUuid == element.getId() || descendentsUuids.stream().anyMatch(uuid -> Objects.equals(uuid, newDirectoryUuid)))) {
+            throw new DirectoryException(IS_DESCENDENT);
         }
 
         if (!isDirectoryElementUpdatable(toElementAttributes(element), userId) ||
