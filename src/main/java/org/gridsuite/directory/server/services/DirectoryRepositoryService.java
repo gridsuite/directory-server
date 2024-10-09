@@ -9,6 +9,7 @@ package org.gridsuite.directory.server.services;
 import com.google.common.collect.Lists;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+import org.gridsuite.directory.server.dto.elasticsearch.Path;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
@@ -57,6 +59,10 @@ public class DirectoryRepositoryService {
 
     public boolean isElementExists(UUID parentDirectoryUuid, String elementName, String type) {
         return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
+    }
+
+    public List<DirectoryElementInfos> getDirectoryElementInfos(List<UUID> elementUuids) {
+        return StreamSupport.stream(directoryElementInfosRepository.findAllById(elementUuids).spliterator(), false).toList();
     }
 
     public void saveElementsInfos(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
@@ -134,4 +140,16 @@ public class DirectoryRepositoryService {
         return elementId == null ? List.of() : directoryElementRepository.findElementHierarchy(elementId);
     }
 
+    public List<DirectoryElementEntity> findAllDescendants(UUID elementId) {
+        return elementId == null ? List.of() : directoryElementRepository.findAllDescendants(elementId);
+    }
+
+    public Path findPath(UUID elementId) {
+        List<DirectoryElementEntity> path = findElementHierarchy(elementId);
+
+        return Path.builder()
+                .pathUuid(path.stream().map(DirectoryElementEntity::getId).toList())
+                .pathName(path.stream().map(DirectoryElementEntity::getName).toList())
+                .build();
+    }
 }
