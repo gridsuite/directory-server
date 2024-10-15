@@ -350,7 +350,7 @@ public class DirectoryService {
         repositoryService.reindexElements(descendents);
 
         // if it has a parent, we notify it.
-        // otherwise, which means it is a root, we send a notification that a root has been deleted (in this case, it is moved under a new directory)
+        // otherwise, which means it is a root, we send a notification that a root has been deleted (in this case, it moved under a new directory)
         if (oldDirectory != null) {
             notifyDirectoryHasChanged(oldDirectory.getId(), userId, element.getName(), isDirectory);
         } else {
