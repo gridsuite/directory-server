@@ -587,66 +587,46 @@ public class DirectoryTest {
         insertAndCheckSubElement(directory21UUID, elementAttributes1);
         insertAndCheckSubElement(directory21UUID, elementAttributes2);
 
-        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
-                        .header("userId", "Doe")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(directory21UUID))))
-                .andExpect(status().isOk());
+        // test move directory
+        moveDirectoryAndCheck(directory21UUID, rootDir20Uuid, rootDir10Uuid, false);
+
+        // test move root directory
+        moveDirectoryAndCheck(rootDir20Uuid, null, rootDir10Uuid, true);
 
         assertNbElementsInRepositories(5);
+    }
+
+    private void moveDirectoryAndCheck(UUID directoryUuid,
+                                       UUID parentDirectoryUuid,
+                                       UUID targetDirectoryUuid,
+                                       boolean isMovingDirectoryRoot) throws Exception {
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + targetDirectoryUuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(directoryUuid))))
+                .andExpect(status().isOk());
 
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(rootDir20Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(isMovingDirectoryRoot ? directoryUuid : parentDirectoryUuid, headers.get(HEADER_DIRECTORY_UUID));
         assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(true, headers.get(HEADER_IS_DIRECTORY_MOVING));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(isMovingDirectoryRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(targetDirectoryUuid, headers.get(HEADER_DIRECTORY_UUID));
         assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(true, headers.get(HEADER_IS_DIRECTORY_MOVING));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-
-        // test move root directory
-        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
-                        .header("userId", "Doe")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(rootDir20Uuid))))
-                .andExpect(status().isOk());
-
-        message = output.receive(TIMEOUT, directoryUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(rootDir20Uuid, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_DIRECTORY_MOVING));
-        assertEquals(NotificationType.DELETE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
-        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-
-        message = output.receive(TIMEOUT, directoryUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_DIRECTORY_MOVING));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
-        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-
-        assertNbElementsInRepositories(5);
     }
 
     @Test
