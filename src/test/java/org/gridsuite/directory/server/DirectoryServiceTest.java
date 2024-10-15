@@ -185,7 +185,9 @@ class DirectoryServiceTest {
         verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, "element2", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
 
         // we move element1 and element2 from subDir to dir
+        reset(directoryElementRepository);
         directoryService.moveElementsDirectory(List.of(elementUuid1, elementUuid2), dirUuid, "user1");
+        verify(directoryElementRepository, times(2)).findElementHierarchy(any(UUID.class));
 
         verify(notificationService, times(2)).emitDirectoryChanged(subDirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
         verify(notificationService, times(1)).emitDirectoryChanged(dirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
@@ -203,7 +205,9 @@ class DirectoryServiceTest {
         assertEquals(subDirUuid, elementEntity3.get().getParentId());
 
         // we move dir to root2
+        reset(directoryElementRepository);
         directoryService.moveElementsDirectory(List.of(dirUuid), root2Uuid, "user1");
+        verify(directoryElementRepository, times(3)).findElementHierarchy(any(UUID.class));
         verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, "dir", "user1", null, true, true, NotificationType.UPDATE_DIRECTORY);
         verify(notificationService, times(1)).emitDirectoryChanged(root2Uuid, "dir", "user1", null, true, true, NotificationType.UPDATE_DIRECTORY);
         Optional<DirectoryElementEntity> dirEntity = directoryElementRepository.findById(dirUuid);
@@ -211,25 +215,26 @@ class DirectoryServiceTest {
         assertEquals(root2Uuid, dirEntity.get().getParentId());
 
         // move directory to it's descendent
-        DirectoryException exception1 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(List.of(dirUuid), subDirUuid, "user1"));
-        assertEquals(DirectoryException.Type.IS_DESCENDENT.name(), exception1.getMessage());
+        List<UUID> list = List.of(dirUuid); // Just for Sonar issue (assertThrows)
+        DirectoryException exception1 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, subDirUuid, "user1"));
+        assertEquals(DirectoryException.Type.MOVE_IN_DESCENDANT_NOT_ALLOWED, exception1.getType());
     }
 
     @Test
-    void testMoveElementNotExistentDirectory() {
+    void testMoveInNotExistingDirectory() {
         ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
         UUID rootUuid = rootAttributes.getElementUuid();
         ElementAttributes elementAttributes = toElementAttributes(null, "element1", "TYPE1", "user1");
         UUID elementUuid = directoryService.createElement(elementAttributes, rootUuid, "user1", false).getElementUuid();
 
         UUID randomUuid = UUID.randomUUID();
-        DirectoryException exception3 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(List.of(elementUuid), randomUuid, "user1"));
-        String expectedErrorMsg = DIRECTORY + " '" + randomUuid + "' not found !";
-        assertEquals(expectedErrorMsg, exception3.getMessage());
+        List<UUID> list = List.of(elementUuid); // Just for Sonar issue (assertThrows)
+        DirectoryException exception3 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, randomUuid, "user1"));
+        assertEquals(DirectoryException.createElementNotFound(DIRECTORY, randomUuid).getMessage(), exception3.getMessage());
     }
 
     @Test
-    void testMoveElementNotDirectoryElement() {
+    void testMoveInNotDirectory() {
         ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
         UUID rootUuid = rootAttributes.getElementUuid();
 
@@ -238,7 +243,8 @@ class DirectoryServiceTest {
         ElementAttributes elementAttributes2 = toElementAttributes(null, "element2", "TYPE2", "user1");
         UUID elementUuid2 = directoryService.createElement(elementAttributes2, rootUuid, "user1", false).getElementUuid();
 
-        DirectoryException exception2 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(List.of(elementUuid1), elementUuid2, "user1"));
-        assertEquals(DirectoryException.Type.NOT_DIRECTORY.name(), exception2.getMessage());
+        List<UUID> list = List.of(elementUuid1); // Just for Sonar issue (assertThrows)
+        DirectoryException exception2 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, elementUuid2, "user1"));
+        assertEquals(DirectoryException.Type.NOT_DIRECTORY, exception2.getType());
     }
 }

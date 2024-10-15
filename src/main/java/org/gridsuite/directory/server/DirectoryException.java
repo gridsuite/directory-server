@@ -51,6 +51,6 @@ public class DirectoryException extends RuntimeException {
         IS_DIRECTORY,
         UNKNOWN_NOTIFICATION,
         NAME_ALREADY_EXISTS,
-        IS_DESCENDENT
+        MOVE_IN_DESCENDANT_NOT_ALLOWED,
     }
 }

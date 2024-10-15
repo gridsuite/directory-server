@@ -10,7 +10,6 @@ import lombok.NonNull;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
-import org.gridsuite.directory.server.dto.elasticsearch.Path;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
@@ -31,6 +30,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
@@ -328,24 +328,26 @@ public class DirectoryService {
 
         validateNewDirectory(newDirectoryUuid);
 
-        elementsUuids.forEach(elementUuid -> moveElementDirectory(elementUuid, newDirectoryUuid, userId));
+        elementsUuids.forEach(elementUuid -> moveElementDirectory(getDirectoryElementEntity(elementUuid), newDirectoryUuid, userId));
     }
 
-    private void moveElementDirectory(UUID elementsUuid, UUID newDirectoryUuid, String userId) {
-        DirectoryElementEntity element = getDirectoryElementEntity(elementsUuid);
-        boolean isDirectory = DIRECTORY.equals(element.getType());
-        List<UUID> descendentsUuid = isDirectory ? repositoryService.findAllDescendants(element.getId()).stream().map(DirectoryElementEntity::getId).toList() : List.of();
-        validateElementForMove(element, newDirectoryUuid, userId, descendentsUuid);
+    private void moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
+        if (element.getParentId() == newDirectoryUuid) { // Same directory ?
+            return;
+        }
 
         DirectoryElementEntity oldDirectory = element.getParentId() == null ? null : repositoryService.getElementEntity(element.getParentId()).orElseThrow();
+        boolean isDirectory = DIRECTORY.equals(element.getType());
+        List<DirectoryElementEntity> descendents = isDirectory ? repositoryService.findAllDescendants(element.getId()).stream().toList() : List.of();
+
+        // validate move elements
+        validateElementForMove(element, newDirectoryUuid, userId, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()));
 
         // we update the parent of the moving element
         updateElementParentDirectory(element, newDirectoryUuid);
 
-        // if the moving element is directory and have descendents, we update the path for the descendents
-        if (isDirectory && !descendentsUuid.isEmpty()) {
-            updateElementDescendentsInfos(descendentsUuid);
-        }
+        // reindex descendents
+        repositoryService.reindexElements(descendents);
 
         // if it has a parent, we notify it.
         // otherwise, which means it is a root, we send a notification that a root has been deleted (in this case, it is moved under a new directory)
@@ -358,40 +360,9 @@ public class DirectoryService {
 
     }
 
-    private void updateElementDescendentsInfos(List<UUID> descendentsUuids) {
-        // we store in this map all path of parent elements after the update
-        Map<UUID, Path> pathMap = new HashMap<>();
-
-        // we retrieve the descendents elasticsearch
-        List<DirectoryElementInfos> directoryElementInfos = repositoryService.getDirectoryElementInfos(descendentsUuids);
-        List<DirectoryElementInfos> updatedDescendents = new ArrayList<>();
-        for (DirectoryElementInfos descendent : directoryElementInfos) {
-            UUID parentUuid = descendent.getParentId();
-
-            // we check if the path of the parent already exist, otherwise we retrieve it from database
-            if (!pathMap.containsKey(parentUuid)) {
-                pathMap.put(parentUuid, repositoryService.findPath(parentUuid));
-            }
-
-            Path path = pathMap.get(parentUuid);
-
-            // we update the paths
-            descendent.setPathUuid(path.getPathUuid());
-            descendent.setPathName(path.getPathName());
-
-            // we add the updated descendent to the list
-            updatedDescendents.add(descendent);
-        }
-
-        // we update all the descendents
-        repositoryService.saveElementsInfos(updatedDescendents);
-    }
-
-    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, String userId, List<UUID> descendentsUuids) {
-        // We check if the new directory is the same or descendent of the moving element
-        if (DIRECTORY.equals(element.getType()) &&
-                (newDirectoryUuid == element.getId() || descendentsUuids.stream().anyMatch(uuid -> Objects.equals(uuid, newDirectoryUuid)))) {
-            throw new DirectoryException(IS_DESCENDENT);
+    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, String userId, Set<UUID> descendentsUuids) {
+        if (newDirectoryUuid == element.getId() || descendentsUuids.contains(newDirectoryUuid)) {
+            throw new DirectoryException(MOVE_IN_DESCENDANT_NOT_ALLOWED);
         }
 
         if (!isDirectoryElementUpdatable(toElementAttributes(element), userId) ||
@@ -502,7 +473,7 @@ public class DirectoryService {
      * @return ElementAttributes of element and all it's parents up to root directory
      */
     public List<ElementAttributes> getPath(UUID elementUuid) {
-        List<ElementAttributes> path = repositoryService.findElementHierarchy(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList();
+        List<ElementAttributes> path = repositoryService.getPath(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList();
         if (path.isEmpty()) {
             throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
         }

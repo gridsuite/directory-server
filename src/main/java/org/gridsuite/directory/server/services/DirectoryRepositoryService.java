@@ -9,17 +9,13 @@ package org.gridsuite.directory.server.services;
 import com.google.common.collect.Lists;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
-import org.gridsuite.directory.server.dto.elasticsearch.Path;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.StreamSupport;
+import java.util.*;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
@@ -61,23 +57,23 @@ public class DirectoryRepositoryService {
         return !directoryElementRepository.findByNameAndParentIdAndType(elementName, parentDirectoryUuid, type).isEmpty();
     }
 
-    public List<DirectoryElementInfos> getDirectoryElementInfos(List<UUID> elementUuids) {
-        return StreamSupport.stream(directoryElementInfosRepository.findAllById(elementUuids).spliterator(), false).toList();
-    }
-
-    public void saveElementsInfos(@NonNull List<DirectoryElementInfos> directoryElementInfos) {
+    private void saveElementsInfos(List<DirectoryElementEntity> directoryElements) {
+        Map<UUID, List<DirectoryElementEntity>> pathsCache = new HashMap<>();
+        List<DirectoryElementInfos> directoryElementInfos = directoryElements.stream()
+                .map(directoryElementEntity -> directoryElementEntity.toDirectoryElementInfos(getPath(directoryElementEntity.getParentId(), pathsCache)))
+                .toList();
         Lists.partition(directoryElementInfos, partitionSize)
                 .parallelStream()
                 .forEach(directoryElementInfosRepository::saveAll);
     }
 
-    private DirectoryElementEntity saveElementsInfo(DirectoryElementEntity elementEntity) {
-        directoryElementInfosRepository.save(elementEntity.toDirectoryElementInfos(findElementHierarchy(elementEntity.getParentId())));
+    private DirectoryElementEntity saveElementInfos(DirectoryElementEntity elementEntity) {
+        directoryElementInfosRepository.save(elementEntity.toDirectoryElementInfos(getPath(elementEntity.getParentId())));
         return elementEntity;
     }
 
     public DirectoryElementEntity saveElement(DirectoryElementEntity elementEntity) {
-        return saveElementsInfo(directoryElementRepository.save(elementEntity));
+        return saveElementInfos(directoryElementRepository.save(elementEntity));
     }
 
     public void deleteElement(UUID elementUuid) {
@@ -95,9 +91,11 @@ public class DirectoryRepositoryService {
     }
 
     public void reindexElements() {
-        saveElementsInfos(directoryElementRepository.findAll().stream()
-                .map(directoryElementEntity -> directoryElementEntity.toDirectoryElementInfos(findElementHierarchy(directoryElementEntity.getParentId())))
-                .toList());
+        reindexElements(directoryElementRepository.findAll());
+    }
+
+    public void reindexElements(@NonNull List<DirectoryElementEntity> elementEntities) {
+        saveElementsInfos(elementEntities);
     }
 
     public UUID getParentUuid(UUID elementUuid) {
@@ -135,21 +133,16 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.getNameByTypeAndParentIdAndNameStartWith(type, parentId, name);
     }
 
-    public List<DirectoryElementEntity> findElementHierarchy(UUID elementId) {
+    public List<DirectoryElementEntity> getPath(UUID elementId) {
+        return getPath(elementId, new HashMap<>());
+    }
+
+    public List<DirectoryElementEntity> getPath(UUID elementId, Map<UUID, List<DirectoryElementEntity>> pathsCache) {
         // Test null for root directories
-        return elementId == null ? List.of() : directoryElementRepository.findElementHierarchy(elementId);
+        return elementId == null ? List.of() : pathsCache.computeIfAbsent(elementId, directoryElementRepository::findElementHierarchy);
     }
 
-    public List<DirectoryElementEntity> findAllDescendants(UUID elementId) {
-        return elementId == null ? List.of() : directoryElementRepository.findAllDescendants(elementId);
-    }
-
-    public Path findPath(UUID elementId) {
-        List<DirectoryElementEntity> path = findElementHierarchy(elementId);
-
-        return Path.builder()
-                .pathUuid(path.stream().map(DirectoryElementEntity::getId).toList())
-                .pathName(path.stream().map(DirectoryElementEntity::getName).toList())
-                .build();
+    public List<DirectoryElementEntity> findAllDescendants(@NonNull UUID elementId) {
+        return directoryElementRepository.findAllDescendants(elementId);
     }
 }
