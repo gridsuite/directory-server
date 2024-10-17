@@ -332,7 +332,7 @@ public class DirectoryService {
     }
 
     private void moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
-        if (element.getParentId() == newDirectoryUuid) { // Same directory ?
+        if (Objects.equals(element.getParentId(), newDirectoryUuid)) { // Same directory ?
             return;
         }
 

@@ -672,6 +672,14 @@ public class DirectoryTest {
         assertEquals(false, headers.get(HEADER_IS_DIRECTORY_MOVING));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+
+        // Test move element to its parent => keep the same parent
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
+                        .header("userId", "Doe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(elementUUID)))
+                )
+                .andExpect(status().isOk()); // Response status is 200 but nothing changed and no notification should be sent
     }
 
     @Test
@@ -686,7 +694,7 @@ public class DirectoryTest {
         ElementAttributes elementAttributes2 = toElementAttributes(elementUuid2, "dir2", DIRECTORY, USER_ID);
         insertAndCheckSubElement(elementUuid1, elementAttributes2);
 
-        // test move element to be root directory targetDirectoryUuid = null
+        // test move element to be root directory: targetDirectoryUuid = null
         mockMvc.perform(put("/v1/elements")
                         .header("userId", USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -701,6 +709,15 @@ public class DirectoryTest {
                         .content(objectMapper.writeValueAsString(List.of(elementUuid1)))
                 )
                 .andExpect(status().isForbidden());
+
+        // test move element to itself
+        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + elementUuid1)
+                        .header("userId", USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(List.of(elementUuid1)))
+                )
+                .andExpect(status().isForbidden());
+
         assertNbElementsInRepositories(3);
     }
 
