@@ -102,7 +102,7 @@ class DirectoryServiceTest {
         verify(notificationService, times(1)).emitDeletedElement(element2.getId(), "user1");
         verify(notificationService, times(1)).emitDeletedElement(element0.getId(), "user1");
         // notification for updated directory
-        verify(notificationService, times(1)).emitDirectoryChanged(parentDirectoryUuid, null, "user1", null, true, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(parentDirectoryUuid, null, "user1", null, true, false, NotificationType.UPDATE_DIRECTORY);
 
         verifyNoMoreInteractions(notificationService);
     }
@@ -154,5 +154,97 @@ class DirectoryServiceTest {
         assertEquals(DirectoryException.Type.NAME_ALREADY_EXISTS, directoryException.getType());
         assertEquals(DirectoryException.createElementNameAlreadyExists(elementAttributes.getElementName()).getMessage(), directoryException.getMessage());
         inOrder.verify(directoryService, calls(MAX_RETRY)).getDuplicateNameCandidate(root2Uuid, elementAttributes.getElementName(), elementAttributes.getType(), "User1");
+    }
+
+    @Test
+    void testMoveElement() {
+        // Create root
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
+        UUID rootUuid = rootAttributes.getElementUuid();
+
+        ElementAttributes root2Attributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root2", "user1", null, null, null, null), "user1");
+        UUID root2Uuid = root2Attributes.getElementUuid();
+
+        // Insert elements
+        ElementAttributes directoryElementAttributes = toElementAttributes(null, "dir", DIRECTORY, "user1");
+        UUID dirUuid = directoryService.createElement(directoryElementAttributes, rootUuid, "user1", false).getElementUuid();
+
+        ElementAttributes subDirectoryElementAttributes = toElementAttributes(null, "subDir", DIRECTORY, "user1");
+        UUID subDirUuid = directoryService.createElement(subDirectoryElementAttributes, dirUuid, "user1", false).getElementUuid();
+
+        ElementAttributes elementAttributes1 = toElementAttributes(null, "element1", "TYPE1", "user1");
+        UUID elementUuid1 = directoryService.createElement(elementAttributes1, subDirUuid, "user1", false).getElementUuid();
+
+        ElementAttributes elementAttributes2 = toElementAttributes(null, "element2", "TYPE2", "user1");
+        UUID elementUuid2 = directoryService.createElement(elementAttributes2, subDirUuid, "user1", false).getElementUuid();
+
+        ElementAttributes elementAttributes3 = toElementAttributes(null, "element3", "TYPE3", "user1");
+        UUID elementUuid3 = directoryService.createElement(elementAttributes3, subDirUuid, "user1", false).getElementUuid();
+
+        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, "element2", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+
+        // we move element1 and element2 from subDir to dir
+        reset(directoryElementRepository);
+        directoryService.moveElementsDirectory(List.of(elementUuid1, elementUuid2), dirUuid, "user1");
+        verify(directoryElementRepository, times(2)).findElementHierarchy(any(UUID.class));
+
+        verify(notificationService, times(2)).emitDirectoryChanged(subDirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(dirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(2)).emitDirectoryChanged(subDirUuid, "element2", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(dirUuid, "element2", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+
+        Optional<DirectoryElementEntity> elementEntity1 = directoryElementRepository.findById(elementUuid1);
+        Optional<DirectoryElementEntity> elementEntity2 = directoryElementRepository.findById(elementUuid2);
+        Optional<DirectoryElementEntity> elementEntity3 = directoryElementRepository.findById(elementUuid3);
+        assertTrue(elementEntity1.isPresent());
+        assertTrue(elementEntity2.isPresent());
+        assertTrue(elementEntity3.isPresent());
+        assertEquals(dirUuid, elementEntity1.get().getParentId());
+        assertEquals(dirUuid, elementEntity2.get().getParentId());
+        assertEquals(subDirUuid, elementEntity3.get().getParentId());
+
+        // we move dir to root2
+        reset(directoryElementRepository);
+        directoryService.moveElementsDirectory(List.of(dirUuid), root2Uuid, "user1");
+        verify(directoryElementRepository, times(3)).findElementHierarchy(any(UUID.class));
+        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, "dir", "user1", null, true, true, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(root2Uuid, "dir", "user1", null, true, true, NotificationType.UPDATE_DIRECTORY);
+        Optional<DirectoryElementEntity> dirEntity = directoryElementRepository.findById(dirUuid);
+        assertTrue(dirEntity.isPresent());
+        assertEquals(root2Uuid, dirEntity.get().getParentId());
+
+        // move directory to it's descendent
+        List<UUID> list = List.of(dirUuid); // Just for Sonar issue (assertThrows)
+        DirectoryException exception1 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, subDirUuid, "user1"));
+        assertEquals(DirectoryException.Type.MOVE_IN_DESCENDANT_NOT_ALLOWED, exception1.getType());
+    }
+
+    @Test
+    void testMoveInNotExistingDirectory() {
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
+        UUID rootUuid = rootAttributes.getElementUuid();
+        ElementAttributes elementAttributes = toElementAttributes(null, "element1", "TYPE1", "user1");
+        UUID elementUuid = directoryService.createElement(elementAttributes, rootUuid, "user1", false).getElementUuid();
+
+        UUID randomUuid = UUID.randomUUID();
+        List<UUID> list = List.of(elementUuid); // Just for Sonar issue (assertThrows)
+        DirectoryException exception3 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, randomUuid, "user1"));
+        assertEquals(DirectoryException.createElementNotFound(DIRECTORY, randomUuid).getMessage(), exception3.getMessage());
+    }
+
+    @Test
+    void testMoveInNotDirectory() {
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
+        UUID rootUuid = rootAttributes.getElementUuid();
+
+        ElementAttributes elementAttributes1 = toElementAttributes(null, "element1", "TYPE1", "user1");
+        UUID elementUuid1 = directoryService.createElement(elementAttributes1, rootUuid, "user1", false).getElementUuid();
+        ElementAttributes elementAttributes2 = toElementAttributes(null, "element2", "TYPE2", "user1");
+        UUID elementUuid2 = directoryService.createElement(elementAttributes2, rootUuid, "user1", false).getElementUuid();
+
+        List<UUID> list = List.of(elementUuid1); // Just for Sonar issue (assertThrows)
+        DirectoryException exception2 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, elementUuid2, "user1"));
+        assertEquals(DirectoryException.Type.NOT_DIRECTORY, exception2.getType());
     }
 }
