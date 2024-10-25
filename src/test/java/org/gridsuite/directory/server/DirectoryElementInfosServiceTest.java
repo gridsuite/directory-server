@@ -11,7 +11,6 @@ import org.apache.commons.collections4.IterableUtils;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
-import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,8 +38,6 @@ class DirectoryElementInfosServiceTest {
     public static final String TYPE_03 = "TYPE_03";
     public static final String TYPE_04 = "TYPE_04";
     public static final String DIRECTORY = "DIRECTORY";
-    @Autowired
-    DirectoryRepositoryService repositoryService;
 
     @Autowired
     DirectoryElementInfosRepository directoryElementInfosRepository;
@@ -66,7 +63,7 @@ class DirectoryElementInfosServiceTest {
 
         // Add
         List<DirectoryElementInfos> infos = List.of(element1Infos, element2Infos, directoryInfos, element3Infos);
-        repositoryService.saveElementsInfos(infos);
+        directoryElementInfosRepository.saveAll(infos);
         List<DirectoryElementInfos> infosDB = IterableUtils.toList(directoryElementInfosRepository.findAll());
         assertEquals(4, infosDB.size());
         assertEquals(infos, infosDB);
@@ -90,7 +87,7 @@ class DirectoryElementInfosServiceTest {
         var element3Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName3").type(TYPE_03).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
 
         List<DirectoryElementInfos> infos = List.of(directoryInfos, element2Infos, element1Infos, element4Infos, element3Infos);
-        repositoryService.saveElementsInfos(infos);
+        directoryElementInfosRepository.saveAll(infos);
 
         Set<DirectoryElementInfos> hits = new HashSet<>(directoryElementInfosService.searchElements("a", "", PageRequest.of(0, 10)).stream().toList());
         assertEquals(4, hits.size());
@@ -115,7 +112,7 @@ class DirectoryElementInfosServiceTest {
         for (int i = 0; i < 20; i++) {
             elements.add(createElements("filter" + i));
         }
-        repositoryService.saveElementsInfos(elements);
+        directoryElementInfosRepository.saveAll(elements);
         Page<DirectoryElementInfos> pagedHits = directoryElementInfosService.searchElements("filter", "", PageRequest.of(0, 10));
         assertEquals(20, pagedHits.getTotalElements());
         assertEquals(10, pagedHits.getContent().size());
@@ -126,7 +123,7 @@ class DirectoryElementInfosServiceTest {
         var studyInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("s+Ss+ss'sp&pn(n n)ne{e e}et<t t>te|eh-ht.th/hl\\lk[k k]k")
                 .type(TYPE_01).owner("admin1").parentId(UUID.randomUUID())
                 .subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        repositoryService.saveElementsInfos(List.of(studyInfos));
+        directoryElementInfosRepository.saveAll(List.of(studyInfos));
 
         testNameFullAscii("s+S");
         testNameFullAscii("s+s");
@@ -209,12 +206,12 @@ class DirectoryElementInfosServiceTest {
         var commonFile5 = makeElementFile("common_file", allDirs.get("sub_sub_directory3_1").getId());
         var commonFile6 = makeElementFile("common_file", allDirs.get("sub_sub_directory3_2").getId());
 
-        repositoryService.saveElementsInfos(allDirs.values().stream().toList());
+        directoryElementInfosRepository.saveAll(allDirs.values().stream().toList());
         List<DirectoryElementInfos> infos = List.of(
                 file1, file2, file3,
                 commonFile1, commonFile2, commonFile3, commonFile4, commonFile5, commonFile6);
 
-        repositoryService.saveElementsInfos(infos);
+        directoryElementInfosRepository.saveAll(infos);
 
         return allDirs;
     }
@@ -267,7 +264,7 @@ class DirectoryElementInfosServiceTest {
         var newFile1 = makeElementFile("new-file", allDirs.get("sub_directory2").getId());
         var newFile2 = makeElementFile("new-file", allDirs.get("sub_sub_directory2_2").getId());
         var newFile3 = makeElementFile("new-file", allDirs.get("sub_sub_directory3_1").getId());
-        repositoryService.saveElementsInfos(List.of(newFile1, newFile2, newFile3));
+        directoryElementInfosRepository.saveAll(List.of(newFile1, newFile2, newFile3));
 
         //we want to have the files in the current directory if any
         // then the files in the path of the current directory (sub directories and parent directories)
@@ -298,7 +295,7 @@ class DirectoryElementInfosServiceTest {
         var newFile = makeElementFile(fileName, allDirs.get("sub_sub_directory1_2").getId());
         var newFile1 = makeElementFile(fileName + "1", allDirs.get("sub_sub_directory1_2").getId());
         var newFile2 = makeElementFile("1" + fileName + "2", allDirs.get("sub_sub_directory1_2").getId());
-        repositoryService.saveElementsInfos(List.of(newFile, newFile2, newFile1));
+        directoryElementInfosRepository.saveAll(List.of(newFile, newFile2, newFile1));
         List<DirectoryElementInfos> hitsFile = directoryElementInfosService.searchElements(fileName, currentDirUuid.toString(), PageRequest.of(0, 10)).stream().toList();
         assertEquals(3, hitsFile.size());
         assertEquals(fileName, hitsFile.get(0).getName());
@@ -325,7 +322,7 @@ class DirectoryElementInfosServiceTest {
         var newFile2 = makeElementFile("new-file-Ok", allDirs.get("sub_directory2").getId());
         var bNewFile = makeElementFile("bnew-filebbbb", allDirs.get("sub_directory2").getId());
         var testNewFile = makeElementFile("test-new-file", allDirs.get("sub_directory2").getId());
-        repositoryService.saveElementsInfos(List.of(bNewFile, newFile2, anewFile1, testNewFile));
+        directoryElementInfosRepository.saveAll(List.of(bNewFile, newFile2, anewFile1, testNewFile));
 
         //we want to have the files in the current directory if any
         // then the files in the path of the current directory (sub directories and parent directories)

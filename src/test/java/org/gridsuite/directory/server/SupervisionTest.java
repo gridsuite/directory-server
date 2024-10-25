@@ -78,7 +78,7 @@ class SupervisionTest {
         List<DirectoryElementEntity> elementPath = List.of(); // No need path for tests
         verify(directoryElementRepository, times(1)).findAll();
         verify(directoryElementInfosRepository, times(1)).saveAll(allElements.stream().map(e -> e.toDirectoryElementInfos(elementPath)).toList());
-        verify(directoryElementRepository, times(3)).findElementHierarchy(any(UUID.class));
+        verify(directoryElementRepository, times(2)).findElementHierarchy(any(UUID.class));
     }
 
     @AfterEach

@@ -42,6 +42,8 @@ public class RestResponseEntityExceptionHandler {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION);
             case NAME_ALREADY_EXISTS:
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(directoryException.getMessage());
+            case MOVE_IN_DESCENDANT_NOT_ALLOWED:
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(MOVE_IN_DESCENDANT_NOT_ALLOWED);
             default:
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

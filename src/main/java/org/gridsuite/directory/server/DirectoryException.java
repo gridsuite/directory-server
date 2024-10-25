@@ -50,6 +50,7 @@ public class DirectoryException extends RuntimeException {
         NOT_DIRECTORY,
         IS_DIRECTORY,
         UNKNOWN_NOTIFICATION,
-        NAME_ALREADY_EXISTS
+        NAME_ALREADY_EXISTS,
+        MOVE_IN_DESCENDANT_NOT_ALLOWED,
     }
 }
