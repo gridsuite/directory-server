@@ -1,0 +1,40 @@
+name: Build native image
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v[0-9]*'
+
+jobs:
+  build-native-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '17'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Build Docker Native image - Main
+        if: github.ref == 'refs/heads/main'
+        run: >
+          mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
+          -Ddocker.publishRegistry.username=gridsuiteci
+          -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }}
+          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native
+          -Dspring-boot.build-image.publish=true
+
+      - name: Build Docker Native image - Tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: >
+          mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
+          -Ddocker.publishRegistry.username=gridsuiteci
+          -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }}
+          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native:${GITHUB_REF_NAME#v}
+          -Dspring-boot.build-image.publish=true
