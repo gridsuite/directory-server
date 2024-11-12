@@ -41,14 +41,12 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>34</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>35</gridsuite-dependencies.version>
         <testcontainers.version>1.18.3</testcontainers.version>
         <liquibase-hibernate-package>org.gridsuite.directory.server</liquibase-hibernate-package>
         <to-string-verifier-version>1.4.8</to-string-verifier-version>
         <native-buildtools.version>0.10.3</native-buildtools.version>
         <db-util.version>1.0.5</db-util.version>
-        <!-- FIXME: powsybl-ws-commons version is overridden. To be removed at next powsybl-ws-dependencies.version upgrade -->
-        <powsybl-ws-commons.version>1.15.0</powsybl-ws-commons.version>
     </properties>
 
     <profiles>
@@ -160,14 +158,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- overrides of imports -->
-            <!-- FIXME: powsybl-ws-commons version is overridden. To be removed at next powsybl-ws-dependencies.version upgrade -->
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-ws-commons</artifactId>
-                <version>${powsybl-ws-commons.version}</version>
-            </dependency>
-
             <!-- imports -->
             <dependency>
                 <groupId>org.gridsuite</groupId>
