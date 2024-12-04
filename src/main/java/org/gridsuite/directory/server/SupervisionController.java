@@ -10,9 +10,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RestClient;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.SupervisionService;
-import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,12 +32,12 @@ public class SupervisionController {
 
     private final DirectoryElementInfosService directoryElementInfosService;
 
-    private final ClientConfiguration elasticsearchClientConfiguration;
+    private final RestClient restClient;
 
-    public SupervisionController(SupervisionService service, ClientConfiguration elasticsearchClientConfiguration, DirectoryElementInfosService directoryElementInfosService) {
+    public SupervisionController(SupervisionService service, DirectoryElementInfosService directoryElementInfosService, RestClient restClient) {
         this.service = service;
         this.directoryElementInfosService = directoryElementInfosService;
-        this.elasticsearchClientConfiguration = elasticsearchClientConfiguration;
+        this.restClient = restClient;
     }
 
     @DeleteMapping(value = "/elements")
@@ -52,9 +53,10 @@ public class SupervisionController {
     @Operation(summary = "get the elasticsearch address")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "the elasticsearch address")})
     public ResponseEntity<String> getElasticsearchHost() {
-        String host = elasticsearchClientConfiguration.getEndpoints().get(0).getHostName()
-                        + ":"
-                        + elasticsearchClientConfiguration.getEndpoints().get(0).getPort();
+        HttpHost elasticSearchHost = restClient.getNodes().get(0).getHost();
+        String host = elasticSearchHost.getHostName()
+            + ":"
+            + elasticSearchHost.getPort();
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(host);
     }
 
