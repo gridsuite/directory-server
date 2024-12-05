@@ -9,7 +9,10 @@ package org.gridsuite.directory.server.elasticsearch;
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
-public class ESConfig {
+public final class ESConfig {
+    private ESConfig() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     // It's not simple SPEL but this syntax is managed by both ES and Spring
     public static final String DIRECTORY_ELEMENT_INFOS_INDEX_NAME = "#{@environment.getProperty('powsybl-ws.elasticsearch.index.prefix')}directory-elements";
