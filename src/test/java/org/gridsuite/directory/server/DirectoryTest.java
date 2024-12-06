@@ -14,6 +14,8 @@ import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
 import lombok.SneakyThrows;
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RestClient;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
@@ -27,7 +29,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.InputDestination;
@@ -99,8 +100,8 @@ public class DirectoryTest {
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
 
-    @Value("${spring.data.elasticsearch.embedded.port:}")
-    private String expectedEsPort;
+    @Autowired
+    RestClient restClient;
 
     @Autowired
     ObjectMapper objectMapper;
@@ -1288,7 +1289,8 @@ public class DirectoryTest {
             .andExpect(status().isOk())
             .andReturn();
 
-        assertEquals("localhost:" + expectedEsPort, mvcResult.getResponse().getContentAsString());
+        HttpHost elasticSearchHost = restClient.getNodes().get(0).getHost();
+        assertEquals(elasticSearchHost.getHostName() + ":" + elasticSearchHost.getPort(), mvcResult.getResponse().getContentAsString());
 
         // Test get indexed elements index name
         mvcResult = mockMvc.perform(get("/v1/supervision/elements/index-name"))
