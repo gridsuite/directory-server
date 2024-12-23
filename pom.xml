@@ -41,7 +41,7 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>35</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>36</gridsuite-dependencies.version>
         <testcontainers.version>1.18.3</testcontainers.version>
         <liquibase-hibernate-package>org.gridsuite.directory.server</liquibase-hibernate-package>
         <to-string-verifier-version>1.4.8</to-string-verifier-version>
