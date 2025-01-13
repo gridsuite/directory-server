@@ -81,6 +81,7 @@ public class DirectoryTest {
     public static final String TYPE_05 = "TYPE_05";
     public static final String DIRECTORY = "DIRECTORY";
     public static final String CASE = "CASE";
+    public static final String MODIFICATION = "MODIFICATION";
 
     private static final long TIMEOUT = 1000;
     private static final UUID TYPE_01_RENAME_UUID = UUID.randomUUID();
@@ -1148,7 +1149,7 @@ public class DirectoryTest {
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), toElementAttributes(null, "subDirElementType02", TYPE_02, "user1"));
         checkDirectoryContent(rootDirUuid, "user1", List.of(newElement1Attributes, newElement2Attributes, newElement3Attributes, subDirAttributes));
         subDirAttributes.setSubdirectoriesCount(1L);
-        checkDirectoryContent(rootDirUuid, "user1", List.of(TYPE_02), List.of(newElement1Attributes, subDirAttributes));
+        checkDirectoryContent(rootDirUuid, "user1", List.of(TYPE_02), false, List.of(newElement1Attributes, subDirAttributes));
 
         ElementAttributes rootDirectory = getElements(List.of(rootDirUuid), "user1", false, 200).get(0);
 
@@ -1575,13 +1576,14 @@ public class DirectoryTest {
         assertTrue(new MatcherJson<>(objectMapper, elementAttributes).matchesSafely(result));
     }
 
-    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementAttributes> list) throws Exception {
-        checkDirectoryContent(parentDirectoryUuid, userId, List.of(), list);
+    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementAttributes> expectedList) throws Exception {
+        checkDirectoryContent(parentDirectoryUuid, userId, List.of(), false, expectedList);
     }
 
-    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, List<ElementAttributes> list) throws Exception {
-        String elementTypes = !CollectionUtils.isEmpty(types) ? "?elementTypes=" + String.join(",", types) : "";
-        String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + elementTypes)
+    private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, boolean recursive, List<ElementAttributes> expectedList) throws Exception {
+        String recurs = "?recursive=" + (recursive ? "true" : "false");
+        String elementTypes = !CollectionUtils.isEmpty(types) ? "&elementTypes=" + String.join(",", types) : "";
+        String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + recurs + elementTypes)
                 .header("userId", userId))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn()
@@ -1589,7 +1591,11 @@ public class DirectoryTest {
                 .getContentAsString();
         List<ElementAttributes> result = objectMapper.readValue(response, new TypeReference<>() {
         });
-        assertThat(list).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(result);
+        if (recursive) {
+            assertThat(expectedList).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).ignoringCollectionOrder().isEqualTo(result);
+        } else {
+            assertThat(expectedList).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(result);
+        }
     }
 
     private void checkElementNotFound(UUID elementUuid, String userId) throws Exception {
@@ -1763,7 +1769,7 @@ public class DirectoryTest {
         element2Attributes.setElementName(elementName + "(1)");
         assertElementIsProperlyInserted(element2Attributes);
 
-        checkDirectoryContent(rootDirUuid, userId, List.of(TYPE_04), List.of(elementAttributes, element2Attributes));
+        checkDirectoryContent(rootDirUuid, userId, List.of(TYPE_04), false, List.of(elementAttributes, element2Attributes));
 
         assertNbElementsInRepositories(3);
     }
@@ -2027,5 +2033,38 @@ public class DirectoryTest {
         JsonNode resultJson = objectMapper.readTree(mvcResult.getResponse().getContentAsString());
         ObjectReader resultReader = objectMapper.readerFor(new TypeReference<>() { });
         return resultReader.readValue(resultJson.get("content"));
+    }
+
+    @Test
+    public void testDirectoryContentRecursive() throws Exception {
+        checkRootDirectoriesList("userId", List.of());
+        //    rootDir  (contains modifRoot)
+        //      |
+        //    subDir   (contains modifSub, modifSub2)
+        //      |
+        //    lastDir   (contains modifLeaf)
+
+        // create rootDir
+        UUID uuidNewRootDirectory = retrieveInsertAndCheckRootDirectory("rootDir", USER_ID).getElementUuid();
+        // create modifRoot
+        ElementAttributes rootModifAttributes = toElementAttributes(null, "modifRoot", MODIFICATION, USER_ID);
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, rootModifAttributes);
+        // create subDir
+        ElementAttributes subDirAttributes = toElementAttributes(null, "subDir", DIRECTORY, USER_ID);
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subDirAttributes);
+        // create modifSub, modifSub2
+        ElementAttributes subModifAttributes = toElementAttributes(null, "modifSub", MODIFICATION, USER_ID);
+        insertAndCheckSubElement(subDirAttributes.getElementUuid(), subModifAttributes);
+        ElementAttributes subModifAttributes2 = toElementAttributes(null, "modifSub2", MODIFICATION, USER_ID);
+        insertAndCheckSubElement(subDirAttributes.getElementUuid(), subModifAttributes2);
+        // create lastDir
+        ElementAttributes lastDirAttributes = toElementAttributes(null, "lastDir", DIRECTORY, USER_ID);
+        insertAndCheckSubElement(subDirAttributes.getElementUuid(), lastDirAttributes);
+        // create modifLeaf
+        ElementAttributes leafModifAttributes = toElementAttributes(null, "modifLeaf", MODIFICATION, USER_ID);
+        insertAndCheckSubElement(lastDirAttributes.getElementUuid(), leafModifAttributes);
+
+        // 4 modifications expected starting recursively from rootDir (in random order)
+        checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(MODIFICATION), true, List.of(leafModifAttributes, rootModifAttributes, subModifAttributes, subModifAttributes2));
     }
 }
