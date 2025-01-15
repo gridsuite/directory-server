@@ -140,8 +140,9 @@ public class DirectoryController {
     @Operation(summary = "Get directory elements")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
     public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
-                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, types));
+                                                                        @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
+                                                                        @RequestParam(value = "recursive", required = false, defaultValue = "false") Boolean recursive) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, types, recursive));
     }
 
     @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)

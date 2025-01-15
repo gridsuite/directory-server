@@ -261,17 +261,24 @@ public class DirectoryService {
         return subdirectoriesCountsMap;
     }
 
-    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types) {
+    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive) {
         ElementAttributes elementAttributes = getElement(directoryUuid);
         if (elementAttributes == null) {
             throw DirectoryException.createElementNotFound(DIRECTORY, directoryUuid);
         }
-
         if (!elementAttributes.getType().equals(DIRECTORY)) {
             return List.of();
         }
-
-        return getAllDirectoryElementsStream(directoryUuid, types).toList();
+        if (Boolean.TRUE.equals(recursive)) {
+            List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(directoryUuid).stream().toList();
+            return descendents
+                    .stream()
+                    .filter(e -> types.isEmpty() || types.contains(e.getType()))
+                    .map(ElementAttributes::toElementAttributes)
+                    .toList();
+        } else {
+            return getAllDirectoryElementsStream(directoryUuid, types).toList();
+        }
     }
 
     private Stream<ElementAttributes> getOnlyElementsStream(UUID directoryUuid, List<String> types) {
