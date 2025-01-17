@@ -657,4 +657,15 @@ public class DirectoryService {
                 NotificationType.DELETE_DIRECTORY
         );
     }
+
+    public boolean areElementsAccessible(List<UUID> elementUuids, String userId, boolean forDeletion, boolean forUpdate) {
+
+        if (forDeletion) {
+            return areDirectoryElementsDeletable(elementUuids, userId);
+        }
+        if (forUpdate) {
+            return getElements(elementUuids, true, List.of()).stream().allMatch(e -> isDirectoryElementUpdatable(e, userId));
+        }
+        return areDirectoryElementsAccessible(elementUuids, userId);
+    }
 }

@@ -2067,4 +2067,40 @@ public class DirectoryTest {
         // 4 modifications expected starting recursively from rootDir (in random order)
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(MODIFICATION), true, List.of(leafModifAttributes, rootModifAttributes, subModifAttributes, subModifAttributes2));
     }
+
+    @Test
+    public void testElementsUpdateOk() throws Exception {
+        checkRootDirectoriesList(USER_ID, List.of());
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert a  sub-element of type TYPE_01
+        ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_01, "userId", "descr element");
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, elementAttributes);
+        checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(elementAttributes));
+
+        // The elementAttributes is created by the userId,so it is updated
+        mockMvc
+                .perform(head("/v1/elements?forUpdate=true&ids={ids}", elementAttributes.getElementUuid()).header(USER_ID, USER_ID))
+                .andExpectAll(status().isOk()).andReturn();
+    }
+
+    @Test
+    public void testElementsUpdateNotOk() throws Exception {
+        checkRootDirectoriesList(USER_ID, List.of());
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert a  sub-element of type TYPE_01
+        ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_01, "userId", "descr element");
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, elementAttributes);
+        checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(elementAttributes));
+
+        // The elementAttributes is created by the userId,so it is updated
+        mockMvc
+                .perform(head("/v1/elements?forUpdate=true&ids={ids}", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
+                .andExpectAll(status().isNoContent()).andReturn();
+    }
 }
