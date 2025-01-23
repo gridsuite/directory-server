@@ -44,7 +44,7 @@ public class DirectoryElementEntity {
     @Column(name = "name", length = 255, nullable = false)
     private String name;
 
-    @Column(name = "type", length = 30, nullable = false)
+    @Column(name = "type", length = 80, nullable = false)
     private String type;
 
     @Column(name = "owner", length = 80, nullable = false)
