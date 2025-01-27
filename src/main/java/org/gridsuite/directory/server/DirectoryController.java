@@ -185,9 +185,9 @@ public class DirectoryController {
     })
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                       @RequestParam(value = "forDeletion", required = false, defaultValue = "false") Boolean forDeletion,
+                                                      @RequestParam(value = "forUpdate", required = false, defaultValue = "false") Boolean forUpdate,
                                                       @RequestHeader("userId") String userId) {
-        boolean result = Boolean.TRUE.equals(forDeletion) ? service.areDirectoryElementsDeletable(elementUuids, userId) : service.areDirectoryElementsAccessible(elementUuids, userId);
-        return result ? ResponseEntity.ok().build() : ResponseEntity.noContent().build();
+        return service.areElementsAccessible(elementUuids, userId, forDeletion, forUpdate) ? ResponseEntity.ok().build() : ResponseEntity.noContent().build();
     }
 
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
