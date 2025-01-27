@@ -2098,7 +2098,7 @@ public class DirectoryTest {
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, elementAttributes);
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(elementAttributes));
 
-        // The elementAttributes is created by the userId,so it is updated
+        // The elementAttributes is created by the userId,so it is not updated by USERID_1
         mockMvc
                 .perform(head("/v1/elements?forUpdate=true&ids={ids}", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
                 .andExpectAll(status().isNoContent()).andReturn();
