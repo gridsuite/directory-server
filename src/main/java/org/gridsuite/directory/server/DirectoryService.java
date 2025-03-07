@@ -254,7 +254,7 @@ public class DirectoryService {
             if (currentDirectoryUuid == null) {
                 //we create the root directory if it doesn't exist
                 if (parentDirectoryUuid == null) {
-                    parentDirectoryUuid = createRootDirectory(
+                    parentDirectoryUuid = self.createRootDirectory(
                             new RootDirectoryAttributes(
                                     s,
                                     userId,
@@ -265,7 +265,7 @@ public class DirectoryService {
                             userId).getElementUuid();
                 } else {
                     //and then we create the rest of the path
-                    parentDirectoryUuid = createElement(
+                    parentDirectoryUuid = self.createElement(
                             toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, null, now, now, userId),
                             parentDirectoryUuid,
                             userId, false).getElementUuid();
@@ -379,7 +379,7 @@ public class DirectoryService {
         List<DirectoryElementEntity> descendents = isDirectory ? repositoryService.findAllDescendants(element.getId()).stream().toList() : List.of();
 
         // validate move elements
-        validateElementForMove(element, newDirectoryUuid, userId, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()));
+        validateElementForMove(element, newDirectoryUuid, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()));
 
         // we update the parent of the moving element
         updateElementParentDirectory(element, newDirectoryUuid);
@@ -398,7 +398,7 @@ public class DirectoryService {
 
     }
 
-    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, String userId, Set<UUID> descendentsUuids) {
+    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, Set<UUID> descendentsUuids) {
         if (newDirectoryUuid == element.getId() || descendentsUuids.contains(newDirectoryUuid)) {
             throw new DirectoryException(MOVE_IN_DESCENDANT_NOT_ALLOWED);
         }

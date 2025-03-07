@@ -103,11 +103,10 @@ public class AccessRightsControlTest {
             @Override
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                if ("HEAD".equals(request.getMethod())) {
-                    if (path.matches("/v1/users/.*/isAdmin")) {
+                if ("HEAD".equals(request.getMethod()) && path.matches("/v1/users/.*/isAdmin")) {
                         return new MockResponse().setResponseCode(200);
                     }
-                }
+
                 return new MockResponse().setResponseCode(418);
             }
         };
