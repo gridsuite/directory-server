@@ -358,6 +358,7 @@ public class DirectoryService {
 
     }
 
+    @Transactional
     public void moveElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
         if (elementsUuids.isEmpty()) {
             throw new DirectoryException(NOT_ALLOWED);
