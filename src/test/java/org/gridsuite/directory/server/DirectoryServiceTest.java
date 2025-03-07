@@ -108,20 +108,6 @@ class DirectoryServiceTest {
     }
 
     @Test
-    void testDeleteFromForbiddenDirectory() {
-        UUID parentDirectoryUuid = createRootElement("root", DIRECTORY, "user1").getId();
-        DirectoryElementEntity element = createElement(parentDirectoryUuid, "elementName", TYPE_01, "user2");
-        List<UUID> elementToDeleteUuids = List.of(element).stream().map(e -> e.getId()).toList();
-        UUID elementUuid = element.getId();
-        when(directoryElementRepository.findById(element.getId())).thenReturn(Optional.of(element));
-        when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(List.of(element));
-
-        // element was created by user2,so it can not be deleted by user1
-        DirectoryException exception = assertThrows(DirectoryException.class, () -> directoryService.deleteElements(elementToDeleteUuids, elementUuid, "user1"));
-        assertEquals(DirectoryException.Type.NOT_ALLOWED.name(), exception.getMessage());
-    }
-
-    @Test
     void testDirectoryElementUniqueness() {
         ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
         UUID rootUuid = rootAttributes.getElementUuid();

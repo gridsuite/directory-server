@@ -14,6 +14,11 @@ import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
 import lombok.SneakyThrows;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.directory.server.dto.ElementAttributes;
@@ -22,8 +27,12 @@ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.PermissionId;
+import org.gridsuite.directory.server.repository.PermissionRepository;
+import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -85,7 +94,6 @@ public class DirectoryTest {
 
     private static final long TIMEOUT = 1000;
     private static final UUID TYPE_01_RENAME_UUID = UUID.randomUUID();
-    private static final UUID TYPE_01_RENAME_FORBIDDEN_UUID = UUID.randomUUID();
     private static final UUID TYPE_01_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
     private static final UUID TYPE_03_UUID = UUID.randomUUID();
     private static final UUID TYPE_02_UUID = UUID.randomUUID();
@@ -98,6 +106,8 @@ public class DirectoryTest {
     public static final String USERID_2 = "userId2";
     public static final String USERID_3 = "userId3";
     public static final String RECOLLEMENT = "recollement";
+    public static final String ALL_USERS = "ALL_USERS";
+    private static final String NOT_ADMIN_USER = "notAdmin";
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
 
@@ -125,15 +135,46 @@ public class DirectoryTest {
     @Autowired
     private DirectoryService directoryService;
 
-    private void cleanDB() {
-        directoryElementRepository.deleteAll();
-        directoryElementInfosRepository.deleteAll();
-        SQLStatementCountValidator.reset();
-    }
+    @Autowired
+    private UserAdminService userAdminService;
+
+    private MockWebServer server;
+    @Autowired
+    private PermissionRepository permissionRepository;
 
     @Before
     public void setup() {
+        server = new MockWebServer();
+        HttpUrl baseHttpUrl = server.url("");
+        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+
+        userAdminService.setUserAdminServerBaseUri(baseUrl);
+
+        // Ask the server for its URL. You'll need this to make HTTP requests.
+        final Dispatcher dispatcher = new Dispatcher() {
+            @NotNull
+            @Override
+            public MockResponse dispatch(RecordedRequest request) {
+                String path = Objects.requireNonNull(request.getPath());
+                if ("HEAD".equals(request.getMethod())) {
+                    if (path.matches("/v1/users/" + NOT_ADMIN_USER + "/isAdmin")) {
+                        return new MockResponse().setResponseCode(403);
+                    } else if (path.matches("/v1/users/.*/isAdmin")) {
+                        return new MockResponse().setResponseCode(200);
+                    }
+                }
+                return new MockResponse().setResponseCode(418);
+            }
+        };
+        server.setDispatcher(dispatcher);
         cleanDB();
+    }
+
+    private void cleanDB() {
+        directoryElementRepository.deleteAll();
+        directoryElementInfosRepository.deleteAll();
+        permissionRepository.deleteAll();
+        SQLStatementCountValidator.reset();
     }
 
     @After
@@ -402,95 +443,6 @@ public class DirectoryTest {
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
         checkElementNameExistInDirectory(rootDir10Uuid, "type03", TYPE_03, HttpStatus.OK);
-    }
-
-    @Test
-    public void testMoveElementFromDifferentAccessRightsFolder() throws Exception {
-        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", "Doe");
-
-        // Insert another root20 directory
-        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
-
-        // Insert a subDirectory20 in the root20 directory
-        UUID directory21PrivateUUID = UUID.randomUUID();
-        ElementAttributes directory20Attributes = toElementAttributes(directory21PrivateUUID, "directory20", DIRECTORY, "Doe");
-        insertAndCheckSubElementInRootDir(rootDir20Uuid, directory20Attributes);
-
-        // Insert an element of type TYPE_03 in the last subdirectory
-        UUID elementUuid = UUID.randomUUID();
-        ElementAttributes elementAttributes = toElementAttributes(elementUuid, "type03", TYPE_03, "Doe");
-        insertAndCheckSubElement(directory21PrivateUUID, elementAttributes);
-
-        assertNbElementsInRepositories(4);
-
-        // Move from one folder to another folder is forbidden if the issuer of the operation isn't the element's owner
-        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
-                        .header("userId", "Roger")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(elementUuid))))
-                .andExpect(status().isForbidden());
-
-        assertNbElementsInRepositories(4);
-
-        // Move from one folder to another folder is allowed if the issuer of the operation is the element's owner
-        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
-                        .header("userId", "Doe")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(elementUuid))))
-                .andExpect(status().isOk());
-
-        assertNbElementsInRepositories(4);
-
-        // assert that the broker message has been sent a root directory creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        MessageHeaders headers = message.getHeaders();
-        assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(directory21PrivateUUID, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
-        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-
-        message = output.receive(TIMEOUT, directoryUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
-        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-
-        checkElementNameExistInDirectory(rootDir10Uuid, "type03", TYPE_03, HttpStatus.OK);
-    }
-
-    @Test
-    public void testMoveUnallowedElement() throws Exception {
-        UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", "Unallowed User");
-
-        // Insert another public root20 directory
-        UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
-
-        // Insert a subDirectory20 in the root20 directory
-        UUID directory21PrivateUUID = UUID.randomUUID();
-        ElementAttributes directory20Attributes = toElementAttributes(directory21PrivateUUID, "directory20", DIRECTORY, "Doe");
-        insertAndCheckSubElementInRootDir(rootDir20Uuid, directory20Attributes);
-
-        // Insert an element of type TYPE_03 in the last subdirectory
-        UUID elementUuid = UUID.randomUUID();
-        ElementAttributes elementAttributes = toElementAttributes(elementUuid, "elementName", TYPE_03, "Doe");
-        insertAndCheckSubElement(directory21PrivateUUID, elementAttributes);
-
-        assertNbElementsInRepositories(4);
-
-        mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + rootDir10Uuid)
-                        .header("userId", "Unallowed User")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(List.of(elementUuid))))
-                .andExpect(status().isForbidden());
-
-        assertNbElementsInRepositories(4);
     }
 
     @Test
@@ -979,22 +931,6 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameElementForbiddenFail() throws Exception {
-        checkRootDirectoriesList("user1", List.of());
-
-        // Insert a root directory by user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
-
-        // Insert an element of type TYPE_01 in the root directory by the user1
-        ElementAttributes element1Attributes = toElementAttributes(TYPE_01_RENAME_FORBIDDEN_UUID, "elementName1", TYPE_01, "user1");
-        insertAndCheckSubElementInRootDir(rootDirUuid, element1Attributes);
-
-        //the name should not change
-        renameElementExpectFail(element1Attributes.getElementUuid(), "user2", "newElementName1", 403);
-        checkDirectoryContent(rootDirUuid, "user2", List.of(element1Attributes));
-    }
-
-    @Test
     public void testRenameElementWithSameNameAndTypeInSameDirectory() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
@@ -1009,24 +945,6 @@ public class DirectoryTest {
 
         // Renaming file to an already existing name should fail
         renameElementExpectFail(element1Attributes.getElementUuid(), "Doe", "elementName2", 403);
-    }
-
-    @Test
-    public void testRenameDirectoryNotAllowed() throws Exception {
-        checkRootDirectoriesList("Doe", List.of());
-
-        // Insert a root directory user1
-        ElementAttributes rootDir = retrieveInsertAndCheckRootDirectory("rootDir1", "Doe");
-        UUID rootDirUuid = rootDir.getElementUuid();
-        Instant rootDirCreationDate = rootDir.getCreationDate();
-
-        assertNbElementsInRepositories(1);
-
-        //the name should not change
-        renameElementExpectFail(rootDirUuid, "user1", "newName1", 403);
-        checkRootDirectoriesList("Doe", List.of(toElementAttributes(rootDirUuid, "rootDir1", DIRECTORY, "Doe", null, rootDirCreationDate, rootDirCreationDate, "Doe")));
-
-        assertNbElementsInRepositories(1);
     }
 
     @Test
@@ -1159,6 +1077,45 @@ public class DirectoryTest {
         checkRootDirectoriesList("user1", List.of(TYPE_03), List.of(rootDirectory, directory));
 
         assertNbElementsInRepositories(7);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testGetElementWithNonAdminUser() {
+        // Insert a root directory by the user1
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
+
+        // Insert an element of type TYPE_02 in the root directory by the user1
+        ElementAttributes element1Attributes = toElementAttributes(TYPE_02_UUID, "elementName1", TYPE_02, "user1");
+        insertAndCheckSubElementInRootDir(rootDirUuid, element1Attributes);
+
+        // Insert an element of type TYPE_03 in the root directory by the user1
+        ElementAttributes element2Attributes = toElementAttributes(TYPE_03_UUID, "elementName2", TYPE_03, "user1");
+        insertAndCheckSubElementInRootDir(rootDirUuid, element2Attributes);
+
+        // Insert an element of type TYPE_03 in the root directory by the user1
+        ElementAttributes element3Attributes = toElementAttributes(UUID.randomUUID(), "elementName3", TYPE_03, "user1");
+        insertAndCheckSubElementInRootDir(rootDirUuid, element3Attributes);
+
+        ElementAttributes rootDirectory = getElements(List.of(rootDirUuid), "user1", false, 200).get(0);
+
+        //user should be able to retrieve the root directory because of the global permission
+        checkRootDirectoriesList(NOT_ADMIN_USER, List.of(), List.of(rootDirectory));
+
+        //delete the global read permission
+        permissionRepository.deleteById(new PermissionId(rootDirUuid, ALL_USERS, ""));
+
+        //random user should still be able to retrieve the root directory because he's an admin
+        checkRootDirectoriesList("user", List.of(), List.of(rootDirectory));
+
+        //and not_admin user shouldn't be able to retrieve the root directory anymore
+        checkRootDirectoriesList(NOT_ADMIN_USER, List.of(), List.of());
+
+        //retrieve directory content with admin or a user that has permission should work
+        checkDirectoryContent(rootDirUuid, "user", List.of(element1Attributes, element2Attributes, element3Attributes));
+
+        //retrieve directory content with non admin user should be empty (no permissions)
+        checkDirectoryContent(rootDirUuid, NOT_ADMIN_USER, List.of());
     }
 
     @SneakyThrows
@@ -1854,7 +1811,7 @@ public class DirectoryTest {
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(subDirAttributes));
         // The subDirAttributes is created by the userId,so it is deletable
         mockMvc
-                .perform(head("/v1/elements?forDeletion=true&ids={ids}", subDirAttributes.getElementUuid()).header(USER_ID, USER_ID))
+                .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", subDirAttributes.getElementUuid()).header(USER_ID, USER_ID))
                 .andExpectAll(status().isOk()).andReturn();
         deleteElement(subDirAttributes.getElementUuid(), uuidNewRootDirectory, "userId", false, true, 0);
     }
@@ -1873,7 +1830,7 @@ public class DirectoryTest {
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(subDirAttributes));
         //The subDirAttributes is created by the userId,so the userId1 is not allowed to delete it.
         mockMvc
-                .perform(head("/v1/elements?forDeletion=true&ids={ids}", subDirAttributes.getElementUuid()).header(USER_ID, USERID_1))
+                .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", subDirAttributes.getElementUuid()).header(USER_ID, USERID_1))
                 .andExpectAll(status().isNoContent()).andReturn();
     }
 
@@ -2082,7 +2039,7 @@ public class DirectoryTest {
 
         // The elementAttributes is created by the userId,so it is updated
         mockMvc
-                .perform(head("/v1/elements?forUpdate=true&ids={ids}", elementAttributes.getElementUuid()).header(USER_ID, USER_ID))
+                .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", elementAttributes.getElementUuid()).header(USER_ID, USER_ID))
                 .andExpectAll(status().isOk()).andReturn();
     }
 
@@ -2100,7 +2057,7 @@ public class DirectoryTest {
 
         // The elementAttributes is created by the userId,so it is not updated by USERID_1
         mockMvc
-                .perform(head("/v1/elements?forUpdate=true&ids={ids}", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
+                .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
                 .andExpectAll(status().isNoContent()).andReturn();
     }
 }
