@@ -56,14 +56,6 @@ class SupervisionTest {
     }
 
     @Test
-    void testDeleteElementInfos() {
-        supervisionService.deleteIndexedDirectoryElements();
-
-        verify(directoryElementInfosRepository, times(1)).count();
-        verify(directoryElementInfosRepository, times(1)).deleteAll();
-    }
-
-    @Test
     void testReindexElements() {
         DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId");
         DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId");

@@ -58,6 +58,7 @@ import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_T
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -1319,12 +1320,14 @@ public class DirectoryTest {
 
         assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
-        // Test indexed elements deletion
-        mvcResult = mockMvc.perform(delete("/v1/supervision/elements/indexation"))
-            .andExpect(status().isOk())
-            .andReturn();
+        // Recreate the index
+        mockMvc.perform(post("/v1/supervision/elements/index/recreate"))
+                .andExpect(status().isOk());
 
-        assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
+        mvcResult = mockMvc.perform(get("/v1/supervision/elements/indexation-count"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertEquals(0, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
         // reindex
         mockMvc.perform(post("/v1/supervision/elements/reindex"))
