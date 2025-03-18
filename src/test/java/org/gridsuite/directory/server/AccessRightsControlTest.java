@@ -89,6 +89,8 @@ public class AccessRightsControlTest {
 
     MockWebServer server;
 
+    public static final String ADMIN_USER = "adminUser";
+
     @Before
     public void setup() {
         server = new MockWebServer();
@@ -103,9 +105,13 @@ public class AccessRightsControlTest {
             @Override
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                if ("HEAD".equals(request.getMethod()) && path.matches("/v1/users/.*/isAdmin")) {
+                if ("HEAD".equals(request.getMethod())) {
+                    if (path.matches("/v1/users/" + ADMIN_USER + "/isAdmin")) {
                         return new MockResponse().setResponseCode(200);
+                    } else if (path.matches("/v1/users/.*/isAdmin")) {
+                        return new MockResponse().setResponseCode(403);
                     }
+                }
 
                 return new MockResponse().setResponseCode(418);
             }
@@ -133,8 +139,8 @@ public class AccessRightsControlTest {
         // Insert a root directory for user3
         UUID rootUuid3 = insertRootDirectory(user3, "root3");
 
-        //For each element creation we should have 2 entries in DB, 1 for the creator and one for all users "ALL_USERS"
-        //Check that permission are set to read for all and write only for the creator
+        // For each element creation we should have 2 entries in DB, 1 for the creator and one for all users "ALL_USERS"
+        // Check that permission are set to read for all and write only for the creator
         ArrayList<PermissionEntity> expectedPermissions = new ArrayList<>();
         expectedPermissions.add(new PermissionEntity(rootUuid1, user1, "", true, true));
         expectedPermissions.add(new PermissionEntity(rootUuid1, ALL_USERS, "", true, false));
@@ -166,6 +172,10 @@ public class AccessRightsControlTest {
         controlElementsAccess(user1, List.of(rootUuid2), null, WRITE, HttpStatus.NO_CONTENT);
         controlElementsAccess(user2, List.of(rootUuid1), null, WRITE, HttpStatus.NO_CONTENT);
         controlElementsAccess(user3, List.of(rootUuid2), null, WRITE, HttpStatus.NO_CONTENT);
+
+        // Check WRITE access OK because admin user
+        controlElementsAccess(ADMIN_USER, List.of(rootUuid2, rootUuid1, rootUuid3), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(ADMIN_USER, List.of(rootUuid2, rootUuid1, rootUuid3), null, READ, HttpStatus.OK);
 
         // Check WRITE access on multiple element not OK
         controlElementsAccess(user1, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.NO_CONTENT);
@@ -221,6 +231,10 @@ public class AccessRightsControlTest {
         controlElementsAccess("user1", List.of(eltUuid2), null, WRITE, HttpStatus.NO_CONTENT);
         controlElementsAccess("user2", List.of(eltUuid1), null, WRITE, HttpStatus.NO_CONTENT);
 
+        // Write access should be OK for admin user
+        controlElementsAccess(ADMIN_USER, List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(ADMIN_USER, List.of(eltUuid2), null, WRITE, HttpStatus.OK);
+
         // Write access should be OK for something like move within folder the user has permissions
         // this is what should be called if user1 moves element3 to directory1 (should be OK)
         controlElementsAccess("user1", List.of(eltUuid3), dirUuid1, WRITE, HttpStatus.OK);
@@ -232,6 +246,8 @@ public class AccessRightsControlTest {
         controlElementsAccess("user1", List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.NO_CONTENT);
         // this is what should be called if user2 moves element4 to directory3 (should NOT be OK)
         controlElementsAccess("user2", List.of(eltUuid4), dirUuid3, WRITE, HttpStatus.NO_CONTENT);
+        // this is what should be called if admin user moves element3 to directory2 (should be OK)
+        controlElementsAccess(ADMIN_USER, List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.OK);
     }
 
     @Test
@@ -245,6 +261,7 @@ public class AccessRightsControlTest {
         insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"), HttpStatus.CONFLICT);
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"));
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"), HttpStatus.CONFLICT);
+        insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, ADMIN_USER), HttpStatus.CONFLICT);
     }
 
     private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {

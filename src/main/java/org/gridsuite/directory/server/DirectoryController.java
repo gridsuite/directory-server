@@ -16,6 +16,7 @@ import org.gridsuite.directory.server.dto.PermissionType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.gridsuite.directory.server.services.UserAdminService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -39,10 +40,12 @@ public class DirectoryController {
     private final DirectoryService service;
 
     private final DirectoryRepositoryService repositoryService;
+    private final UserAdminService userAdminService;
 
-    public DirectoryController(DirectoryService service, DirectoryRepositoryService repositoryService) {
+    public DirectoryController(DirectoryService service, DirectoryRepositoryService repositoryService, UserAdminService userAdminService) {
         this.service = service;
         this.repositoryService = repositoryService;
+        this.userAdminService = userAdminService;
     }
 
     @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -191,10 +194,10 @@ public class DirectoryController {
                                                       @RequestParam(value = "accessType") PermissionType permissionType,
                                                       @RequestParam(value = "targetDirectoryUuid", required = false) UUID targetDirectoryUuid,
                                                       @RequestHeader("userId") String userId) {
-        if (service.hasPermission(userId, elementUuids, targetDirectoryUuid, permissionType)) {
-            return ResponseEntity.ok().build();
-        } else {
+        if (!userAdminService.isUserAdmin(userId) && !service.hasPermission(userId, elementUuids, targetDirectoryUuid, permissionType)) {
             return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.ok().build();
         }
     }
 

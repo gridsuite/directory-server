@@ -108,6 +108,7 @@ public class DirectoryTest {
     public static final String RECOLLEMENT = "recollement";
     public static final String ALL_USERS = "ALL_USERS";
     private static final String NOT_ADMIN_USER = "notAdmin";
+    private static final String ADMIN_USER = "adminUser";
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
 
@@ -157,10 +158,10 @@ public class DirectoryTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 if ("HEAD".equals(request.getMethod())) {
-                    if (path.matches("/v1/users/" + NOT_ADMIN_USER + "/isAdmin")) {
-                        return new MockResponse().setResponseCode(403);
-                    } else if (path.matches("/v1/users/.*/isAdmin")) {
+                    if (path.matches("/v1/users/" + ADMIN_USER + "/isAdmin")) {
                         return new MockResponse().setResponseCode(200);
+                    } else if (path.matches("/v1/users/.*/isAdmin")) {
+                        return new MockResponse().setResponseCode(403);
                     }
                 }
                 return new MockResponse().setResponseCode(418);
@@ -1105,14 +1106,14 @@ public class DirectoryTest {
         //delete the global read permission
         permissionRepository.deleteById(new PermissionId(rootDirUuid, ALL_USERS, ""));
 
-        //random user should still be able to retrieve the root directory because he's an admin
-        checkRootDirectoriesList("user", List.of(), List.of(rootDirectory));
+        //admin user should still be able to retrieve the root directory
+        checkRootDirectoriesList(ADMIN_USER, List.of(), List.of(rootDirectory));
 
         //and not_admin user shouldn't be able to retrieve the root directory anymore
         checkRootDirectoriesList(NOT_ADMIN_USER, List.of(), List.of());
 
         //retrieve directory content with admin or a user that has permission should work
-        checkDirectoryContent(rootDirUuid, "user", List.of(element1Attributes, element2Attributes, element3Attributes));
+        checkDirectoryContent(rootDirUuid, ADMIN_USER, List.of(element1Attributes, element2Attributes, element3Attributes));
 
         //retrieve directory content with non admin user should be empty (no permissions)
         checkDirectoryContent(rootDirUuid, NOT_ADMIN_USER, List.of());
