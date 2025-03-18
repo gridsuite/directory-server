@@ -133,9 +133,9 @@ public class DirectoryService {
         assertDirectoryExist(parentDirectoryUuid);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, generateNewName);
         if (DIRECTORY.equals(elementAttributes.getType())) {
-            insertUserPermission(elementEntity.getId(), userId, "", true, true);
+            insertWriteAndReadUserPermission(elementEntity.getId(), userId, "");
             //Grants read permission for all users on created element
-            insertGlobalUsersPermission(elementEntity.getId(), true, false);
+            insertReadGlobalUsersPermission(elementEntity.getId());
         }
 
         // Here we know that parentDirectoryUuid can't be null
@@ -228,8 +228,8 @@ public class DirectoryService {
         assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName());
         ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
         UUID elementUuid = elementAttributes.getElementUuid();
-        insertUserPermission(elementUuid, userId, "", true, true);
-        insertGlobalUsersPermission(elementUuid, true, false);
+        insertWriteAndReadUserPermission(elementUuid, userId, "");
+        insertReadGlobalUsersPermission(elementUuid);
         // here we know a root directory has no parent
         notificationService.emitDirectoryChanged(
                 elementUuid,
@@ -676,24 +676,24 @@ public class DirectoryService {
     private boolean checkPermission(String userId, List<UUID> elementUuids, PermissionType permissionType) {
         return elementUuids.stream().allMatch(uuid -> {
             //Check global permission first
-            PermissionEntity globalPermission = permissionRepository.findById(new PermissionId(uuid, ALL_USERS, "")).orElse(null);
-            if (globalPermission != null && (permissionType.equals(WRITE) && TRUE.equals(globalPermission.getWrite()) ||
-                        permissionType.equals(READ) && TRUE.equals(globalPermission.getRead()))) {
+            boolean globalPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, ALL_USERS, "")), permissionType);
+            if (globalPermission) {
                 return true;
             }
-
             //Then check user specific permission
-            Optional<PermissionEntity> permission = permissionRepository.findById(new PermissionId(uuid, userId, ""));
-            PermissionEntity permissionEntity = permission.orElse(null);
-            if (permissionEntity == null) {
-                return false;
-            } else {
-                if (WRITE.equals(permissionType)) {
-                    return TRUE.equals(permissionEntity.getWrite());
-                }
-                return TRUE.equals(permissionEntity.getRead());
-            }
+            return checkPermission(permissionRepository.findById(new PermissionId(uuid, userId, "")), permissionType);
         });
+    }
+
+    private boolean checkPermission(Optional<PermissionEntity> permissionEntity, PermissionType permissionType) {
+        return permissionEntity
+                .map(p -> {
+                    if (permissionType == WRITE) {
+                        return Boolean.TRUE.equals(p.getWrite());
+                    }
+                    return Boolean.TRUE.equals(p.getRead());
+                })
+                .orElse(false);
     }
 
     private boolean hasWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid) {
@@ -704,12 +704,17 @@ public class DirectoryService {
         ) && (targetDirectoryUuid == null || checkPermission(userId, List.of(targetDirectoryUuid), WRITE));
     }
 
-    private void insertUserPermission(UUID elementUuid, String userId, String userGroupId, boolean read, boolean write) {
-        PermissionEntity permissionEntity = new PermissionEntity(elementUuid, userId, userGroupId, read, write);
+    private void insertReadUserPermission(UUID elementUuid, String userId, String userGroupId) {
+        PermissionEntity permissionEntity = PermissionEntity.read(elementUuid, userId, userGroupId);
         permissionRepository.save(permissionEntity);
     }
 
-    private void insertGlobalUsersPermission(UUID elementUuid, boolean read, boolean write) {
-        insertUserPermission(elementUuid, ALL_USERS, "", read, write);
+    private void insertWriteAndReadUserPermission(UUID elementUuid, String userId, String userGroupId) {
+        PermissionEntity permissionEntity = PermissionEntity.write(elementUuid, userId, userGroupId);
+        permissionRepository.save(permissionEntity);
+    }
+
+    private void insertReadGlobalUsersPermission(UUID elementUuid) {
+        insertReadUserPermission(elementUuid, ALL_USERS, "");
     }
 }
