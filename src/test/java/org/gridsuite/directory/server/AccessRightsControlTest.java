@@ -7,12 +7,22 @@
 package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.PermissionType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.PermissionEntity;
+import org.gridsuite.directory.server.repository.PermissionRepository;
+import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.hamcrest.core.IsEqual;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,17 +38,21 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.gridsuite.directory.server.DirectoryService.ALL_USERS;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.dto.PermissionType.READ;
+import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -67,32 +81,106 @@ public class AccessRightsControlTest {
     @Autowired
     private DirectoryElementRepository directoryElementRepository;
 
+    @Autowired
+    private PermissionRepository permissionRepository;
+
+    @Autowired
+    private UserAdminService userAdminService;
+
+    MockWebServer server;
+
+    public static final String ADMIN_USER = "adminUser";
+
     @Before
-    public void setUp() {
+    public void setup() {
+        server = new MockWebServer();
+        HttpUrl baseHttpUrl = server.url("");
+        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+
+        userAdminService.setUserAdminServerBaseUri(baseUrl);
+
+        // Ask the server for its URL. You'll need this to make HTTP requests.
+        final Dispatcher dispatcher = new Dispatcher() {
+            @NotNull
+            @Override
+            public MockResponse dispatch(RecordedRequest request) {
+                String path = Objects.requireNonNull(request.getPath());
+                if ("HEAD".equals(request.getMethod())) {
+                    if (path.matches("/v1/users/" + ADMIN_USER + "/isAdmin")) {
+                        return new MockResponse().setResponseCode(200);
+                    } else if (path.matches("/v1/users/.*/isAdmin")) {
+                        return new MockResponse().setResponseCode(403);
+                    }
+                }
+
+                return new MockResponse().setResponseCode(418);
+            }
+        };
+        server.setDispatcher(dispatcher);
         directoryElementRepository.deleteAll();
+        permissionRepository.deleteAll();
     }
 
     @Test
     public void testRootDirectories() throws Exception {
-        checkRootDirectories("user1", List.of());
-        checkRootDirectories("user2", List.of());
-        checkRootDirectories("user3", List.of());
+        String user1 = "user1";
+        String user2 = "user2";
+        String user3 = "user3";
+        checkRootDirectories(user1, List.of());
+        checkRootDirectories(user2, List.of());
+        checkRootDirectories(user3, List.of());
 
         // Insert a root directory for user1
-        UUID rootUuid1 = insertRootDirectory("user1", "root1");
+        UUID rootUuid1 = insertRootDirectory(user1, "root1");
 
         // Insert a root directory for user2
-        UUID rootUuid2 = insertRootDirectory("user2", "root2");
+        UUID rootUuid2 = insertRootDirectory(user2, "root2");
+
+        // Insert a root directory for user3
+        UUID rootUuid3 = insertRootDirectory(user3, "root3");
+
+        // For each element creation we should have 2 entries in DB, 1 for the creator and one for all users "ALL_USERS"
+        // Check that permission are set to read for all and write only for the creator
+        ArrayList<PermissionEntity> expectedPermissions = new ArrayList<>();
+        expectedPermissions.add(new PermissionEntity(rootUuid1, user1, "", true, true));
+        expectedPermissions.add(new PermissionEntity(rootUuid1, ALL_USERS, "", true, false));
+        expectedPermissions.add(new PermissionEntity(rootUuid2, user2, "", true, true));
+        expectedPermissions.add(new PermissionEntity(rootUuid2, ALL_USERS, "", true, false));
+        expectedPermissions.add(new PermissionEntity(rootUuid3, user3, "", true, true));
+        expectedPermissions.add(new PermissionEntity(rootUuid3, ALL_USERS, "", true, false));
+        List<PermissionEntity> permissions = permissionRepository.findAll();
+        assertEquals(6, permissions.size());
+        assertTrue(permissions.containsAll(expectedPermissions));
 
         // Test with empty list
-        controlElementsAccess("user", List.of(), HttpStatus.OK);
+        controlElementsAccess("user", List.of(), null, READ, HttpStatus.OK);
 
-        // Any user has access to root directories
-        controlElementsAccess("user", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
-        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
-        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
-        controlElementsAccess("user3", List.of(rootUuid1, rootUuid2), HttpStatus.OK);
+        // All users should have read permission for all root directories
+        // But they should only have the others permission (move, update, write...) for the root directory they created
+        // Check read access
+        controlElementsAccess("user", List.of(rootUuid1, rootUuid2, rootUuid3), null, READ, HttpStatus.OK);
+        controlElementsAccess(user1, List.of(rootUuid1, rootUuid2, rootUuid3), null, READ, HttpStatus.OK);
+        controlElementsAccess(user2, List.of(rootUuid1, rootUuid2, rootUuid3), null, READ, HttpStatus.OK);
+        controlElementsAccess(user3, List.of(rootUuid1, rootUuid2, rootUuid3), null, READ, HttpStatus.OK);
 
+        // Check WRITE access OK
+        controlElementsAccess(user1, List.of(rootUuid1), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(user2, List.of(rootUuid2), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(user3, List.of(rootUuid3), null, WRITE, HttpStatus.OK);
+
+        // Check WRITE access not OK
+        controlElementsAccess(user1, List.of(rootUuid2), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess(user2, List.of(rootUuid1), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess(user3, List.of(rootUuid2), null, WRITE, HttpStatus.NO_CONTENT);
+
+        // Check WRITE access OK because admin user
+        controlElementsAccess(ADMIN_USER, List.of(rootUuid2, rootUuid1, rootUuid3), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(ADMIN_USER, List.of(rootUuid2, rootUuid1, rootUuid3), null, READ, HttpStatus.OK);
+
+        // Check WRITE access on multiple element not OK
+        controlElementsAccess(user1, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess(user2, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess(user3, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.NO_CONTENT);
     }
 
     @Test
@@ -104,37 +192,62 @@ public class AccessRightsControlTest {
         UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"));
         UUID eltUuid1 = insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"));
 
+        UUID rootUuid3 = insertRootDirectory("user1", "root3");
+        UUID dirUuid3 = insertSubElement(rootUuid3, toElementAttributes(null, "dir3", DIRECTORY, "user1"));
+        UUID eltUuid3 = insertSubElement(dirUuid3, toElementAttributes(null, "elementName3", TYPE_01, "user1"));
+
         // Create directory tree for user2 : root2 -> dir2 -> element of type TYPE_01
         UUID rootUuid2 = insertRootDirectory("user2", "root2");
         UUID dirUuid2 = insertSubElement(rootUuid2, toElementAttributes(null, "dir2", DIRECTORY, "user2"));
         UUID eltUuid2 = insertSubElement(dirUuid2, toElementAttributes(null, "elementName2", TYPE_01, "user2"));
 
-        // Dir2 is created by user2 and is accessible by user1 and user2
-        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), HttpStatus.OK);
-        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), HttpStatus.OK);
+        UUID rootUuid4 = insertRootDirectory("user2", "root4");
+        UUID dirUuid4 = insertSubElement(rootUuid4, toElementAttributes(null, "dir4", DIRECTORY, "user2"));
+        UUID eltUuid4 = insertSubElement(dirUuid4, toElementAttributes(null, "elementName4", TYPE_01, "user2"));
 
-        // Dir2 is created by user2 and sub elements creation for user1
-        UUID dirUuid = insertSubElement(dirUuid2, toElementAttributes(null, "dir", DIRECTORY, "user1"));
-        UUID eltUuid = insertSubElement(dirUuid2, toElementAttributes(null, "elementName", TYPE_01, "user1"));
+        // Dir2 is created by user2 and is accessible by user1 and user2 to read
+        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), null, READ, HttpStatus.OK);
+        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), null, READ, HttpStatus.OK);
 
-        // elementName2 is accessible by user1 and user2
-        controlElementsAccess("user1", List.of(eltUuid1, eltUuid2), HttpStatus.OK);
-        controlElementsAccess("user2", List.of(eltUuid1, eltUuid2), HttpStatus.OK);
+        // - ROOT1 (USER1)
+        //      - DIR1
+        //          - ELEMENT1
+        // - ROOT2 (USER2)
+        //      - DIR2
+        //          - ELEMENT2
+        // - ROOT3 (USER1)
+        //      - DIR3
+        //          - ELEMENT3
+        // - ROOT4 (USER2)
+        //      - DIR4
+        //          - ELEMENT4
+        // Write access should be OK for each user on its own elements
+        controlElementsAccess("user1", List.of(rootUuid1, dirUuid1, eltUuid1), null, WRITE, HttpStatus.OK);
+        controlElementsAccess("user2", List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.OK);
 
-        // Delete elements
-        deleteSubElement(dirUuid2, "user1", HttpStatus.FORBIDDEN);
-        deleteSubElement(eltUuid2, "user1", HttpStatus.FORBIDDEN);
+        // Write access should NOT be OK for other user elements
+        controlElementsAccess("user1", List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess("user2", List.of(rootUuid1, dirUuid1, eltUuid1), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess("user1", List.of(eltUuid2), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess("user2", List.of(eltUuid1), null, WRITE, HttpStatus.NO_CONTENT);
 
-        deleteSubElement(rootUuid1, "user1", HttpStatus.OK);
-        deleteSubElement(dirUuid1, "user1", HttpStatus.NOT_FOUND);
-        deleteSubElement(eltUuid1, "user1", HttpStatus.NOT_FOUND);
+        // Write access should be OK for admin user
+        controlElementsAccess(ADMIN_USER, List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(ADMIN_USER, List.of(eltUuid2), null, WRITE, HttpStatus.OK);
 
-        deleteSubElement(eltUuid, "user1", HttpStatus.OK);
-        deleteSubElement(dirUuid, "user1", HttpStatus.OK);
+        // Write access should be OK for something like move within folder the user has permissions
+        // this is what should be called if user1 moves element3 to directory1 (should be OK)
+        controlElementsAccess("user1", List.of(eltUuid3), dirUuid1, WRITE, HttpStatus.OK);
+        // this is what should be called if user2 moves element4 to directory2 (should be OK)
+        controlElementsAccess("user2", List.of(eltUuid4), dirUuid2, WRITE, HttpStatus.OK);
 
-        deleteSubElement(dirUuid2, "user2", HttpStatus.OK);
-        deleteSubElement(eltUuid2, "user2", HttpStatus.NOT_FOUND);
-        deleteSubElement(rootUuid2, "user2", HttpStatus.OK);
+        // Write access should NOT be OK for something like move within folder the user doesn't have permissions
+        // this is what should be called if user1 moves element3 to directory2 (should NOT be OK)
+        controlElementsAccess("user1", List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.NO_CONTENT);
+        // this is what should be called if user2 moves element4 to directory3 (should NOT be OK)
+        controlElementsAccess("user2", List.of(eltUuid4), dirUuid3, WRITE, HttpStatus.NO_CONTENT);
+        // this is what should be called if admin user moves element3 to directory2 (should be OK)
+        controlElementsAccess(ADMIN_USER, List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.OK);
     }
 
     @Test
@@ -148,6 +261,7 @@ public class AccessRightsControlTest {
         insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"), HttpStatus.CONFLICT);
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"));
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"), HttpStatus.CONFLICT);
+        insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, ADMIN_USER), HttpStatus.CONFLICT);
     }
 
     private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
@@ -166,14 +280,9 @@ public class AccessRightsControlTest {
                 .andReturn();
     }
 
-    private void deleteSubElement(UUID elementUUid, String userId, HttpStatus expectedStatus) throws Exception {
-        mockMvc.perform(delete("/v1/elements/" + elementUUid).header("userId", userId))
-               .andExpect(status().is(new IsEqual<>(expectedStatus.value())));
-    }
-
-    private void controlElementsAccess(String userId, List<UUID> uuids, HttpStatus expectedStatus) throws Exception {
+    private void controlElementsAccess(String userId, List<UUID> uuids, UUID targetDirectoryUuid, PermissionType accessType, HttpStatus expectedStatus) throws Exception {
         var ids = uuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        mockMvc.perform(head("/v1/elements?ids=" + ids).header("userId", userId))
+        mockMvc.perform(head("/v1/elements?accessType=" + accessType.name() + "&ids=" + ids + "&targetDirectoryUuid" + (targetDirectoryUuid != null ? "=" + targetDirectoryUuid : "")).header("userId", userId))
                .andExpect(status().is(new IsEqual<>(expectedStatus.value())));
     }
 

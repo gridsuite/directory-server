@@ -19,5 +19,9 @@ powsybl-ws:
 
 gridsuite:
   services:
-    study-server:
+    -
+      name: study-server
       base-uri: http://localhost:5001
+    -
+      name: user-admin-server
+      base-uri: http://localhost:5033

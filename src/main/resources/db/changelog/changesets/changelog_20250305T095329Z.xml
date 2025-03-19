@@ -1,0 +1,13 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet  author="hedhiliabd" id="populate-permissions">
+        <comment>Insert default permissions for DIRECTORY elements</comment>
+        <sql>
+            INSERT INTO permission (element_id, user_group_id, user_id, read, write)
+            SELECT id, '', owner, TRUE, TRUE FROM element WHERE type = 'DIRECTORY';
+
+            INSERT INTO permission (element_id, user_group_id, user_id, read, write)
+            SELECT id, '', 'ALL_USERS', TRUE, FALSE FROM element WHERE type = 'DIRECTORY';
+        </sql>
+    </changeSet>
+</databaseChangeLog>
