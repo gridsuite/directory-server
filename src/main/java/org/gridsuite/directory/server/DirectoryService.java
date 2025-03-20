@@ -16,28 +16,21 @@ import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.TimerService;
 import org.gridsuite.directory.server.services.UserAdminService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
-import static org.gridsuite.directory.server.NotificationService.HEADER_ERROR;
-import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
@@ -51,12 +44,7 @@ import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 public class DirectoryService {
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
-    public static final String HEADER_UPDATE_TYPE = "updateType";
-    public static final String UPDATE_TYPE_STUDIES = "studies";
-    public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String ALL_USERS = "ALL_USERS";
-    private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
-    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
     private static final int ES_PAGE_MAX_SIZE = 50;
     static final int MAX_RETRY = 3;
     static final int DELAY_RETRY = 50;
@@ -86,37 +74,20 @@ public class DirectoryService {
         this.userAdminService = userAdminService;
     }
 
-    /* notifications */
     //TODO: this consumer is the kept here at the moment, but it will be moved to explore server later on
-    @Bean
-    public Consumer<Message<String>> consumeStudyUpdate() {
-        LOGGER.info(CATEGORY_BROKER_INPUT);
-        return message -> {
-            try {
-                String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
-                String error = message.getHeaders().get(HEADER_ERROR, String.class);
-                String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                String updateType = message.getHeaders().get(HEADER_UPDATE_TYPE, String.class);
-                // UPDATE_TYPE_STUDIES is the update type used when inserting or duplicating studies, and when a study import fails
-                if (UPDATE_TYPE_STUDIES.equals(updateType) && studyUuidHeader != null) {
-                    UUID studyUuid = UUID.fromString(studyUuidHeader);
-
-                    UUID parentUuid = repositoryService.getParentUuid(studyUuid);
-                    Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
-                    String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
-                    if (error != null && elementName != null) {
-                        deleteElementWithNotif(studyUuid, userId);
-                    }
-                    // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
-                    // then avoid sending a notification with parentUuid=null and isRoot=true
-                    if (parentUuid != null) {
-                        notifyDirectoryHasChanged(parentUuid, userId, elementName, error);
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-            }
-        };
+    @Transactional
+    public void studyUpdated(UUID studyUuid, String errorMessage, String userId) {
+        UUID parentUuid = repositoryService.getParentUuid(studyUuid);
+        Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
+        String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
+        if (errorMessage != null && elementName != null) {
+            deleteElementWithNotif(studyUuid, userId);
+        }
+        // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
+        // then avoid sending a notification with parentUuid=null and isRoot=true
+        if (parentUuid != null) {
+            notifyDirectoryHasChanged(parentUuid, userId, elementName, errorMessage);
+        }
     }
 
     @Transactional
