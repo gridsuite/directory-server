@@ -12,9 +12,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.PermissionType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.gridsuite.directory.server.services.UserAdminService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -38,10 +40,12 @@ public class DirectoryController {
     private final DirectoryService service;
 
     private final DirectoryRepositoryService repositoryService;
+    private final UserAdminService userAdminService;
 
-    public DirectoryController(DirectoryService service, DirectoryRepositoryService repositoryService) {
+    public DirectoryController(DirectoryService service, DirectoryRepositoryService repositoryService, UserAdminService userAdminService) {
         this.service = service;
         this.repositoryService = repositoryService;
+        this.userAdminService = userAdminService;
     }
 
     @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -121,8 +125,9 @@ public class DirectoryController {
     @GetMapping(value = "/root-directories", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get root directories")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "The root directories"))
-    public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types) {
-        return ResponseEntity.ok().body(service.getRootDirectories(types));
+    public ResponseEntity<List<ElementAttributes>> getRootDirectories(@RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
+                                                                      @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.getRootDirectories(types, userId));
     }
 
     @RequestMapping(value = "/root-directories", method = RequestMethod.HEAD)
@@ -141,8 +146,9 @@ public class DirectoryController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "List directory's elements"))
     public ResponseEntity<List<ElementAttributes>> getDirectoryElements(@PathVariable("directoryUuid") UUID directoryUuid,
                                                                         @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
-                                                                        @RequestParam(value = "recursive", required = false, defaultValue = "false") Boolean recursive) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, types, recursive));
+                                                                        @RequestParam(value = "recursive", required = false, defaultValue = "false") Boolean recursive,
+                                                                        @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDirectoryElements(directoryUuid, types, recursive, userId));
     }
 
     @GetMapping(value = "/elements/{elementUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -163,8 +169,9 @@ public class DirectoryController {
     })
     public ResponseEntity<List<ElementAttributes>> getElements(@RequestParam("ids") List<UUID> ids,
                                                                @RequestParam(value = "elementTypes", required = false, defaultValue = "") List<String> types,
-                                                               @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
-        return ResponseEntity.ok().body(service.getElements(ids, strictMode, types));
+                                                               @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode,
+                                                               @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.getElements(ids, strictMode, types, userId));
     }
 
     @GetMapping(value = "/users/{userId}/cases/count")
@@ -184,10 +191,14 @@ public class DirectoryController {
         @ApiResponse(responseCode = "204", description = "Access forbidden for at least one element")
     })
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
-                                                      @RequestParam(value = "forDeletion", required = false, defaultValue = "false") Boolean forDeletion,
-                                                      @RequestParam(value = "forUpdate", required = false, defaultValue = "false") Boolean forUpdate,
+                                                      @RequestParam(value = "accessType") PermissionType permissionType,
+                                                      @RequestParam(value = "targetDirectoryUuid", required = false) UUID targetDirectoryUuid,
                                                       @RequestHeader("userId") String userId) {
-        return service.areElementsAccessible(elementUuids, userId, forDeletion, forUpdate) ? ResponseEntity.ok().build() : ResponseEntity.noContent().build();
+        if (!userAdminService.isUserAdmin(userId) && !service.hasPermission(userId, elementUuids, targetDirectoryUuid, permissionType)) {
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.ok().build();
+        }
     }
 
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
