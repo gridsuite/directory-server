@@ -16,29 +16,21 @@ import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.TimerService;
 import org.gridsuite.directory.server.services.UserAdminService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.context.annotation.Bean;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
-import static org.gridsuite.directory.server.NotificationService.HEADER_ERROR;
-import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
@@ -52,19 +44,12 @@ import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 public class DirectoryService {
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
-    public static final String HEADER_UPDATE_TYPE = "updateType";
-    public static final String UPDATE_TYPE_STUDIES = "studies";
-    public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String ALL_USERS = "ALL_USERS";
-    private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
-    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
     private static final int ES_PAGE_MAX_SIZE = 50;
     static final int MAX_RETRY = 3;
     static final int DELAY_RETRY = 50;
 
     private final NotificationService notificationService;
-
-    private final ObjectProvider<DirectoryService> self;
     private final DirectoryRepositoryService repositoryService;
     private final UserAdminService userAdminService;
 
@@ -73,15 +58,13 @@ public class DirectoryService {
     private final PermissionRepository permissionRepository;
     private final TimerService timerService;
 
-    public DirectoryService(ObjectProvider<DirectoryService> directoryService,
-                            DirectoryRepositoryService repositoryService,
+    public DirectoryService(DirectoryRepositoryService repositoryService,
                             NotificationService notificationService,
                             DirectoryElementRepository directoryElementRepository,
                             DirectoryElementInfosService directoryElementInfosService,
                             PermissionRepository permissionRepository,
                             TimerService timerService,
                             UserAdminService userAdminService) {
-        this.self = directoryService;
         this.repositoryService = repositoryService;
         this.notificationService = notificationService;
         this.directoryElementRepository = directoryElementRepository;
@@ -91,42 +74,28 @@ public class DirectoryService {
         this.userAdminService = userAdminService;
     }
 
-    /* notifications */
     //TODO: this consumer is the kept here at the moment, but it will be moved to explore server later on
-    @Bean
-    public Consumer<Message<String>> consumeStudyUpdate() {
-        LOGGER.info(CATEGORY_BROKER_INPUT);
-        return message -> {
-            try {
-                String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
-                String error = message.getHeaders().get(HEADER_ERROR, String.class);
-                String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                String updateType = message.getHeaders().get(HEADER_UPDATE_TYPE, String.class);
-                // UPDATE_TYPE_STUDIES is the update type used when inserting or duplicating studies, and when a study import fails
-                if (UPDATE_TYPE_STUDIES.equals(updateType) && studyUuidHeader != null) {
-                    UUID studyUuid = UUID.fromString(studyUuidHeader);
-
-                    UUID parentUuid = repositoryService.getParentUuid(studyUuid);
-                    Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
-                    String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
-                    if (error != null && elementName != null) {
-                        self.getObject().deleteElement(studyUuid, userId);
-                    }
-                    // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
-                    // then avoid sending a notification with parentUuid=null and isRoot=true
-                    if (parentUuid != null) {
-                        notifyDirectoryHasChanged(parentUuid, userId, elementName, error);
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-            }
-        };
+    @Transactional
+    public void studyUpdated(UUID studyUuid, String errorMessage, String userId) {
+        UUID parentUuid = repositoryService.getParentUuid(studyUuid);
+        Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
+        String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
+        if (errorMessage != null && elementName != null) {
+            deleteElementWithNotif(studyUuid, userId);
+        }
+        // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
+        // then avoid sending a notification with parentUuid=null and isRoot=true
+        if (parentUuid != null) {
+            notifyDirectoryHasChanged(parentUuid, userId, elementName, errorMessage);
+        }
     }
 
-    /* methods */
     @Transactional
     public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
+        return createElementWithNotif(elementAttributes, parentDirectoryUuid, userId, generateNewName);
+    }
+
+    private ElementAttributes createElementWithNotif(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
         if (elementAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
@@ -221,6 +190,10 @@ public class DirectoryService {
 
     @Transactional
     public ElementAttributes createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
+        return createRootDirectoryWithNotif(rootDirectoryAttributes, userId);
+    }
+
+    private ElementAttributes createRootDirectoryWithNotif(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
         if (rootDirectoryAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
@@ -242,6 +215,7 @@ public class DirectoryService {
         return elementAttributes;
     }
 
+    @Transactional
     public void createElementInDirectoryPath(String directoryPath, ElementAttributes elementAttributes, String userId) {
         String[] directoryPathSplit = directoryPath.split("/");
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
@@ -254,7 +228,7 @@ public class DirectoryService {
             if (currentDirectoryUuid == null) {
                 //we create the root directory if it doesn't exist
                 if (parentDirectoryUuid == null) {
-                    parentDirectoryUuid = self.getObject().createRootDirectory(
+                    parentDirectoryUuid = createRootDirectoryWithNotif(
                             new RootDirectoryAttributes(
                                     s,
                                     userId,
@@ -265,7 +239,7 @@ public class DirectoryService {
                             userId).getElementUuid();
                 } else {
                     //and then we create the rest of the path
-                    parentDirectoryUuid = self.getObject().createElement(
+                    parentDirectoryUuid = createElementWithNotif(
                             toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, null, now, now, userId),
                             parentDirectoryUuid,
                             userId, false).getElementUuid();
@@ -431,10 +405,14 @@ public class DirectoryService {
 
     @Transactional
     public void deleteElement(UUID elementUuid, String userId) {
+        deleteElementWithNotif(elementUuid, userId);
+    }
+
+    private void deleteElementWithNotif(UUID elementUuid, String userId) {
         ElementAttributes elementAttributes = getElement(elementUuid);
 
         UUID parentUuid = repositoryService.getParentUuid(elementUuid);
-        self.getObject().deleteElement(elementAttributes, userId);
+        deleteElement(elementAttributes, userId);
         if (parentUuid == null) {
             // We can't notify to update the parent directory of a deleted root directory
             // Then we send a specific notification
@@ -444,8 +422,7 @@ public class DirectoryService {
         }
     }
 
-    @Transactional
-    public void deleteElement(ElementAttributes elementAttributes, String userId) {
+    private void deleteElement(ElementAttributes elementAttributes, String userId) {
         if (elementAttributes.getType().equals(DIRECTORY)) {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
@@ -455,7 +432,7 @@ public class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> self.getObject().deleteElement(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
     }
 
     /**

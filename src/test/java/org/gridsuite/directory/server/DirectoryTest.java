@@ -66,6 +66,8 @@ import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOT
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
+import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDIES;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -111,6 +113,7 @@ public class DirectoryTest {
     private static final String ADMIN_USER = "adminUser";
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
+    private final String studyUpdateDestination = "study.update";
 
     @Autowired
     RestClient restClient;
@@ -1238,6 +1241,60 @@ public class DirectoryTest {
 
         assertEquals(newModificationDate, updatedElement.getLastModificationDate());
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
+    }
+
+    @Test
+    public void testStudyUpdateNotification() throws Exception {
+        String userId = "userId";
+
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", userId);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert a study
+        UUID studyUuid = UUID.randomUUID();
+        String studyName = "studyName";
+        ElementAttributes subEltAttributes = toElementAttributes(studyUuid, studyName, TYPE_01, userId, "descr");
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
+
+        input.send(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid.toString())
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
+            .setHeader(HEADER_ERROR, "error")
+            .build(), studyUpdateDestination);
+
+        // Assert that the broker message has been sent an element delete (study) request message
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(UPDATE_TYPE_ELEMENT_DELETE, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, headers.get(HEADER_ELEMENT_UUID));
+
+        // Assert that the broker message has been sent a directory update request message
+        message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(uuidNewRootDirectory, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(studyName, headers.get(HEADER_ELEMENT_NAME));
+
+        // Assert that the broker message has been sent a directory update request message
+        message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(uuidNewRootDirectory, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(studyName, headers.get(HEADER_ELEMENT_NAME));
     }
 
     @Test
