@@ -33,12 +33,12 @@ public class ConsumerService {
 
     private static final String CATEGORY_BROKER_INPUT = ConsumerService.class.getName() + ".input-broker-messages";
 
-    private static final String HEADER_UPDATE_TYPE = "updateType";
-    private static final String HEADER_ELEMENT_UUID = "elementUuid";
-    private static final String UPDATE_TYPE_STUDIES = "studies";
-    private static final String HEADER_STUDY_UUID = "studyUuid";
-    private static final String HEADER_MODIFIED_BY = "modifiedBy";
-    private static final String HEADER_MODIFICATION_DATE = "modificationDate";
+    public static final String HEADER_UPDATE_TYPE = "updateType";
+    public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    public static final String UPDATE_TYPE_STUDIES = "studies";
+    public static final String HEADER_STUDY_UUID = "studyUuid";
+    public static final String HEADER_MODIFIED_BY = "modifiedBy";
+    public static final String HEADER_MODIFICATION_DATE = "modificationDate";
 
     DirectoryService directoryService;
 
