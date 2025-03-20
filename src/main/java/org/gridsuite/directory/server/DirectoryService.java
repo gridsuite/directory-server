@@ -18,8 +18,8 @@ import org.gridsuite.directory.server.services.TimerService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -64,7 +64,7 @@ public class DirectoryService {
 
     private final NotificationService notificationService;
 
-    private final DirectoryService self;
+    private final ObjectProvider<DirectoryService> self;
     private final DirectoryRepositoryService repositoryService;
     private final UserAdminService userAdminService;
 
@@ -73,7 +73,7 @@ public class DirectoryService {
     private final PermissionRepository permissionRepository;
     private final TimerService timerService;
 
-    public DirectoryService(@Lazy DirectoryService directoryService,
+    public DirectoryService(ObjectProvider<DirectoryService> directoryService,
                             DirectoryRepositoryService repositoryService,
                             NotificationService notificationService,
                             DirectoryElementRepository directoryElementRepository,
@@ -110,7 +110,7 @@ public class DirectoryService {
                     Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
                     String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
                     if (error != null && elementName != null) {
-                        self.deleteElement(studyUuid, userId);
+                        self.getObject().deleteElement(studyUuid, userId);
                     }
                     // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
                     // then avoid sending a notification with parentUuid=null and isRoot=true
@@ -254,7 +254,7 @@ public class DirectoryService {
             if (currentDirectoryUuid == null) {
                 //we create the root directory if it doesn't exist
                 if (parentDirectoryUuid == null) {
-                    parentDirectoryUuid = self.createRootDirectory(
+                    parentDirectoryUuid = self.getObject().createRootDirectory(
                             new RootDirectoryAttributes(
                                     s,
                                     userId,
@@ -265,7 +265,7 @@ public class DirectoryService {
                             userId).getElementUuid();
                 } else {
                     //and then we create the rest of the path
-                    parentDirectoryUuid = self.createElement(
+                    parentDirectoryUuid = self.getObject().createElement(
                             toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, null, now, now, userId),
                             parentDirectoryUuid,
                             userId, false).getElementUuid();
@@ -434,7 +434,7 @@ public class DirectoryService {
         ElementAttributes elementAttributes = getElement(elementUuid);
 
         UUID parentUuid = repositoryService.getParentUuid(elementUuid);
-        self.deleteElement(elementAttributes, userId);
+        self.getObject().deleteElement(elementAttributes, userId);
         if (parentUuid == null) {
             // We can't notify to update the parent directory of a deleted root directory
             // Then we send a specific notification
@@ -455,7 +455,7 @@ public class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> self.deleteElement(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> self.getObject().deleteElement(elementAttributes, userId));
     }
 
     /**
