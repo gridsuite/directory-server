@@ -19,7 +19,6 @@ import org.gridsuite.directory.server.services.UserAdminService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -63,8 +62,6 @@ public class DirectoryService {
     static final int DELAY_RETRY = 50;
 
     private final NotificationService notificationService;
-
-    private final DirectoryService self;
     private final DirectoryRepositoryService repositoryService;
     private final UserAdminService userAdminService;
 
@@ -73,15 +70,13 @@ public class DirectoryService {
     private final PermissionRepository permissionRepository;
     private final TimerService timerService;
 
-    public DirectoryService(@Lazy DirectoryService directoryService,
-                            DirectoryRepositoryService repositoryService,
+    public DirectoryService(DirectoryRepositoryService repositoryService,
                             NotificationService notificationService,
                             DirectoryElementRepository directoryElementRepository,
                             DirectoryElementInfosService directoryElementInfosService,
                             PermissionRepository permissionRepository,
                             TimerService timerService,
                             UserAdminService userAdminService) {
-        this.self = directoryService;
         this.repositoryService = repositoryService;
         this.notificationService = notificationService;
         this.directoryElementRepository = directoryElementRepository;
@@ -110,7 +105,7 @@ public class DirectoryService {
                     Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
                     String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
                     if (error != null && elementName != null) {
-                        self.deleteElement(studyUuid, userId);
+                        deleteElementWithNotif(studyUuid, userId);
                     }
                     // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
                     // then avoid sending a notification with parentUuid=null and isRoot=true
@@ -124,9 +119,12 @@ public class DirectoryService {
         };
     }
 
-    /* methods */
     @Transactional
     public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
+        return createElementWithNotif(elementAttributes, parentDirectoryUuid, userId, generateNewName);
+    }
+
+    private ElementAttributes createElementWithNotif(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
         if (elementAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
@@ -221,6 +219,10 @@ public class DirectoryService {
 
     @Transactional
     public ElementAttributes createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
+        return createRootDirectoryWithNotif(rootDirectoryAttributes, userId);
+    }
+
+    private ElementAttributes createRootDirectoryWithNotif(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
         if (rootDirectoryAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
@@ -242,6 +244,7 @@ public class DirectoryService {
         return elementAttributes;
     }
 
+    @Transactional
     public void createElementInDirectoryPath(String directoryPath, ElementAttributes elementAttributes, String userId) {
         String[] directoryPathSplit = directoryPath.split("/");
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
@@ -254,7 +257,7 @@ public class DirectoryService {
             if (currentDirectoryUuid == null) {
                 //we create the root directory if it doesn't exist
                 if (parentDirectoryUuid == null) {
-                    parentDirectoryUuid = self.createRootDirectory(
+                    parentDirectoryUuid = createRootDirectoryWithNotif(
                             new RootDirectoryAttributes(
                                     s,
                                     userId,
@@ -265,7 +268,7 @@ public class DirectoryService {
                             userId).getElementUuid();
                 } else {
                     //and then we create the rest of the path
-                    parentDirectoryUuid = self.createElement(
+                    parentDirectoryUuid = createElementWithNotif(
                             toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, null, now, now, userId),
                             parentDirectoryUuid,
                             userId, false).getElementUuid();
@@ -431,10 +434,14 @@ public class DirectoryService {
 
     @Transactional
     public void deleteElement(UUID elementUuid, String userId) {
+        deleteElementWithNotif(elementUuid, userId);
+    }
+
+    private void deleteElementWithNotif(UUID elementUuid, String userId) {
         ElementAttributes elementAttributes = getElement(elementUuid);
 
         UUID parentUuid = repositoryService.getParentUuid(elementUuid);
-        self.deleteElement(elementAttributes, userId);
+        deleteElement(elementAttributes, userId);
         if (parentUuid == null) {
             // We can't notify to update the parent directory of a deleted root directory
             // Then we send a specific notification
@@ -444,8 +451,7 @@ public class DirectoryService {
         }
     }
 
-    @Transactional
-    public void deleteElement(ElementAttributes elementAttributes, String userId) {
+    private void deleteElement(ElementAttributes elementAttributes, String userId) {
         if (elementAttributes.getType().equals(DIRECTORY)) {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
@@ -455,7 +461,7 @@ public class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> self.deleteElement(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
     }
 
     /**
