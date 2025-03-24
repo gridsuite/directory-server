@@ -10,6 +10,7 @@ on:
 jobs:
   build-native-image:
     runs-on: ubuntu-latest
+    environment: 'release'
     steps:
       - name: Setup GraalVM
         uses: graalvm/setup-graalvm@v1
