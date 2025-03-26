@@ -1,0 +1,16 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="berrahmaach (generated)" id="1742906186829-1">
+        <addColumn tableName="permission">
+            <column name="manage" type="boolean"/>
+        </addColumn>
+        <sql>
+            -- Update permissions for owners to give them full rights (read, write and manage)
+            UPDATE permission p
+            SET read = TRUE, write = TRUE, manage = TRUE
+            WHERE p.user_id = (
+                SELECT e.owner FROM element e WHERE e.id = p.element_id
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -43,11 +43,18 @@ public class PermissionEntity {
     @Column(name = "write")
     private Boolean write;
 
+    @Column(name = "manage")
+    private Boolean manage;
+
     public static PermissionEntity read(UUID elementId, String userId, String userGroupId) {
-        return new PermissionEntity(elementId, userId, userGroupId, true, false);
+        return new PermissionEntity(elementId, userId, userGroupId, true, false, false);
     }
 
     public static PermissionEntity write(UUID elementId, String userId, String userGroupId) {
-        return new PermissionEntity(elementId, userId, userGroupId, true, true);
+        return new PermissionEntity(elementId, userId, userGroupId, true, true, false);
+    }
+
+    public static PermissionEntity manage(UUID elementId, String userId, String userGroupId) {
+        return new PermissionEntity(elementId, userId, userGroupId, true, true, true);
     }
 }

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2025, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,11 +6,14 @@
  */
 package org.gridsuite.directory.server.dto;
 
+import java.util.Set;
+import java.util.UUID;
+
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Achour BERRAHMA <achour.berrahma at rte-france.com>
  */
-public enum PermissionType {
-    READ,
-    WRITE,
-    MANAGE,
-}
+public record UserGroupDTO(
+    UUID id,
+    String name,
+    Set<String> users
+) { }
