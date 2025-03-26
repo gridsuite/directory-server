@@ -672,13 +672,10 @@ public class DirectoryService {
 
     private boolean checkPermission(Optional<PermissionEntity> permissionEntity, PermissionType permissionType) {
         return permissionEntity
-                .map(p -> {
-                    return switch (permissionType) {
-                        case READ -> Boolean.TRUE.equals(p.getRead());
-                        case WRITE -> Boolean.TRUE.equals(p.getWrite());
-                        case MANAGE -> Boolean.TRUE.equals(p.getManage());
-                        default -> false;
-                    };
+                .map(p -> switch (permissionType) {
+                    case READ -> Boolean.TRUE.equals(p.getRead());
+                    case WRITE -> Boolean.TRUE.equals(p.getWrite());
+                    case MANAGE -> Boolean.TRUE.equals(p.getManage());
                 })
                 .orElse(false);
     }

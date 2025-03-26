@@ -136,7 +136,7 @@ public class AccessRightsControlTest {
         ));
     }
 
-    private void setupMockWebServer() throws IOException {
+    private void setupMockWebServer() {
         server = new MockWebServer();
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
@@ -332,10 +332,6 @@ public class AccessRightsControlTest {
     @Test
     public void testSetDirectoryPermissions() throws Exception {
         UUID rootDirectoryUuid = insertRootDirectory(ADMIN_USER, "root1");
-
-        List<PermissionDTO> perm = parsePermissions(getDirectoryPermissions(ADMIN_USER, rootDirectoryUuid)
-                .andExpect(status().isOk())
-                .andReturn());
 
         // Test case 1: Admin can set permissions
         List<PermissionDTO> newPermissions = List.of(
