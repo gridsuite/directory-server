@@ -340,7 +340,8 @@ public class AccessRightsControlTest {
         // Test case 1: Admin can set permissions
         List<PermissionDTO> newPermissions = List.of(
                 new PermissionDTO(false, List.of(GROUP_ONE_ID), PermissionType.READ),
-                new PermissionDTO(false, List.of(GROUP_TWO_ID), PermissionType.WRITE)
+                new PermissionDTO(false, List.of(GROUP_ONE_ID, GROUP_TWO_ID), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(GROUP_TWO_ID), PermissionType.MANAGE)
         );
 
         // Update permissions as admin
@@ -352,7 +353,12 @@ public class AccessRightsControlTest {
                 .andExpect(status().isOk())
                 .andReturn());
 
-        assertTrue(new MatcherJson<>(objectMapper, newPermissions).matchesSafely(updatedPermissions));
+        List<PermissionDTO> expectedPermissions = List.of(
+                new PermissionDTO(false, List.of(GROUP_ONE_ID), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(GROUP_TWO_ID), PermissionType.MANAGE)
+        );
+
+        assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(updatedPermissions));
 
         // Test case 2: Regular user without manage permission can't update
         List<PermissionDTO> userOnePermissions = List.of(
@@ -368,8 +374,8 @@ public class AccessRightsControlTest {
 
         // Now USER_TWO should be able to update permissions
         List<PermissionDTO> userTwoPermissions = List.of(
-                new PermissionDTO(true, List.of(), PermissionType.READ),
-                new PermissionDTO(true, List.of(), PermissionType.WRITE)
+                new PermissionDTO(true, List.of(GROUP_ONE_ID), PermissionType.READ),
+                new PermissionDTO(true, List.of(GROUP_TWO_ID, GROUP_ONE_ID), PermissionType.WRITE)
         );
 
         updateDirectoryPermissions(USER_TWO, rootDirectoryUuid, userTwoPermissions)
@@ -380,7 +386,7 @@ public class AccessRightsControlTest {
                 .andExpect(status().isOk())
                 .andReturn());
         // expected permissions should be just the WRITE permission for all users since WRITE = READ + WRITE
-        List<PermissionDTO> expectedPermissions = List.of(
+        expectedPermissions = List.of(
                 new PermissionDTO(true, List.of(), PermissionType.WRITE)
         );
         assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(finalPermissions));
