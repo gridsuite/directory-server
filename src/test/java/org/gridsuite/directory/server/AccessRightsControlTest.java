@@ -158,9 +158,7 @@ public class AccessRightsControlTest {
                     } else {
                         return new MockResponse().setResponseCode(HttpStatus.FORBIDDEN.value());
                     }
-                }
-                // Handle get user groups requests
-                else if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
+                } else if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
                     if (path.contains("/" + USER_ONE + "/")) {
                         return jsonResponse(HttpStatus.OK, userOneGroupsJson);
                     } else if (path.contains("/" + USER_TWO + "/")) {
@@ -451,7 +449,7 @@ public class AccessRightsControlTest {
     private List<PermissionDTO> parsePermissions(MvcResult result) throws Exception {
         return objectMapper.readValue(
                 result.getResponse().getContentAsString(),
-                new TypeReference<List<PermissionDTO>>() {}
+                new TypeReference<List<PermissionDTO>>() { }
         );
     }
 
