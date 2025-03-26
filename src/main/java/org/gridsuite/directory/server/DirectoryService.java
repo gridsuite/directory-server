@@ -7,9 +7,7 @@
 package org.gridsuite.directory.server;
 
 import lombok.NonNull;
-import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.PermissionType;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.repository.*;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
@@ -32,8 +30,7 @@ import java.util.stream.Stream;
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.dto.PermissionType.READ;
-import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
+import static org.gridsuite.directory.server.dto.PermissionType.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -102,7 +99,7 @@ public class DirectoryService {
         assertDirectoryExist(parentDirectoryUuid);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, generateNewName);
         if (DIRECTORY.equals(elementAttributes.getType())) {
-            insertWriteAndReadUserPermission(elementEntity.getId(), userId, "");
+            insertManageUserPermission(elementEntity.getId(), userId, "");
             //Grants read permission for all users on created element
             insertReadGlobalUsersPermission(elementEntity.getId());
         }
@@ -142,7 +139,7 @@ public class DirectoryService {
 
     private void assertDirectoryExist(UUID dirUuid) {
         if (!getElement(dirUuid).getType().equals(DIRECTORY)) {
-            throw new DirectoryException(NOT_ALLOWED);
+            throw new DirectoryException(NOT_DIRECTORY);
         }
     }
 
@@ -201,7 +198,7 @@ public class DirectoryService {
         assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName());
         ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
         UUID elementUuid = elementAttributes.getElementUuid();
-        insertWriteAndReadUserPermission(elementUuid, userId, "");
+        insertManageUserPermission(elementUuid, userId, "");
         insertReadGlobalUsersPermission(elementUuid);
         // here we know a root directory has no parent
         notificationService.emitDirectoryChanged(
@@ -635,11 +632,12 @@ public class DirectoryService {
     }
 
     public boolean hasPermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, PermissionType permissionType) {
-        if (permissionType.equals(WRITE)) {
-            return hasWritePermission(userId, elementUuids, targetDirectoryUuid);
-        } else {
-            return hasReadPermissions(userId, elementUuids);
-        }
+        return switch (permissionType) {
+            case READ -> hasReadPermissions(userId, elementUuids);
+            case WRITE -> hasWritePermission(userId, elementUuids, targetDirectoryUuid);
+            case MANAGE -> hasManagePermission(userId, elementUuids);
+            default -> false;
+        };
     }
 
     public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {
@@ -658,19 +656,39 @@ public class DirectoryService {
                 return true;
             }
             //Then check user specific permission
-            return checkPermission(permissionRepository.findById(new PermissionId(uuid, userId, "")), permissionType);
+            boolean userPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, userId, "")), permissionType);
+            if (userPermission) {
+                return true;
+            }
+            //Finally check group permission
+            return userAdminService.getUserGroups(userId)
+                    .stream()
+                    .map(UserGroupDTO::id)
+                    .anyMatch(groupId ->
+                        checkPermission(permissionRepository.findById(new PermissionId(uuid, "", groupId.toString())), permissionType)
+                    );
         });
     }
 
     private boolean checkPermission(Optional<PermissionEntity> permissionEntity, PermissionType permissionType) {
         return permissionEntity
                 .map(p -> {
-                    if (permissionType == WRITE) {
-                        return Boolean.TRUE.equals(p.getWrite());
-                    }
-                    return Boolean.TRUE.equals(p.getRead());
+                    return switch (permissionType) {
+                        case READ -> Boolean.TRUE.equals(p.getRead());
+                        case WRITE -> Boolean.TRUE.equals(p.getWrite());
+                        case MANAGE -> Boolean.TRUE.equals(p.getManage());
+                        default -> false;
+                    };
                 })
                 .orElse(false);
+    }
+
+    private boolean hasManagePermission(String userId, List<UUID> elementUuids) {
+        List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
+        return elements.stream().allMatch(element ->
+            //If it's a directory we check its own write permission else we check the permission on the element parent directory
+            checkPermission(userId, List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), MANAGE)
+        );
     }
 
     private boolean hasWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid) {
@@ -686,12 +704,241 @@ public class DirectoryService {
         permissionRepository.save(permissionEntity);
     }
 
-    private void insertWriteAndReadUserPermission(UUID elementUuid, String userId, String userGroupId) {
-        PermissionEntity permissionEntity = PermissionEntity.write(elementUuid, userId, userGroupId);
+    private void insertManageUserPermission(UUID elementUuid, String userId, String userGroupId) {
+        PermissionEntity permissionEntity = PermissionEntity.manage(elementUuid, userId, userGroupId);
         permissionRepository.save(permissionEntity);
     }
 
     private void insertReadGlobalUsersPermission(UUID elementUuid) {
         insertReadUserPermission(elementUuid, ALL_USERS, "");
+    }
+
+    private void addPermissionForAllUsers(UUID elementUuid, PermissionType permissionType) {
+        PermissionEntity permissionEntity = switch (permissionType) {
+            case READ -> PermissionEntity.read(elementUuid, ALL_USERS, "");
+            case WRITE -> PermissionEntity.write(elementUuid, ALL_USERS, "");
+            case MANAGE -> PermissionEntity.manage(elementUuid, ALL_USERS, "");
+            default -> throw new IllegalArgumentException("Unknown permission type: " + permissionType);
+        };
+        permissionRepository.save(permissionEntity);
+    }
+
+    private void addPermissionForGroup(UUID elementUuid, String groupId, PermissionType permissionType) {
+        PermissionEntity permissionEntity = switch (permissionType) {
+            case READ -> PermissionEntity.read(elementUuid, "", groupId);
+            case WRITE -> PermissionEntity.write(elementUuid, "", groupId);
+            case MANAGE -> PermissionEntity.manage(elementUuid, "", groupId);
+            default -> throw new IllegalArgumentException("Unknown permission type: " + permissionType);
+        };
+        permissionRepository.save(permissionEntity);
+    }
+
+    public void validatePermissionsGetAccess(UUID directoryUuid, String userId) {
+        if (!userAdminService.isUserAdmin(userId) && !hasReadPermissions(userId, List.of(directoryUuid))) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+    }
+
+    public List<PermissionDTO> getDirectoryPermissions(UUID directoryUuid, String userId) {
+        validatePermissionsGetAccess(directoryUuid, userId);
+
+        assertDirectoryExist(directoryUuid);
+
+        List<PermissionEntity> permissions = permissionRepository.findAllByElementId(directoryUuid);
+
+        // Track global permissions (for ALL_USERS)
+        var allUsersHighestPermission = determineHighestPermission(
+                permissions.stream()
+                        .filter(p -> ALL_USERS.equals(p.getUserId()))
+                        .findFirst()
+                        .orElse(null)
+        );
+
+        // Track the highest permission level for each group
+        Map<String, PermissionType> groupHighestPermissions = new HashMap<>();
+
+        // Process group permissions to find the highest permission level for each group
+        permissions.stream()
+                .filter(p -> !p.getUserGroupId().isEmpty())
+                .forEach(permission -> {
+                    String groupId = permission.getUserGroupId();
+                    PermissionType currentHighest = groupHighestPermissions.getOrDefault(groupId, null);
+                    PermissionType permissionLevel = determineHighestPermission(permission);
+
+                    if (shouldUpdatePermission(currentHighest, permissionLevel)) {
+                        groupHighestPermissions.put(groupId, permissionLevel);
+                    }
+                });
+
+        // Build the result DTOs
+        List<PermissionDTO> result = new ArrayList<>();
+
+        // Add global permission if present
+        if (allUsersHighestPermission != null) {
+            result.add(new PermissionDTO(true, List.of(), allUsersHighestPermission));
+        }
+
+        // Group permissions by type
+        Map<PermissionType, List<UUID>> permissionsByType = new EnumMap<>(PermissionType.class);
+        Arrays.stream(PermissionType.values()).forEach(type -> permissionsByType.put(type, new ArrayList<>()));
+
+        // Add groups to their respective highest permission type
+        groupHighestPermissions.forEach((groupIdStr, permType) -> {
+            try {
+                UUID groupId = UUID.fromString(groupIdStr);
+                permissionsByType.get(permType).add(groupId);
+            } catch (IllegalArgumentException e) {
+                // Skip non-UUID group IDs
+            }
+        });
+
+        // Create DTOs for each permission type that has groups
+        permissionsByType.forEach((type, groups) -> {
+            if (!groups.isEmpty()) {
+                result.add(new PermissionDTO(false, groups, type));
+            }
+        });
+
+        return result;
+    }
+
+    private void validatePermissionUpdateAccess(UUID directoryUuid, String userId) {
+        if (!userAdminService.isUserAdmin(userId) && !hasManagePermission(userId, List.of(directoryUuid))) {
+            throw new DirectoryException(NOT_ALLOWED);
+        }
+    }
+
+    @Transactional
+    public void setDirectoryPermissions(UUID directoryUuid, List<PermissionDTO> permissions, String userId) {
+        validatePermissionUpdateAccess(directoryUuid, userId);
+
+        assertDirectoryExist(directoryUuid);
+
+        // Remove all permissions for this directory except for the owner
+        String owner = getElement(directoryUuid).getOwner();
+        permissionRepository.deleteAllByElementIdAndUserIdNot(directoryUuid, owner);
+
+        // Apply new permissions based on the provided DTOs
+        PermissionConfiguration config = buildPermissionConfiguration(permissions);
+        applyPermissionConfiguration(directoryUuid, config);
+
+        // Notify about the change
+        notifyDirectoryHasChanged(directoryUuid, userId);
+    }
+
+    /**
+     * Represents the resolved permission configuration
+     */
+    private record PermissionConfiguration(boolean allUsersRead, boolean allUsersWrite, boolean allUsersManage,
+                                           Map<String, PermissionType> groupPermissions) {
+    }
+
+    /**
+     * Builds a permission configuration from DTO list, resolving conflicts
+     */
+    private PermissionConfiguration buildPermissionConfiguration(List<PermissionDTO> permissions) {
+        boolean allUsersRead = false;
+        boolean allUsersWrite = false;
+        boolean allUsersManage = false;
+        Map<String, PermissionType> groupPermissions = new HashMap<>();
+
+        for (PermissionDTO dto : permissions) {
+            if (dto.isAllUsers()) {
+                // Process permissions for all users
+                switch (dto.getType()) {
+                    case READ:
+                        allUsersRead = true;
+                        break;
+                    case WRITE:
+                        allUsersWrite = true;
+                        break;
+                    case MANAGE:
+                        allUsersManage = true;
+                        break;
+                }
+            } else if (dto.getGroups() != null && !dto.getGroups().isEmpty()) {
+                // Process group permissions
+                processGroupPermissions(dto, groupPermissions);
+            }
+        }
+
+        return new PermissionConfiguration(allUsersRead, allUsersWrite, allUsersManage, groupPermissions);
+    }
+
+    /**
+     * Processes group permissions and resolves conflicts (same group with different permissions)
+     */
+    private void processGroupPermissions(PermissionDTO dto, Map<String, PermissionType> groupPermissions) {
+        for (UUID groupId : dto.getGroups()) {
+            String groupIdStr = groupId.toString();
+            PermissionType currentHighest = groupPermissions.getOrDefault(groupIdStr, null);
+
+            if (shouldUpdatePermission(currentHighest, dto.getType())) {
+                groupPermissions.put(groupIdStr, dto.getType());
+            }
+        }
+    }
+
+    /**
+     * Determines the highest permission level for a permission entity
+     *
+     * @param permission The permission entity to evaluate
+     * @return The highest permission type or null if no permissions
+     */
+    private PermissionType determineHighestPermission(PermissionEntity permission) {
+        if (permission == null) {
+            return null;
+        }
+
+        PermissionType highest = null;
+
+        if (Boolean.TRUE.equals(permission.getManage())) {
+            highest = PermissionType.MANAGE;
+        } else if (Boolean.TRUE.equals(permission.getWrite())) {
+            highest = PermissionType.WRITE;
+        } else if (Boolean.TRUE.equals(permission.getRead())) {
+            highest = PermissionType.READ;
+        }
+
+        return highest;
+    }
+
+    /**
+     * Determines if a permission should be updated based on hierarchy
+     * returns true if the proposed permission is higher than the current permission
+     */
+    private boolean shouldUpdatePermission(PermissionType current, PermissionType proposed) {
+        if (proposed == null) {
+            return false;
+        }
+
+        if (current == null) {
+            return true;
+        }
+
+        return switch (current) {
+            case READ -> proposed == PermissionType.WRITE || proposed == PermissionType.MANAGE;
+            case WRITE -> proposed == PermissionType.MANAGE;
+            case MANAGE -> false;
+        };
+    }
+
+    /**
+     * Applies the resolved permission configuration to the directory
+     */
+    private void applyPermissionConfiguration(UUID directoryUuid, PermissionConfiguration config) {
+        // Apply all users permissions based on highest level
+        if (config.allUsersManage()) {
+            addPermissionForAllUsers(directoryUuid, PermissionType.MANAGE);
+        } else if (config.allUsersWrite()) {
+            addPermissionForAllUsers(directoryUuid, PermissionType.WRITE);
+        } else if (config.allUsersRead()) {
+            addPermissionForAllUsers(directoryUuid, PermissionType.READ);
+        }
+
+        // Apply group permissions
+        config.groupPermissions().forEach((groupId, permissionType) ->
+                addPermissionForGroup(directoryUuid, groupId, permissionType)
+        );
     }
 }

@@ -10,6 +10,7 @@ import lombok.NonNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,4 +25,7 @@ public interface PermissionRepository extends JpaRepository<PermissionEntity, Pe
 
     void deleteAllByElementId(UUID elementId);
 
+    List<PermissionEntity> findAllByElementId(UUID elementId);
+
+    void deleteAllByElementIdAndUserIdNot(UUID elementId, String userId);
 }
