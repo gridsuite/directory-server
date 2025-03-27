@@ -8,35 +8,32 @@ package org.gridsuite.directory.server;
 
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.PermissionType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
-import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.*;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.TimerService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Bean;
+import org.gridsuite.directory.server.services.UserAdminService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.DirectoryException.Type.*;
-import static org.gridsuite.directory.server.NotificationService.HEADER_ERROR;
-import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.dto.PermissionType.READ;
+import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -47,75 +44,68 @@ import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttr
 public class DirectoryService {
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
-    public static final String HEADER_UPDATE_TYPE = "updateType";
-    public static final String UPDATE_TYPE_STUDIES = "studies";
-    public static final String HEADER_STUDY_UUID = "studyUuid";
-    private static final String CATEGORY_BROKER_INPUT = DirectoryService.class.getName() + ".input-broker-messages";
-    private static final Logger LOGGER = LoggerFactory.getLogger(DirectoryService.class);
+    public static final String ALL_USERS = "ALL_USERS";
     private static final int ES_PAGE_MAX_SIZE = 50;
     static final int MAX_RETRY = 3;
     static final int DELAY_RETRY = 50;
 
     private final NotificationService notificationService;
-
     private final DirectoryRepositoryService repositoryService;
+    private final UserAdminService userAdminService;
 
     private final DirectoryElementRepository directoryElementRepository;
     private final DirectoryElementInfosService directoryElementInfosService;
+    private final PermissionRepository permissionRepository;
     private final TimerService timerService;
 
     public DirectoryService(DirectoryRepositoryService repositoryService,
                             NotificationService notificationService,
                             DirectoryElementRepository directoryElementRepository,
                             DirectoryElementInfosService directoryElementInfosService,
-                            TimerService timerService) {
+                            PermissionRepository permissionRepository,
+                            TimerService timerService,
+                            UserAdminService userAdminService) {
         this.repositoryService = repositoryService;
         this.notificationService = notificationService;
         this.directoryElementRepository = directoryElementRepository;
         this.directoryElementInfosService = directoryElementInfosService;
+        this.permissionRepository = permissionRepository;
         this.timerService = timerService;
+        this.userAdminService = userAdminService;
     }
 
-    /* notifications */
     //TODO: this consumer is the kept here at the moment, but it will be moved to explore server later on
-    @Bean
-    public Consumer<Message<String>> consumeStudyUpdate() {
-        LOGGER.info(CATEGORY_BROKER_INPUT);
-        return message -> {
-            try {
-                String studyUuidHeader = message.getHeaders().get(HEADER_STUDY_UUID, String.class);
-                String error = message.getHeaders().get(HEADER_ERROR, String.class);
-                String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                String updateType = message.getHeaders().get(HEADER_UPDATE_TYPE, String.class);
-                // UPDATE_TYPE_STUDIES is the update type used when inserting or duplicating studies, and when a study import fails
-                if (UPDATE_TYPE_STUDIES.equals(updateType) && studyUuidHeader != null) {
-                    UUID studyUuid = UUID.fromString(studyUuidHeader);
-
-                    UUID parentUuid = repositoryService.getParentUuid(studyUuid);
-                    Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
-                    String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
-                    if (error != null && elementName != null) {
-                        deleteElement(studyUuid, userId);
-                    }
-                    // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
-                    // then avoid sending a notification with parentUuid=null and isRoot=true
-                    if (parentUuid != null) {
-                        notifyDirectoryHasChanged(parentUuid, userId, elementName, error);
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.error(e.toString(), e);
-            }
-        };
+    @Transactional
+    public void studyUpdated(UUID studyUuid, String errorMessage, String userId) {
+        UUID parentUuid = repositoryService.getParentUuid(studyUuid);
+        Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
+        String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
+        if (errorMessage != null && elementName != null) {
+            deleteElementWithNotif(studyUuid, userId);
+        }
+        // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
+        // then avoid sending a notification with parentUuid=null and isRoot=true
+        if (parentUuid != null) {
+            notifyDirectoryHasChanged(parentUuid, userId, elementName, errorMessage);
+        }
     }
 
-    /* methods */
+    @Transactional
     public ElementAttributes createElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
+        return createElementWithNotif(elementAttributes, parentDirectoryUuid, userId, generateNewName);
+    }
+
+    private ElementAttributes createElementWithNotif(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
         if (elementAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
         assertDirectoryExist(parentDirectoryUuid);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, generateNewName);
+        if (DIRECTORY.equals(elementAttributes.getType())) {
+            insertWriteAndReadUserPermission(elementEntity.getId(), userId, "");
+            //Grants read permission for all users on created element
+            insertReadGlobalUsersPermission(elementEntity.getId());
+        }
 
         // Here we know that parentDirectoryUuid can't be null
         notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementAttributes.getElementName());
@@ -145,7 +135,7 @@ public class DirectoryService {
     }
 
     private void assertRootDirectoryNotExist(String rootName) {
-        if (Boolean.TRUE.equals(repositoryService.isRootDirectoryExist(rootName))) {
+        if (TRUE.equals(repositoryService.isRootDirectoryExist(rootName))) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
@@ -198,27 +188,34 @@ public class DirectoryService {
         throw DirectoryException.createElementNameAlreadyExists(elementEntity.getName());
     }
 
+    @Transactional
     public ElementAttributes createRootDirectory(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
+        return createRootDirectoryWithNotif(rootDirectoryAttributes, userId);
+    }
+
+    private ElementAttributes createRootDirectoryWithNotif(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
         if (rootDirectoryAttributes.getElementName().isBlank()) {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
         assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName());
         ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
-
+        UUID elementUuid = elementAttributes.getElementUuid();
+        insertWriteAndReadUserPermission(elementUuid, userId, "");
+        insertReadGlobalUsersPermission(elementUuid);
         // here we know a root directory has no parent
         notificationService.emitDirectoryChanged(
-                elementAttributes.getElementUuid(),
+                elementUuid,
                 elementAttributes.getElementName(),
                 userId,
                 null,
                 true,
                 NotificationType.ADD_DIRECTORY
         );
-
         return elementAttributes;
     }
 
+    @Transactional
     public void createElementInDirectoryPath(String directoryPath, ElementAttributes elementAttributes, String userId) {
         String[] directoryPathSplit = directoryPath.split("/");
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
@@ -231,7 +228,7 @@ public class DirectoryService {
             if (currentDirectoryUuid == null) {
                 //we create the root directory if it doesn't exist
                 if (parentDirectoryUuid == null) {
-                    parentDirectoryUuid = createRootDirectory(
+                    parentDirectoryUuid = createRootDirectoryWithNotif(
                             new RootDirectoryAttributes(
                                     s,
                                     userId,
@@ -242,7 +239,7 @@ public class DirectoryService {
                             userId).getElementUuid();
                 } else {
                     //and then we create the rest of the path
-                    parentDirectoryUuid = createElement(
+                    parentDirectoryUuid = createElementWithNotif(
                             toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, null, now, now, userId),
                             parentDirectoryUuid,
                             userId, false).getElementUuid();
@@ -261,7 +258,10 @@ public class DirectoryService {
         return subdirectoriesCountsMap;
     }
 
-    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive) {
+    public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
+        if (!userAdminService.isUserAdmin(userId) && !hasReadPermissions(userId, List.of(directoryUuid))) {
+            return List.of();
+        }
         ElementAttributes elementAttributes = getElement(directoryUuid);
         if (elementAttributes == null) {
             throw DirectoryException.createElementNotFound(DIRECTORY, directoryUuid);
@@ -269,7 +269,7 @@ public class DirectoryService {
         if (!elementAttributes.getType().equals(DIRECTORY)) {
             return List.of();
         }
-        if (Boolean.TRUE.equals(recursive)) {
+        if (TRUE.equals(recursive)) {
             List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(directoryUuid).stream().toList();
             return descendents
                     .stream()
@@ -295,8 +295,13 @@ public class DirectoryService {
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
-    public List<ElementAttributes> getRootDirectories(List<String> types) {
+    public List<ElementAttributes> getRootDirectories(List<String> types, String userId) {
+
         List<DirectoryElementEntity> directoryElements = repositoryService.findRootDirectories();
+
+        if (!userAdminService.isUserAdmin(userId)) {
+            directoryElements = directoryElements.stream().filter(directoryElementEntity -> hasReadPermissions(userId, List.of(directoryElementEntity.getId()))).toList();
+        }
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements);
         return directoryElements.stream()
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
@@ -309,8 +314,7 @@ public class DirectoryService {
 
     public void updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
         DirectoryElementEntity directoryElement = getDirectoryElementEntity(elementUuid);
-        if (!isDirectoryElementUpdatable(toElementAttributes(directoryElement), userId) ||
-            !directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
+        if (!directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
             !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
              directoryHasElementOfNameAndType(directoryElement.getParentId(), newElementAttributes.getElementName(), directoryElement.getType())) {
             throw new DirectoryException(NOT_ALLOWED);
@@ -349,7 +353,7 @@ public class DirectoryService {
         List<DirectoryElementEntity> descendents = isDirectory ? repositoryService.findAllDescendants(element.getId()).stream().toList() : List.of();
 
         // validate move elements
-        validateElementForMove(element, newDirectoryUuid, userId, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()));
+        validateElementForMove(element, newDirectoryUuid, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()));
 
         // we update the parent of the moving element
         updateElementParentDirectory(element, newDirectoryUuid);
@@ -368,13 +372,12 @@ public class DirectoryService {
 
     }
 
-    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, String userId, Set<UUID> descendentsUuids) {
+    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, Set<UUID> descendentsUuids) {
         if (newDirectoryUuid == element.getId() || descendentsUuids.contains(newDirectoryUuid)) {
             throw new DirectoryException(MOVE_IN_DESCENDANT_NOT_ALLOWED);
         }
 
-        if (!isDirectoryElementUpdatable(toElementAttributes(element), userId) ||
-                directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType())) {
+        if (directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType())) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
@@ -400,26 +403,14 @@ public class DirectoryService {
             );
     }
 
-    private boolean isDirectoryElementUpdatable(ElementAttributes element, String userId) {
-        return element.isOwnedBy(userId);
-    }
-
-    private boolean isDirectoryElementDeletable(ElementAttributes element, String userId) {
-        if (element.getType().equals(DIRECTORY)) {
-            return element.isOwnedBy(userId) &&
-                    getAllDirectoryElementsStream(element.getElementUuid(), List.of())
-                            .allMatch(e -> isDirectoryElementDeletable(e, userId));
-        } else {
-            return element.isOwnedBy(userId);
-        }
-    }
-
+    @Transactional
     public void deleteElement(UUID elementUuid, String userId) {
+        deleteElementWithNotif(elementUuid, userId);
+    }
+
+    private void deleteElementWithNotif(UUID elementUuid, String userId) {
         ElementAttributes elementAttributes = getElement(elementUuid);
 
-        if (elementAttributes == null || !isDirectoryElementDeletable(elementAttributes, userId)) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
         UUID parentUuid = repositoryService.getParentUuid(elementUuid);
         deleteElement(elementAttributes, userId);
         if (parentUuid == null) {
@@ -436,6 +427,7 @@ public class DirectoryService {
             deleteSubElements(elementAttributes.getElementUuid(), userId);
         }
         repositoryService.deleteElement(elementAttributes.getElementUuid());
+        permissionRepository.deleteAllByElementId(elementAttributes.getElementUuid());
         notificationService.emitDeletedElement(elementAttributes.getElementUuid(), userId);
     }
 
@@ -450,14 +442,6 @@ public class DirectoryService {
      * @param userId user making the deletion
      */
     public void deleteElements(List<UUID> elementsUuids, UUID parentDirectoryUuid, String userId) {
-        // verify if all elements are owned by the user in order to be deleted.
-        getElements(elementsUuids, true, List.of()).stream()
-                .forEach(e -> {
-                    if (!isDirectoryElementDeletable(e, userId)) {
-                        throw new DirectoryException(NOT_ALLOWED);
-                    }
-                });
-
         // getting elements by "elementUuids", filtered if they don't belong to parentDirectoryUuid, or if they are directories
         List<ElementAttributes> elementsAttributesToDelete = repositoryService.getElementEntities(elementsUuids, parentDirectoryUuid).stream()
             .map(ElementAttributes::toElementAttributes)
@@ -510,8 +494,15 @@ public class DirectoryService {
         return null;
     }
 
-    public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types) {
+    public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types, String userId) {
         List<DirectoryElementEntity> elementEntities = repositoryService.findAllByIdIn(ids);
+
+        //if the user is not an admin we filter out elements he doesn't have the permission on
+        if (!userAdminService.isUserAdmin(userId)) {
+            elementEntities = elementEntities.stream().filter(directoryElementEntity ->
+                            hasReadPermissions(userId, List.of(directoryElementEntity.getId()))
+                    ).toList();
+        }
 
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
             throw new DirectoryException(NOT_FOUND);
@@ -546,18 +537,6 @@ public class DirectoryService {
         }
     }
 
-    public boolean areDirectoryElementsAccessible(@NonNull List<UUID> elementUuids, @NonNull String userId) {
-        // TODO : check in the gateway should be modified. Now all directories are public. See with Slimane
-        /* getElements(elementUuids, true, List.of()).stream()
-                .map(e -> e.getType().equals(DIRECTORY) ? e : getParentElement(e.getElementUuid()))
-                .forEach(e -> {
-                    if (!e.isAllowed(userId)) {
-                        throw new DirectoryException(NOT_ALLOWED);
-                    }
-                });*/
-        return true;
-    }
-
     private String nameCandidate(String elementName, int n) {
         return elementName + '(' + n + ')';
     }
@@ -580,10 +559,6 @@ public class DirectoryService {
     public Page<DirectoryElementInfos> searchElements(@NonNull String userInput, String directoryUuid) {
         Pageable pageRequest = PageRequest.of(0, ES_PAGE_MAX_SIZE);
         return directoryElementInfosService.searchElements(userInput, directoryUuid, pageRequest);
-    }
-
-    public boolean areDirectoryElementsDeletable(List<UUID> elementsUuid, String userId) {
-        return getElements(elementsUuid, true, List.of()).stream().allMatch(e -> isDirectoryElementDeletable(e, userId));
     }
 
     public UUID getDirectoryUuidFromPath(List<String> directoryPath) {
@@ -659,14 +634,64 @@ public class DirectoryService {
         );
     }
 
-    public boolean areElementsAccessible(List<UUID> elementUuids, String userId, boolean forDeletion, boolean forUpdate) {
+    public boolean hasPermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, PermissionType permissionType) {
+        if (permissionType.equals(WRITE)) {
+            return hasWritePermission(userId, elementUuids, targetDirectoryUuid);
+        } else {
+            return hasReadPermissions(userId, elementUuids);
+        }
+    }
 
-        if (forDeletion) {
-            return areDirectoryElementsDeletable(elementUuids, userId);
-        }
-        if (forUpdate) {
-            return getElements(elementUuids, true, List.of()).stream().allMatch(e -> isDirectoryElementUpdatable(e, userId));
-        }
-        return areDirectoryElementsAccessible(elementUuids, userId);
+    public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {
+        List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
+        return elements.stream().allMatch(element ->
+                //If it's a directory we check its own write permission else we check the permission on the element parent directory
+                checkPermission(userId, List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), READ)
+        );
+    }
+
+    private boolean checkPermission(String userId, List<UUID> elementUuids, PermissionType permissionType) {
+        return elementUuids.stream().allMatch(uuid -> {
+            //Check global permission first
+            boolean globalPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, ALL_USERS, "")), permissionType);
+            if (globalPermission) {
+                return true;
+            }
+            //Then check user specific permission
+            return checkPermission(permissionRepository.findById(new PermissionId(uuid, userId, "")), permissionType);
+        });
+    }
+
+    private boolean checkPermission(Optional<PermissionEntity> permissionEntity, PermissionType permissionType) {
+        return permissionEntity
+                .map(p -> {
+                    if (permissionType == WRITE) {
+                        return Boolean.TRUE.equals(p.getWrite());
+                    }
+                    return Boolean.TRUE.equals(p.getRead());
+                })
+                .orElse(false);
+    }
+
+    private boolean hasWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid) {
+        List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
+        return elements.stream().allMatch(element ->
+            //If it's a directory we check its own write permission else we check the permission on the element parent directory
+            checkPermission(userId, List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), WRITE)
+        ) && (targetDirectoryUuid == null || checkPermission(userId, List.of(targetDirectoryUuid), WRITE));
+    }
+
+    private void insertReadUserPermission(UUID elementUuid, String userId, String userGroupId) {
+        PermissionEntity permissionEntity = PermissionEntity.read(elementUuid, userId, userGroupId);
+        permissionRepository.save(permissionEntity);
+    }
+
+    private void insertWriteAndReadUserPermission(UUID elementUuid, String userId, String userGroupId) {
+        PermissionEntity permissionEntity = PermissionEntity.write(elementUuid, userId, userGroupId);
+        permissionRepository.save(permissionEntity);
+    }
+
+    private void insertReadGlobalUsersPermission(UUID elementUuid) {
+        insertReadUserPermission(elementUuid, ALL_USERS, "");
     }
 }
