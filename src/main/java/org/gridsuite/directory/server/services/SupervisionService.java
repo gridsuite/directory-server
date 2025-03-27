@@ -3,6 +3,7 @@ package org.gridsuite.directory.server.services;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,16 +39,17 @@ public class SupervisionService {
     }
 
     public void recreateIndex() {
-        boolean deleted = elasticsearchOperations.indexOps(DirectoryElementInfos.class).delete();
-        if (!deleted) {
+        IndexOperations indexOperations = elasticsearchOperations.indexOps(DirectoryElementInfos.class);
+        boolean isDeleted = indexOperations.delete();
+        if (!isDeleted) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Failed to delete Elasticsearch index.");
+                    "Failed to delete elements ElasticSearch index");
         }
 
-        boolean created = elasticsearchOperations.indexOps(DirectoryElementInfos.class).createWithMapping();
-        if (!created) {
+        boolean isCreated = indexOperations.createWithMapping();
+        if (!isCreated) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Failed to create Elasticsearch index.");
+                    "Failed to create elements ElasticSearch index");
         }
     }
 }

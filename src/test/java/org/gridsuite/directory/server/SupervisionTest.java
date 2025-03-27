@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server;
 
+import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
@@ -16,12 +17,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.IndexOperations;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
@@ -39,6 +46,12 @@ class SupervisionTest {
 
     @MockBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
+
+    @MockBean
+    ElasticsearchOperations elasticsearchOperations;
+
+    @MockBean
+    IndexOperations indexOperations;
 
     @Test
     void testDeleteElements() {
@@ -73,9 +86,57 @@ class SupervisionTest {
         verify(directoryElementRepository, times(2)).findElementHierarchy(any(UUID.class));
     }
 
+    @Test
+    void testRecreateIndexThrowsExceptionWhenDeleteFails() {
+        when(elasticsearchOperations.indexOps(DirectoryElementInfos.class)).thenReturn(indexOperations);
+        when(indexOperations.delete()).thenReturn(false);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            supervisionService.recreateIndex();
+        });
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
+        assertEquals("Failed to delete elements ElasticSearch index", exception.getReason());
+        verify(elasticsearchOperations, times(1)).indexOps(DirectoryElementInfos.class);
+        verify(indexOperations, times(1)).delete();
+        verify(indexOperations, never()).createWithMapping();
+    }
+
+    @Test
+    void testRecreateIndexThrowsExceptionWhenCreateFails() {
+        when(elasticsearchOperations.indexOps(DirectoryElementInfos.class)).thenReturn(indexOperations);
+        when(indexOperations.delete()).thenReturn(true);
+        when(indexOperations.createWithMapping()).thenReturn(false);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            supervisionService.recreateIndex();
+        });
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatusCode());
+        assertEquals("Failed to create elements ElasticSearch index", exception.getReason());
+        verify(elasticsearchOperations, times(1)).indexOps(DirectoryElementInfos.class);
+        verify(indexOperations, times(1)).delete();
+        verify(indexOperations, times(1)).createWithMapping();
+    }
+
+    @Test
+    void recreateIndexSuccess() {
+        when(elasticsearchOperations.indexOps(DirectoryElementInfos.class)).thenReturn(indexOperations);
+        when(indexOperations.delete()).thenReturn(true);
+        when(indexOperations.createWithMapping()).thenReturn(true);
+
+        supervisionService.recreateIndex();
+
+        verify(elasticsearchOperations, times(1)).indexOps(DirectoryElementInfos.class);
+        verify(indexOperations, times(1)).delete();
+        verify(indexOperations, times(1)).createWithMapping();
+    }
+
     @AfterEach
     public void verifyNoMoreInteractionsMocks() {
         verifyNoMoreInteractions(directoryElementRepository);
         verifyNoMoreInteractions(directoryElementInfosRepository);
+        verifyNoMoreInteractions(elasticsearchOperations);
+        verifyNoMoreInteractions(indexOperations);
     }
 }
