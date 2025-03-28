@@ -678,7 +678,7 @@ public class DirectoryService {
         return elements.stream().allMatch(element -> {
             if (recursiveCheck && element.getType().equals(DIRECTORY)) {
                 List<UUID> descendentsUuids = repositoryService.findAllDescendants(element.getId()).stream().map(DirectoryElementEntity::getId).toList();
-                if(!checkPermission(userId, descendentsUuids, WRITE)) {
+                if (!checkPermission(userId, descendentsUuids, WRITE)) {
                     throw new DirectoryException(CONFLICT);
                 }
             }

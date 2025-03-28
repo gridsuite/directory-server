@@ -301,7 +301,7 @@ public class AccessRightsControlTest {
 
     private void controlElementsAccess(String userId, List<UUID> uuids, UUID targetDirectoryUuid, PermissionType accessType, boolean recursiveCheck, HttpStatus expectedStatus) throws Exception {
         var ids = uuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        mockMvc.perform(head("/v1/elements?accessType=" + accessType.name() + "&ids=" + ids + "&targetDirectoryUuid" + (targetDirectoryUuid != null ? "=" + targetDirectoryUuid : "")+ "&recursiveCheck=" + recursiveCheck).header("userId", userId))
+        mockMvc.perform(head("/v1/elements?accessType=" + accessType.name() + "&ids=" + ids + "&targetDirectoryUuid" + (targetDirectoryUuid != null ? "=" + targetDirectoryUuid : "") + "&recursiveCheck=" + recursiveCheck).header("userId", userId))
             .andExpect(status().is(new IsEqual<>(expectedStatus.value())));
     }
 
