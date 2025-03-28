@@ -188,13 +188,15 @@ public class DirectoryController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "All elements are accessible"),
         @ApiResponse(responseCode = "404", description = "At least one element was not found"),
-        @ApiResponse(responseCode = "204", description = "Access forbidden for at least one element")
+        @ApiResponse(responseCode = "204", description = "Access forbidden for at least one element"),
+        @ApiResponse(responseCode = "409", description = "Access forbidden for at least one sub element of one element")
     })
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                       @RequestParam(value = "accessType") PermissionType permissionType,
                                                       @RequestParam(value = "targetDirectoryUuid", required = false) UUID targetDirectoryUuid,
+                                                      @RequestParam(value = "recursiveCheck", required = false, defaultValue = "false") boolean recursiveCheck,
                                                       @RequestHeader("userId") String userId) {
-        if (!userAdminService.isUserAdmin(userId) && !service.hasPermission(userId, elementUuids, targetDirectoryUuid, permissionType)) {
+        if (!userAdminService.isUserAdmin(userId) && !service.hasPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck)) {
             return ResponseEntity.noContent().build();
         } else {
             return ResponseEntity.ok().build();
