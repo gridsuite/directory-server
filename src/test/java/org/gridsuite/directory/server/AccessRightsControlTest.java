@@ -264,6 +264,21 @@ public class AccessRightsControlTest {
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, ADMIN_USER), HttpStatus.CONFLICT);
     }
 
+    @Test
+    public void testRecursiveCheck() throws Exception {
+        String user1 = "user1";
+        UUID rootDir10Uuid = insertRootDirectory(user1, "rootDir10");
+        UUID directory21UUID = UUID.randomUUID();
+        ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, ADMIN_USER);
+        insertSubElement(rootDir10Uuid, directory20Attributes);
+        UUID rootDir20Uuid = insertRootDirectory(ADMIN_USER, "rootDir20");
+
+        controlElementsAccess(user1, List.of(rootDir10Uuid), rootDir20Uuid, WRITE, true, HttpStatus.CONFLICT);
+        controlElementsAccess(user1, List.of(rootDir10Uuid), null, WRITE, true, HttpStatus.CONFLICT);
+        controlElementsAccess(user1, List.of(rootDir10Uuid), rootDir20Uuid, READ, true, HttpStatus.OK);
+        controlElementsAccess(user1, List.of(rootDir10Uuid), null, READ, true, HttpStatus.OK);
+    }
+
     private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
         String response = insertSubElement(parentDirectoryUUid, subElementAttributes, HttpStatus.OK)
                 .getResponse()
@@ -281,9 +296,13 @@ public class AccessRightsControlTest {
     }
 
     private void controlElementsAccess(String userId, List<UUID> uuids, UUID targetDirectoryUuid, PermissionType accessType, HttpStatus expectedStatus) throws Exception {
+        controlElementsAccess(userId, uuids, targetDirectoryUuid, accessType, false, expectedStatus);
+    }
+
+    private void controlElementsAccess(String userId, List<UUID> uuids, UUID targetDirectoryUuid, PermissionType accessType, boolean recursiveCheck, HttpStatus expectedStatus) throws Exception {
         var ids = uuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        mockMvc.perform(head("/v1/elements?accessType=" + accessType.name() + "&ids=" + ids + "&targetDirectoryUuid" + (targetDirectoryUuid != null ? "=" + targetDirectoryUuid : "")).header("userId", userId))
-               .andExpect(status().is(new IsEqual<>(expectedStatus.value())));
+        mockMvc.perform(head("/v1/elements?accessType=" + accessType.name() + "&ids=" + ids + "&targetDirectoryUuid" + (targetDirectoryUuid != null ? "=" + targetDirectoryUuid : "")+ "&recursiveCheck=" + recursiveCheck).header("userId", userId))
+            .andExpect(status().is(new IsEqual<>(expectedStatus.value())));
     }
 
     private void checkRootDirectories(String userId, List<ElementAttributes> list) throws Exception {

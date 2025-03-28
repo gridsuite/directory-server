@@ -634,9 +634,9 @@ public class DirectoryService {
         );
     }
 
-    public boolean hasPermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, PermissionType permissionType) {
+    public boolean hasPermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, PermissionType permissionType, boolean recursiveCheck) {
         if (permissionType.equals(WRITE)) {
-            return hasWritePermission(userId, elementUuids, targetDirectoryUuid);
+            return hasWritePermission(userId, elementUuids, targetDirectoryUuid, recursiveCheck);
         } else {
             return hasReadPermissions(userId, elementUuids);
         }
@@ -673,12 +673,19 @@ public class DirectoryService {
                 .orElse(false);
     }
 
-    private boolean hasWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid) {
+    private boolean hasWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, boolean recursiveCheck) {
         List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
-        return elements.stream().allMatch(element ->
+        return elements.stream().allMatch(element -> {
+            if (recursiveCheck && element.getType().equals(DIRECTORY)) {
+                List<UUID> descendentsUuids = repositoryService.findAllDescendants(element.getId()).stream().map(DirectoryElementEntity::getId).toList();
+                if(!checkPermission(userId, descendentsUuids, WRITE)) {
+                    throw new DirectoryException(CONFLICT);
+                }
+            }
+
             //If it's a directory we check its own write permission else we check the permission on the element parent directory
-            checkPermission(userId, List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), WRITE)
-        ) && (targetDirectoryUuid == null || checkPermission(userId, List.of(targetDirectoryUuid), WRITE));
+            return checkPermission(userId, List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), WRITE);
+        }) && (targetDirectoryUuid == null || checkPermission(userId, List.of(targetDirectoryUuid), WRITE));
     }
 
     private void insertReadUserPermission(UUID elementUuid, String userId, String userGroupId) {

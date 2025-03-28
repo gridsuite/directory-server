@@ -193,8 +193,9 @@ public class DirectoryController {
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                       @RequestParam(value = "accessType") PermissionType permissionType,
                                                       @RequestParam(value = "targetDirectoryUuid", required = false) UUID targetDirectoryUuid,
+                                                      @RequestParam(value = "recursiveCheck", required = false, defaultValue = "false") boolean recursiveCheck,
                                                       @RequestHeader("userId") String userId) {
-        if (!userAdminService.isUserAdmin(userId) && !service.hasPermission(userId, elementUuids, targetDirectoryUuid, permissionType)) {
+        if (!userAdminService.isUserAdmin(userId) && !service.hasPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck)) {
             return ResponseEntity.noContent().build();
         } else {
             return ResponseEntity.ok().build();
