@@ -188,7 +188,8 @@ public class DirectoryController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "All elements are accessible"),
         @ApiResponse(responseCode = "404", description = "At least one element was not found"),
-        @ApiResponse(responseCode = "204", description = "Access forbidden for at least one element")
+        @ApiResponse(responseCode = "204", description = "Access forbidden for at least one element"),
+        @ApiResponse(responseCode = "409", description = "Access forbidden for at least one sub element of one element")
     })
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                       @RequestParam(value = "accessType") PermissionType permissionType,
