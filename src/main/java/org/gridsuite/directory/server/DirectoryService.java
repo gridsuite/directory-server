@@ -736,67 +736,110 @@ public class DirectoryService {
         }
     }
 
+    /**
+     * Retrieves the permission settings for a directory, organized by permission type.
+     * Returns exactly one PermissionDTO for each permission type (READ, WRITE, MANAGE).
+     *
+     * @param directoryUuid The UUID of the directory
+     * @param userId The ID of the user requesting the permissions
+     * @return A list of exactly three permission DTOs (READ, WRITE, MANAGE)
+     * @throws DirectoryException if the user doesn't have access or the directory doesn't exist
+     */
     public List<PermissionDTO> getDirectoryPermissions(UUID directoryUuid, String userId) {
-        validatePermissionsGetAccess(directoryUuid, userId);
-
         assertDirectoryExist(directoryUuid);
+        validatePermissionsGetAccess(directoryUuid, userId);
 
         List<PermissionEntity> permissions = permissionRepository.findAllByElementId(directoryUuid);
 
-        // Track global permissions (for ALL_USERS)
-        var allUsersHighestPermission = determineHighestPermission(
-                permissions.stream()
-                        .filter(p -> ALL_USERS.equals(p.getUserId()))
-                        .findFirst()
-                        .orElse(null)
-        );
+        PermissionType allUsersPermissionLevel = extractGlobalPermissionLevel(permissions);
 
-        // Track the highest permission level for each group
-        Map<String, PermissionType> groupHighestPermissions = new HashMap<>();
+        Map<String, PermissionType> groupPermissionLevels = extractGroupPermissionLevels(permissions);
 
-        // Process group permissions to find the highest permission level for each group
-        permissions.stream()
-                .filter(p -> !p.getUserGroupId().isEmpty())
-                .forEach(permission -> {
-                    String groupId = permission.getUserGroupId();
-                    PermissionType currentHighest = groupHighestPermissions.getOrDefault(groupId, null);
-                    PermissionType permissionLevel = determineHighestPermission(permission);
+        return Arrays.stream(PermissionType.values())
+                .map(type -> createPermissionDto(type, allUsersPermissionLevel, groupPermissionLevels))
+                .collect(Collectors.toList());
+    }
 
-                    if (shouldUpdatePermission(currentHighest, permissionLevel)) {
-                        groupHighestPermissions.put(groupId, permissionLevel);
+    /**
+     * Creates a PermissionDTO for the specified permission type
+     * If allUsers is true for this permission, groups list will be empty
+     * If allUsers is false, groups list will contain only groups with exactly this permission type
+     */
+    private PermissionDTO createPermissionDto(
+            PermissionType permissionType,
+            PermissionType allUsersPermissionLevel,
+            Map<String, PermissionType> groupPermissionLevels) {
+
+        boolean hasAllUsersPermission = hasPermissionLevel(allUsersPermissionLevel, permissionType);
+
+        List<UUID> groupsWithPermission = hasAllUsersPermission
+                ? Collections.emptyList()
+                : getGroupsWithExactPermission(groupPermissionLevels, permissionType);
+
+        return new PermissionDTO(hasAllUsersPermission, groupsWithPermission, permissionType);
+    }
+
+    /**
+     * Gets all groups that have exactly the specified permission type
+     */
+    private List<UUID> getGroupsWithExactPermission(
+            Map<String, PermissionType> groupPermissionLevels,
+            PermissionType exactPermissionType) {
+
+        return groupPermissionLevels.entrySet().stream()
+                .filter(entry -> entry.getValue() == exactPermissionType)
+                .map(entry -> {
+                    try {
+                        return UUID.fromString(entry.getKey());
+                    } catch (IllegalArgumentException e) {
+                        return null;
                     }
-                });
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
 
-        // Build the result DTOs
-        List<PermissionDTO> result = new ArrayList<>();
-
-        // Add global permission if present
-        if (allUsersHighestPermission != null) {
-            result.add(new PermissionDTO(true, List.of(), allUsersHighestPermission));
+    /**
+     * Checks if the given permission level meets or exceeds the required permission
+     */
+    private boolean hasPermissionLevel(PermissionType actualLevel, PermissionType requiredLevel) {
+        if (actualLevel == null) {
+            return false;
         }
 
-        // Group permissions by type
-        Map<PermissionType, List<UUID>> permissionsByType = new EnumMap<>(PermissionType.class);
-        Arrays.stream(PermissionType.values()).forEach(type -> permissionsByType.put(type, new ArrayList<>()));
+        return switch (requiredLevel) {
+            case READ -> actualLevel == PermissionType.READ ||
+                    actualLevel == PermissionType.WRITE ||
+                    actualLevel == PermissionType.MANAGE;
+            case WRITE -> actualLevel == PermissionType.WRITE ||
+                    actualLevel == PermissionType.MANAGE;
+            case MANAGE -> actualLevel == PermissionType.MANAGE;
+        };
+    }
 
-        // Add groups to their respective highest permission type
-        groupHighestPermissions.forEach((groupIdStr, permType) -> {
-            try {
-                UUID groupId = UUID.fromString(groupIdStr);
-                permissionsByType.get(permType).add(groupId);
-            } catch (IllegalArgumentException e) {
-                // Skip non-UUID group IDs
-            }
-        });
+    /**
+     * Extracts the highest permission level for ALL_USERS from permissions list
+     */
+    private PermissionType extractGlobalPermissionLevel(List<PermissionEntity> permissions) {
+        return permissions.stream()
+                .filter(p -> ALL_USERS.equals(p.getUserId()))
+                .findFirst()
+                .map(this::determineHighestPermission)
+                .orElse(null);
+    }
 
-        // Create DTOs for each permission type that has groups
-        permissionsByType.forEach((type, groups) -> {
-            if (!groups.isEmpty()) {
-                result.add(new PermissionDTO(false, groups, type));
-            }
-        });
-
-        return result;
+    /**
+     * Extracts and consolidates group permissions, keeping only the highest permission level for each group
+     */
+    private Map<String, PermissionType> extractGroupPermissionLevels(List<PermissionEntity> permissions) {
+        return permissions.stream()
+                .filter(p -> !p.getUserGroupId().isEmpty())
+                .collect(Collectors.toMap(
+                        PermissionEntity::getUserGroupId,
+                        this::determineHighestPermission,
+                        (existing, replacement) -> shouldUpdatePermission(existing, replacement) ? replacement : existing,
+                        HashMap::new
+                ));
     }
 
     private void validatePermissionUpdateAccess(UUID directoryUuid, String userId) {
@@ -807,9 +850,8 @@ public class DirectoryService {
 
     @Transactional
     public void setDirectoryPermissions(UUID directoryUuid, List<PermissionDTO> permissions, String userId) {
-        validatePermissionUpdateAccess(directoryUuid, userId);
-
         assertDirectoryExist(directoryUuid);
+        validatePermissionUpdateAccess(directoryUuid, userId);
 
         // Remove all permissions for this directory except for the owner
         String owner = getElement(directoryUuid).getOwner();
@@ -819,7 +861,6 @@ public class DirectoryService {
         PermissionConfiguration config = buildPermissionConfiguration(permissions);
         applyPermissionConfiguration(directoryUuid, config);
 
-        // Notify about the change
         notifyDirectoryHasChanged(directoryUuid, userId);
     }
 
@@ -924,18 +965,29 @@ public class DirectoryService {
      * Applies the resolved permission configuration to the directory
      */
     private void applyPermissionConfiguration(UUID directoryUuid, PermissionConfiguration config) {
-        // Apply all users permissions based on highest level
         if (config.allUsersManage()) {
             addPermissionForAllUsers(directoryUuid, PermissionType.MANAGE);
         } else if (config.allUsersWrite()) {
             addPermissionForAllUsers(directoryUuid, PermissionType.WRITE);
+            applyGroupPermissions(directoryUuid, config.groupPermissions(), Set.of(PermissionType.MANAGE));
         } else if (config.allUsersRead()) {
             addPermissionForAllUsers(directoryUuid, PermissionType.READ);
+            applyGroupPermissions(directoryUuid, config.groupPermissions(), Set.of(PermissionType.WRITE, PermissionType.MANAGE));
+        } else {
+            // Apply group permissions
+            config.groupPermissions().forEach((groupId, permissionType) ->
+                    addPermissionForGroup(directoryUuid, groupId, permissionType)
+            );
         }
 
-        // Apply group permissions
-        config.groupPermissions().forEach((groupId, permissionType) ->
-                addPermissionForGroup(directoryUuid, groupId, permissionType)
-        );
+    }
+
+    /**
+     * Applies permissions to groups belonging to the target permissions
+     */
+    private void applyGroupPermissions(UUID directoryUuid, Map<String, PermissionType> groupPermissions, Set<PermissionType> targetPermissions) {
+        groupPermissions.entrySet().stream()
+                .filter(entry -> targetPermissions.contains(entry.getValue()))
+                .forEach(entry -> addPermissionForGroup(directoryUuid, entry.getKey(), entry.getValue()));
     }
 }

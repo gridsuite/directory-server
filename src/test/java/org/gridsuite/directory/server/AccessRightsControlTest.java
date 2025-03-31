@@ -350,6 +350,7 @@ public class AccessRightsControlTest {
                 .andReturn());
 
         List<PermissionDTO> expectedPermissions = List.of(
+                new PermissionDTO(false, List.of(), PermissionType.READ),
                 new PermissionDTO(false, List.of(GROUP_ONE_ID), PermissionType.WRITE),
                 new PermissionDTO(false, List.of(GROUP_TWO_ID), PermissionType.MANAGE)
         );
@@ -383,7 +384,9 @@ public class AccessRightsControlTest {
                 .andReturn());
         // expected permissions should be just the WRITE permission for all users since WRITE = READ + WRITE
         expectedPermissions = List.of(
-                new PermissionDTO(true, List.of(), PermissionType.WRITE)
+                new PermissionDTO(true, List.of(), PermissionType.READ),
+                new PermissionDTO(true, List.of(), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(), PermissionType.MANAGE)
         );
         assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(finalPermissions));
 
@@ -392,6 +395,12 @@ public class AccessRightsControlTest {
 
         updateDirectoryPermissions(ADMIN_USER, nonExistentUuid, newPermissions)
                 .andExpect(status().isNotFound());
+
+        // Test case 5: Not Directory
+        UUID elementUuid = insertSubElement(rootDirectoryUuid, toElementAttributes(null, "elementName1", TYPE_01, ADMIN_USER));
+
+        updateDirectoryPermissions(ADMIN_USER, elementUuid, newPermissions)
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -404,7 +413,9 @@ public class AccessRightsControlTest {
                 .andReturn();
         List<PermissionDTO> adminPermissions = parsePermissions(result);
         List<PermissionDTO> expectedPermissions = List.of(
-                new PermissionDTO(true, List.of(), PermissionType.READ)
+                new PermissionDTO(true, List.of(), PermissionType.READ),
+                new PermissionDTO(false, List.of(), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(), PermissionType.MANAGE)
         );
         assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(adminPermissions));
 
@@ -424,7 +435,9 @@ public class AccessRightsControlTest {
                 .andReturn();
         List<PermissionDTO> userPermissions = parsePermissions(result);
         expectedPermissions = List.of(
-                new PermissionDTO(false, List.of(GROUP_ONE_ID), PermissionType.READ)
+                new PermissionDTO(false, List.of(GROUP_ONE_ID), PermissionType.READ),
+                new PermissionDTO(false, List.of(), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(), PermissionType.MANAGE)
         );
 
         // Should see the same permissions as admin
