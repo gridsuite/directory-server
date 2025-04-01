@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.PermissionDTO;
 import org.gridsuite.directory.server.dto.PermissionType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
@@ -201,6 +202,32 @@ public class DirectoryController {
         } else {
             return ResponseEntity.ok().build();
         }
+    }
+
+    @GetMapping(value = "/directories/{directoryUuid}/permissions", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get permissions for the directory")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The permissions for the directory"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to view permissions for this directory"),
+        @ApiResponse(responseCode = "404", description = "The directory was not found")
+    })
+    public ResponseEntity<List<PermissionDTO>> getDirectoryPermissions(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                                       @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(service.getDirectoryPermissions(directoryUuid, userId));
+    }
+
+    @PutMapping(value = "/directories/{directoryUuid}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Set permissions for a directory")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Permissions were successfully updated"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to update permissions for this directory"),
+        @ApiResponse(responseCode = "404", description = "The directory was not found")
+    })
+    public ResponseEntity<Void> setDirectoryPermissions(@PathVariable("directoryUuid") UUID directoryUuid,
+                                                        @RequestBody List<PermissionDTO> permissions,
+                                                        @RequestHeader("userId") String userId) {
+        service.setDirectoryPermissions(directoryUuid, permissions, userId);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping(value = "/elements/{elementUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
