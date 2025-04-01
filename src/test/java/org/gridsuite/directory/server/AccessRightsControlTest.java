@@ -6,15 +6,14 @@
  */
 package org.gridsuite.directory.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.PermissionType;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionEntity;
 import org.gridsuite.directory.server.repository.PermissionRepository;
@@ -23,6 +22,7 @@ import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.hamcrest.core.IsEqual;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,11 +37,11 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.gridsuite.directory.server.DirectoryService.ALL_USERS;
@@ -53,9 +53,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -89,34 +87,101 @@ public class AccessRightsControlTest {
 
     MockWebServer server;
 
-    public static final String ADMIN_USER = "adminUser";
+    public static final String ADMIN_USER = "ADMIN_USER";
+    private static final String USER_ONE = "USER_ONE";
+    private static final String USER_TWO = "USER_TWO";
+    private static final UUID GROUP_ONE_ID = UUID.randomUUID();
+    private static final UUID GROUP_TWO_ID = UUID.randomUUID();
+
+    private static final String PERMISSIONS_API_PATH = "/v1/directories/{directoryUuid}/permissions";
+    private static final String IS_ADMIN_SUFFIX = "/isAdmin";
+    private static final String GROUPS_SUFFIX = "/groups";
+    private static final String USER_ID_HEADER = "userId";
+
+    private String userOneGroupsJson;
+    private String userTwoGroupsJson;
+    private static final String EMPTY_GROUPS_JSON = "[]";
 
     @Before
-    public void setup() {
+    public void setup() throws Exception {
+        initializeGroupsJson();
+
+        setupMockWebServer();
+
+        cleanDatabase();
+    }
+
+    @After
+    public void tearDown() throws IOException {
+        if (server != null) {
+            server.shutdown();
+        }
+    }
+
+    private void initializeGroupsJson() throws Exception {
+        userOneGroupsJson = objectMapper.writeValueAsString(List.of(
+            Map.of(
+                "id", GROUP_ONE_ID.toString(),
+                "name", "Group One",
+                "users", List.of(USER_ONE)
+            )
+        ));
+
+        userTwoGroupsJson = objectMapper.writeValueAsString(List.of(
+            Map.of(
+                "id", GROUP_TWO_ID.toString(),
+                "name", "Group Two",
+                "users", List.of(USER_TWO)
+            )
+        ));
+    }
+
+    private void setupMockWebServer() {
         server = new MockWebServer();
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
 
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
-        // Ask the server for its URL. You'll need this to make HTTP requests.
+        // Set up the dispatcher to handle all requests
         final Dispatcher dispatcher = new Dispatcher() {
             @NotNull
             @Override
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                if ("HEAD".equals(request.getMethod())) {
-                    if (path.matches("/v1/users/" + ADMIN_USER + "/isAdmin")) {
-                        return new MockResponse().setResponseCode(200);
-                    } else if (path.matches("/v1/users/.*/isAdmin")) {
-                        return new MockResponse().setResponseCode(403);
+                String method = request.getMethod();
+
+                // Handle isAdmin requests
+                if ("HEAD".equals(method) && path.endsWith(IS_ADMIN_SUFFIX)) {
+                    if (path.contains("/v1/users/" + ADMIN_USER + "/")) {
+                        return new MockResponse().setResponseCode(HttpStatus.OK.value());
+                    } else {
+                        return new MockResponse().setResponseCode(HttpStatus.FORBIDDEN.value());
+                    }
+                } else if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
+                    if (path.contains("/" + USER_ONE + "/")) {
+                        return jsonResponse(HttpStatus.OK, userOneGroupsJson);
+                    } else if (path.contains("/" + USER_TWO + "/")) {
+                        return jsonResponse(HttpStatus.OK, userTwoGroupsJson);
+                    } else {
+                        return jsonResponse(HttpStatus.OK, EMPTY_GROUPS_JSON);
                     }
                 }
 
-                return new MockResponse().setResponseCode(418);
+                return new MockResponse().setResponseCode(HttpStatus.I_AM_A_TEAPOT.value());
             }
         };
         server.setDispatcher(dispatcher);
+    }
+
+    private MockResponse jsonResponse(HttpStatus status, String body) {
+        return new MockResponse()
+                .setResponseCode(status.value())
+                .setHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                .setBody(body);
+    }
+
+    private void cleanDatabase() {
         directoryElementRepository.deleteAll();
         permissionRepository.deleteAll();
     }
@@ -140,14 +205,14 @@ public class AccessRightsControlTest {
         UUID rootUuid3 = insertRootDirectory(user3, "root3");
 
         // For each element creation we should have 2 entries in DB, 1 for the creator and one for all users "ALL_USERS"
-        // Check that permission are set to read for all and write only for the creator
+        // Check that permission are set to read only for all users and manage for the creator
         ArrayList<PermissionEntity> expectedPermissions = new ArrayList<>();
-        expectedPermissions.add(new PermissionEntity(rootUuid1, user1, "", true, true));
-        expectedPermissions.add(new PermissionEntity(rootUuid1, ALL_USERS, "", true, false));
-        expectedPermissions.add(new PermissionEntity(rootUuid2, user2, "", true, true));
-        expectedPermissions.add(new PermissionEntity(rootUuid2, ALL_USERS, "", true, false));
-        expectedPermissions.add(new PermissionEntity(rootUuid3, user3, "", true, true));
-        expectedPermissions.add(new PermissionEntity(rootUuid3, ALL_USERS, "", true, false));
+        expectedPermissions.add(new PermissionEntity(rootUuid1, user1, "", true, true, true));
+        expectedPermissions.add(new PermissionEntity(rootUuid1, ALL_USERS, "", true, false, false));
+        expectedPermissions.add(new PermissionEntity(rootUuid2, user2, "", true, true, true));
+        expectedPermissions.add(new PermissionEntity(rootUuid2, ALL_USERS, "", true, false, false));
+        expectedPermissions.add(new PermissionEntity(rootUuid3, user3, "", true, true, true));
+        expectedPermissions.add(new PermissionEntity(rootUuid3, ALL_USERS, "", true, false, false));
         List<PermissionEntity> permissions = permissionRepository.findAll();
         assertEquals(6, permissions.size());
         assertTrue(permissions.containsAll(expectedPermissions));
@@ -262,6 +327,155 @@ public class AccessRightsControlTest {
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"));
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"), HttpStatus.CONFLICT);
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, ADMIN_USER), HttpStatus.CONFLICT);
+    }
+
+    @Test
+    public void testSetDirectoryPermissions() throws Exception {
+        UUID rootDirectoryUuid = insertRootDirectory(ADMIN_USER, "root1");
+
+        // Test case 1: Admin can set permissions
+        List<PermissionDTO> newPermissions = List.of(
+                new PermissionDTO(false, List.of(GROUP_ONE_ID), PermissionType.READ),
+                new PermissionDTO(false, List.of(GROUP_ONE_ID, GROUP_TWO_ID), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(GROUP_TWO_ID), PermissionType.MANAGE)
+        );
+
+        // Update permissions as admin
+        updateDirectoryPermissions(ADMIN_USER, rootDirectoryUuid, newPermissions)
+                .andExpect(status().isOk());
+
+        // Verify permissions were updated
+        List<PermissionDTO> updatedPermissions = parsePermissions(getDirectoryPermissions(ADMIN_USER, rootDirectoryUuid)
+                .andExpect(status().isOk())
+                .andReturn());
+
+        List<PermissionDTO> expectedPermissions = List.of(
+                new PermissionDTO(false, List.of(), PermissionType.READ),
+                new PermissionDTO(false, List.of(GROUP_ONE_ID), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(GROUP_TWO_ID), PermissionType.MANAGE)
+        );
+
+        assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(updatedPermissions));
+
+        // Test case 2: Regular user without manage permission can't update
+        List<PermissionDTO> userOnePermissions = List.of(
+                new PermissionDTO(true, List.of(), PermissionType.READ)
+        );
+
+        updateDirectoryPermissions(USER_ONE, rootDirectoryUuid, userOnePermissions)
+                .andExpect(status().isForbidden());
+
+        // Test case 3: User with manage permission can update
+        // Grant manage permission to USER_TWO's group
+        grantGroupPermission(rootDirectoryUuid, GROUP_TWO_ID, PermissionType.MANAGE);
+
+        // Now USER_TWO should be able to update permissions
+        List<PermissionDTO> userTwoPermissions = List.of(
+                new PermissionDTO(true, List.of(GROUP_ONE_ID), PermissionType.READ),
+                new PermissionDTO(true, List.of(GROUP_TWO_ID, GROUP_ONE_ID), PermissionType.WRITE)
+        );
+
+        updateDirectoryPermissions(USER_TWO, rootDirectoryUuid, userTwoPermissions)
+                .andExpect(status().isOk());
+
+        // Verify permissions were updated
+        List<PermissionDTO> finalPermissions = parsePermissions(getDirectoryPermissions(ADMIN_USER, rootDirectoryUuid)
+                .andExpect(status().isOk())
+                .andReturn());
+        // expected permissions should be just the WRITE permission for all users since WRITE = READ + WRITE
+        expectedPermissions = List.of(
+                new PermissionDTO(true, List.of(), PermissionType.READ),
+                new PermissionDTO(true, List.of(), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(), PermissionType.MANAGE)
+        );
+        assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(finalPermissions));
+
+        // Test case 4: Non-existent directory returns 404
+        UUID nonExistentUuid = UUID.randomUUID();
+
+        updateDirectoryPermissions(ADMIN_USER, nonExistentUuid, newPermissions)
+                .andExpect(status().isNotFound());
+
+        // Test case 5: Not Directory
+        UUID elementUuid = insertSubElement(rootDirectoryUuid, toElementAttributes(null, "elementName1", TYPE_01, ADMIN_USER));
+
+        updateDirectoryPermissions(ADMIN_USER, elementUuid, newPermissions)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void testGetDirectoryPermissions() throws Exception {
+        UUID rootDirectoryUuid = insertRootDirectory(ADMIN_USER, "root1");
+
+        // Test case 1: Admin user can retrieve permissions
+        MvcResult result = getDirectoryPermissions(ADMIN_USER, rootDirectoryUuid)
+                .andExpect(status().isOk())
+                .andReturn();
+        List<PermissionDTO> adminPermissions = parsePermissions(result);
+        List<PermissionDTO> expectedPermissions = List.of(
+                new PermissionDTO(true, List.of(), PermissionType.READ),
+                new PermissionDTO(false, List.of(), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(), PermissionType.MANAGE)
+        );
+        assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(adminPermissions));
+
+        // Test case 2: Regular user without access gets 403
+        //first delete all permissions
+        permissionRepository.deleteAll();
+        getDirectoryPermissions(USER_ONE, rootDirectoryUuid)
+                .andExpect(status().isForbidden());
+
+        // Test case 3: User with group permission can access
+        // Grant group permission
+        grantGroupPermission(rootDirectoryUuid, GROUP_ONE_ID, PermissionType.READ);
+
+        // User should now have access
+        result = getDirectoryPermissions(USER_ONE, rootDirectoryUuid)
+                .andExpect(status().isOk())
+                .andReturn();
+        List<PermissionDTO> userPermissions = parsePermissions(result);
+        expectedPermissions = List.of(
+                new PermissionDTO(false, List.of(GROUP_ONE_ID), PermissionType.READ),
+                new PermissionDTO(false, List.of(), PermissionType.WRITE),
+                new PermissionDTO(false, List.of(), PermissionType.MANAGE)
+        );
+
+        // Should see the same permissions as admin
+        assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(userPermissions));
+    }
+
+    private ResultActions getDirectoryPermissions(String userId, UUID directoryUuid) throws Exception {
+        MockHttpServletRequestBuilder request = get(PERMISSIONS_API_PATH, directoryUuid)
+                .header(USER_ID_HEADER, userId);
+
+        return mockMvc.perform(request);
+    }
+
+    private ResultActions updateDirectoryPermissions(String userId, UUID directoryUuid,
+                                                     List<PermissionDTO> permissions) throws Exception {
+        MockHttpServletRequestBuilder request = put(PERMISSIONS_API_PATH, directoryUuid)
+                .header(USER_ID_HEADER, userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(permissions));
+
+        return mockMvc.perform(request);
+    }
+
+    private List<PermissionDTO> parsePermissions(MvcResult result) throws Exception {
+        return objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                new TypeReference<List<PermissionDTO>>() { }
+        );
+    }
+
+    private void grantGroupPermission(UUID directoryUuid, UUID groupId, PermissionType permissionType) {
+        PermissionEntity permission = switch (permissionType) {
+            case READ -> PermissionEntity.read(directoryUuid, "", groupId.toString());
+            case WRITE -> PermissionEntity.write(directoryUuid, "", groupId.toString());
+            case MANAGE -> PermissionEntity.manage(directoryUuid, "", groupId.toString());
+        };
+
+        permissionRepository.save(permission);
     }
 
     private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
