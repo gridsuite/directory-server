@@ -1889,7 +1889,7 @@ public class DirectoryTest {
         //The subDirAttributes is created by the userId,so the userId1 is not allowed to delete it.
         mockMvc
                 .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", subDirAttributes.getElementUuid()).header(USER_ID, USERID_1))
-                .andExpectAll(status().isNoContent()).andReturn();
+                .andExpectAll(status().isForbidden()).andReturn();
     }
 
     private void assertQueuesEmptyThenClear(List<String> destinations) {
@@ -2116,6 +2116,6 @@ public class DirectoryTest {
         // The elementAttributes is created by the userId,so it is not updated by USERID_1
         mockMvc
                 .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
-                .andExpectAll(status().isNoContent()).andReturn();
+                .andExpectAll(status().isForbidden()).andReturn();
     }
 }

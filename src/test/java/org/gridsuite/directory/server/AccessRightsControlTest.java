@@ -234,18 +234,18 @@ public class AccessRightsControlTest {
         controlElementsAccess(user3, List.of(rootUuid3), null, WRITE, HttpStatus.OK);
 
         // Check WRITE access not OK
-        controlElementsAccess(user1, List.of(rootUuid2), null, WRITE, HttpStatus.NO_CONTENT);
-        controlElementsAccess(user2, List.of(rootUuid1), null, WRITE, HttpStatus.NO_CONTENT);
-        controlElementsAccess(user3, List.of(rootUuid2), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess(user1, List.of(rootUuid2), null, WRITE, HttpStatus.FORBIDDEN);
+        controlElementsAccess(user2, List.of(rootUuid1), null, WRITE, HttpStatus.FORBIDDEN);
+        controlElementsAccess(user3, List.of(rootUuid2), null, WRITE, HttpStatus.FORBIDDEN);
 
         // Check WRITE access OK because admin user
         controlElementsAccess(ADMIN_USER, List.of(rootUuid2, rootUuid1, rootUuid3), null, WRITE, HttpStatus.OK);
         controlElementsAccess(ADMIN_USER, List.of(rootUuid2, rootUuid1, rootUuid3), null, READ, HttpStatus.OK);
 
         // Check WRITE access on multiple element not OK
-        controlElementsAccess(user1, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.NO_CONTENT);
-        controlElementsAccess(user2, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.NO_CONTENT);
-        controlElementsAccess(user3, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess(user1, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.FORBIDDEN);
+        controlElementsAccess(user2, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.FORBIDDEN);
+        controlElementsAccess(user3, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -291,10 +291,10 @@ public class AccessRightsControlTest {
         controlElementsAccess("user2", List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.OK);
 
         // Write access should NOT be OK for other user elements
-        controlElementsAccess("user1", List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.NO_CONTENT);
-        controlElementsAccess("user2", List.of(rootUuid1, dirUuid1, eltUuid1), null, WRITE, HttpStatus.NO_CONTENT);
-        controlElementsAccess("user1", List.of(eltUuid2), null, WRITE, HttpStatus.NO_CONTENT);
-        controlElementsAccess("user2", List.of(eltUuid1), null, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess("user1", List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.FORBIDDEN);
+        controlElementsAccess("user2", List.of(rootUuid1, dirUuid1, eltUuid1), null, WRITE, HttpStatus.FORBIDDEN);
+        controlElementsAccess("user1", List.of(eltUuid2), null, WRITE, HttpStatus.FORBIDDEN);
+        controlElementsAccess("user2", List.of(eltUuid1), null, WRITE, HttpStatus.FORBIDDEN);
 
         // Write access should be OK for admin user
         controlElementsAccess(ADMIN_USER, List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.OK);
@@ -308,9 +308,9 @@ public class AccessRightsControlTest {
 
         // Write access should NOT be OK for something like move within folder the user doesn't have permissions
         // this is what should be called if user1 moves element3 to directory2 (should NOT be OK)
-        controlElementsAccess("user1", List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess("user1", List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.FORBIDDEN);
         // this is what should be called if user2 moves element4 to directory3 (should NOT be OK)
-        controlElementsAccess("user2", List.of(eltUuid4), dirUuid3, WRITE, HttpStatus.NO_CONTENT);
+        controlElementsAccess("user2", List.of(eltUuid4), dirUuid3, WRITE, HttpStatus.FORBIDDEN);
         // this is what should be called if admin user moves element3 to directory2 (should be OK)
         controlElementsAccess(ADMIN_USER, List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.OK);
     }
@@ -479,18 +479,95 @@ public class AccessRightsControlTest {
     }
 
     @Test
-    public void testRecursiveCheck() throws Exception {
+    public void testRecursiveChecks() throws Exception {
+        // Setup test users and directories
         String user1 = "user1";
-        UUID rootDir10Uuid = insertRootDirectory(user1, "rootDir10");
-        UUID directory21UUID = UUID.randomUUID();
-        ElementAttributes directory20Attributes = toElementAttributes(directory21UUID, "directory20", DIRECTORY, ADMIN_USER);
-        insertSubElement(rootDir10Uuid, directory20Attributes);
-        UUID rootDir20Uuid = insertRootDirectory(ADMIN_USER, "rootDir20");
+        String user2 = "user2";
 
-        controlElementsAccess(user1, List.of(rootDir10Uuid), rootDir20Uuid, WRITE, true, HttpStatus.CONFLICT);
-        controlElementsAccess(user1, List.of(rootDir10Uuid), null, WRITE, true, HttpStatus.CONFLICT);
-        controlElementsAccess(user1, List.of(rootDir10Uuid), rootDir20Uuid, READ, true, HttpStatus.OK);
-        controlElementsAccess(user1, List.of(rootDir10Uuid), null, READ, true, HttpStatus.OK);
+        // Create root directories for different users
+        UUID rootDir1User1 = insertRootDirectory(user1, "rootDir1User1");
+        UUID rootDir2User1 = insertRootDirectory(user1, "rootDir2User1");
+        UUID rootDir1User2 = insertRootDirectory(user2, "rootDir1User2");
+        UUID rootDirAdmin = insertRootDirectory(ADMIN_USER, "rootDirAdmin");
+
+        // Create a complex directory structure for testing
+        // rootDir1User1 (owned by user1)
+        // └── dir1User1 (owned by user1)
+        //     └── subDir1 (owned by ADMIN_USER)
+        UUID dir1User1 = insertSubElement(rootDir1User1, toElementAttributes(null, "dir1User1", DIRECTORY, user1));
+        UUID dir2User1 = insertSubElement(rootDir2User1, toElementAttributes(null, "dir2User1", DIRECTORY, user1));
+        UUID subDir1 = insertSubElement(dir1User1, toElementAttributes(null, "subDir1", DIRECTORY, ADMIN_USER));
+
+        // Create test element in user2's directory
+        UUID elementUser2 = insertSubElement(rootDir1User2, toElementAttributes(null, "element1", TYPE_01, user2));
+
+        // =========== TEST SCENARIOS ============
+
+        // 1. PARENT_PERMISSION_DENIED: User2 tries to modify user1's directory
+        MvcResult result = performPermissionCheck(user2, List.of(dir1User1), null, WRITE, false);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.PARENT_PERMISSION_DENIED);
+
+        // 2. TARGET_PERMISSION_DENIED: User1 tries to move their directory to user2's root directory
+        result = performPermissionCheck(user1, List.of(dir1User1), rootDir1User2, WRITE, false);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.TARGET_PERMISSION_DENIED);
+
+        // 3. CHILD_PERMISSION_DENIED: User1 tries to move a directory containing admin-owned subdirectory
+        result = performPermissionCheck(user1, List.of(dir1User1), dir2User1, WRITE, true);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.CHILD_PERMISSION_DENIED);
+
+        // 4. ALLOWED: Admin can move any directory (even with recursive check)
+        result = performPermissionCheck(ADMIN_USER, List.of(dir1User1), rootDirAdmin, WRITE, true);
+        assertPermissionResult(result, HttpStatus.OK, null);
+
+        // 5. ALLOWED: User1 can move their own directory when recursive check is disabled
+        result = performPermissionCheck(user1, List.of(dir1User1), dir2User1, WRITE, false);
+        assertPermissionResult(result, HttpStatus.OK, null);
+
+        // 6. READ Permission: Users can read directories (ALL_USERS has READ)
+        result = performPermissionCheck(user2, List.of(rootDir1User1), null, READ, false);
+        assertPermissionResult(result, HttpStatus.OK, null);
+
+        // 7. MANAGE Permission: User cannot manage another user's directory
+        result = performPermissionCheck(user2, List.of(rootDir1User1), null, PermissionType.MANAGE, false);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.PARENT_PERMISSION_DENIED);
+
+        // 8. Multiple directories with mixed permissions
+        result = performPermissionCheck(user1, List.of(rootDir1User1, rootDir1User2), null, WRITE, false);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.PARENT_PERMISSION_DENIED);
+
+        // 9. Test moving multiple elements with different parents (should fail)
+        result = performPermissionCheck(user1, List.of(dir1User1, elementUser2), rootDirAdmin, WRITE, false);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.PARENT_PERMISSION_DENIED);
+    }
+
+    /**
+     * Helper method to perform a permission check and return the MvcResult
+     */
+    private MvcResult performPermissionCheck(String userId, List<UUID> elementUuids,
+                                             UUID targetDirectoryUuid, PermissionType permissionType,
+                                             boolean recursiveCheck) throws Exception {
+        String ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+
+        return mockMvc.perform(head("/v1/elements")
+                        .param("ids", ids)
+                        .param("accessType", permissionType.name())
+                        .param("recursiveCheck", String.valueOf(recursiveCheck))
+                        .param("targetDirectoryUuid", targetDirectoryUuid != null ? targetDirectoryUuid.toString() : "")
+                        .header("userId", userId))
+                .andReturn();
+    }
+
+    /**
+     * Helper method to assert the permission check result
+     */
+    private void assertPermissionResult(MvcResult result, HttpStatus expectedStatus, PermissionCheckResult expectedHeaderValue) {
+        assertEquals("Status code should match", expectedStatus.value(), result.getResponse().getStatus());
+
+        if (expectedHeaderValue != null) {
+            assertEquals("X-Permission-Error header should match",
+                    expectedHeaderValue.toString(),
+                    result.getResponse().getHeader("X-Permission-Error"));
+        }
     }
 
     private UUID insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes) throws Exception {
@@ -510,13 +587,8 @@ public class AccessRightsControlTest {
     }
 
     private void controlElementsAccess(String userId, List<UUID> uuids, UUID targetDirectoryUuid, PermissionType accessType, HttpStatus expectedStatus) throws Exception {
-        controlElementsAccess(userId, uuids, targetDirectoryUuid, accessType, false, expectedStatus);
-    }
-
-    private void controlElementsAccess(String userId, List<UUID> uuids, UUID targetDirectoryUuid, PermissionType accessType, boolean recursiveCheck, HttpStatus expectedStatus) throws Exception {
-        var ids = uuids.stream().map(UUID::toString).collect(Collectors.joining(","));
-        mockMvc.perform(head("/v1/elements?accessType=" + accessType.name() + "&ids=" + ids + "&targetDirectoryUuid" + (targetDirectoryUuid != null ? "=" + targetDirectoryUuid : "") + "&recursiveCheck=" + recursiveCheck).header("userId", userId))
-            .andExpect(status().is(new IsEqual<>(expectedStatus.value())));
+        MvcResult result = performPermissionCheck(userId, uuids, targetDirectoryUuid, accessType, false);
+        assertPermissionResult(result, expectedStatus, null);
     }
 
     private void checkRootDirectories(String userId, List<ElementAttributes> list) throws Exception {
