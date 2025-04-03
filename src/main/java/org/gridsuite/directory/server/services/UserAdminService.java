@@ -7,6 +7,7 @@
 package org.gridsuite.directory.server.services;
 
 import lombok.Setter;
+import org.gridsuite.directory.server.dto.UserGroupDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -14,6 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.List;
+import java.util.Objects;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -23,6 +27,7 @@ public class UserAdminService {
 
     private static final String USER_ADMIN_API_VERSION = "v1";
     private static final String IS_USER_ADMIN_URI = "/users/{sub}/isAdmin";
+    private static final String GET_USER_GROUPS_URI = "/users/{sub}/groups";
     private static final String DELIMITER = "/";
     private final RestTemplate restTemplate;
     @Setter
@@ -42,6 +47,16 @@ public class UserAdminService {
             return responseEntity.getStatusCode().is2xxSuccessful();
         } catch (HttpStatusCodeException e) {
             return false;
+        }
+    }
+
+    public List<UserGroupDTO> getUserGroups(String sub) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + GET_USER_GROUPS_URI)
+                .buildAndExpand(sub).toUriString();
+        try {
+            return List.of(Objects.requireNonNull(restTemplate.getForEntity(userAdminServerBaseUri + path, UserGroupDTO[].class).getBody()));
+        } catch (HttpStatusCodeException e) {
+            return List.of();
         }
     }
 }
