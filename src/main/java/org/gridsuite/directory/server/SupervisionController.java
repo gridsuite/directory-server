@@ -74,7 +74,7 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.getIndexedDirectoryElementsCount()));
     }
 
-    @PostMapping(value = "/elements/index/recreate")
+    @PostMapping(value = "/elements/index")
     @Operation(summary = "Recreate Elasticsearch index")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Elasticsearch index recreated successfully"),

@@ -1336,7 +1336,7 @@ public class DirectoryTest {
         assertEquals(4, Long.parseLong(mvcResult.getResponse().getContentAsString()));
 
         // Recreate the index
-        mockMvc.perform(post("/v1/supervision/elements/index/recreate"))
+        mockMvc.perform(post("/v1/supervision/elements/index"))
                 .andExpect(status().isOk());
 
         mvcResult = mockMvc.perform(get("/v1/supervision/elements/indexation-count"))
