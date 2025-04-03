@@ -74,11 +74,15 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.getIndexedDirectoryElementsCount()));
     }
 
-    @DeleteMapping(value = "/elements/indexation")
-    @Operation(summary = "delete indexed elements")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed elements have been deleted")})
-    public ResponseEntity<String> deleteIndexedDirectoryElements() {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(service.deleteIndexedDirectoryElements()));
+    @PostMapping(value = "/elements/index")
+    @Operation(summary = "Recreate Elasticsearch index")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Elasticsearch index recreated successfully"),
+        @ApiResponse(responseCode = "500", description = "Failed to recreate Elasticsearch index")
+    })
+    public ResponseEntity<Void> recreateESIndex() {
+        service.recreateIndex();
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/elements/reindex")
