@@ -631,13 +631,72 @@ public class DirectoryService {
         );
     }
 
-    public boolean hasPermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, PermissionType permissionType) {
+    /**
+     * Checks if a user has the specified permission on given elements.
+     * Checks parent permissions first, then target directory, then child permissions if recursive check is enabled.
+     *
+     * @param userId             User ID checking permissions for
+     * @param elementUuids       List of element UUIDs to check permissions on
+     * @param targetDirectoryUuid Optional target directory UUID (for move operations)
+     * @param permissionType     Type of permission to check (READ, WRITE, MANAGE)
+     * @param recursiveCheck     Whether to check permissions recursively on children
+     * @return PermissionCheckResult indicating where permission check failed, or ALLOWED if successful
+     */
+    public PermissionCheckResult checkDirectoriesPermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid,
+                                                 PermissionType permissionType, boolean recursiveCheck) {
         return switch (permissionType) {
-            case READ -> hasReadPermissions(userId, elementUuids);
-            case WRITE -> hasWritePermission(userId, elementUuids, targetDirectoryUuid);
-            case MANAGE -> hasManagePermission(userId, elementUuids);
-            default -> false;
+            case READ -> checkReadPermission(userId, elementUuids);
+            case WRITE -> checkWritePermission(userId, elementUuids, targetDirectoryUuid, recursiveCheck);
+            case MANAGE -> checkManagePermission(userId, elementUuids);
+            default -> PermissionCheckResult.PARENT_PERMISSION_DENIED;
         };
+    }
+
+    private PermissionCheckResult checkReadPermission(String userId, List<UUID> elementUuids) {
+        return hasReadPermissions(userId, elementUuids) ?
+                PermissionCheckResult.ALLOWED :
+                PermissionCheckResult.PARENT_PERMISSION_DENIED;
+    }
+
+    private PermissionCheckResult checkManagePermission(String userId, List<UUID> elementUuids) {
+        return hasManagePermission(userId, elementUuids) ?
+                PermissionCheckResult.ALLOWED :
+                PermissionCheckResult.PARENT_PERMISSION_DENIED;
+    }
+
+    private PermissionCheckResult checkWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, boolean recursiveCheck) {
+        List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
+
+        // First, check parent permissions
+        for (DirectoryElementEntity element : elements) {
+            UUID idToCheck = element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId();
+            if (!checkPermission(userId, List.of(idToCheck), WRITE)) {
+                return PermissionCheckResult.PARENT_PERMISSION_DENIED;
+            }
+        }
+
+        // Next, check target directory permission if specified
+        if (targetDirectoryUuid != null && !checkPermission(userId, List.of(targetDirectoryUuid), WRITE)) {
+            return PermissionCheckResult.TARGET_PERMISSION_DENIED;
+        }
+
+        // Finally, check child permissions if recursive check is enabled
+        if (recursiveCheck) {
+            for (DirectoryElementEntity element : elements) {
+                if (element.getType().equals(DIRECTORY)) {
+                    List<UUID> descendantsUuids = repositoryService.findAllDescendants(element.getId())
+                            .stream()
+                            .filter(e -> e.getType().equals(DIRECTORY))
+                            .map(DirectoryElementEntity::getId).toList();
+                    if (!descendantsUuids.isEmpty() && !checkPermission(userId, descendantsUuids, WRITE)) {
+                        return PermissionCheckResult.CHILD_PERMISSION_DENIED;
+                    }
+                }
+            }
+        }
+
+        // All checks passed
+        return PermissionCheckResult.ALLOWED;
     }
 
     public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {
@@ -686,14 +745,6 @@ public class DirectoryService {
             //If it's a directory we check its own write permission else we check the permission on the element parent directory
             checkPermission(userId, List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), MANAGE)
         );
-    }
-
-    private boolean hasWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid) {
-        List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
-        return elements.stream().allMatch(element ->
-            //If it's a directory we check its own write permission else we check the permission on the element parent directory
-            checkPermission(userId, List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), WRITE)
-        ) && (targetDirectoryUuid == null || checkPermission(userId, List.of(targetDirectoryUuid), WRITE));
     }
 
     private void insertReadUserPermission(UUID elementUuid, String userId, String userGroupId) {
