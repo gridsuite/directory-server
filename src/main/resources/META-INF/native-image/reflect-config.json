@@ -6,6 +6,15 @@
     }
   },
   {
+    "name": "org.gridsuite.directory.server.dto.UserGroupDTO",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredFields": true,
+    "allPublicFields": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true
+  },
+  {
     "name":"org.springframework.core.env.AbstractEnvironment",
     "condition": {
       "typeReachable":"org.springframework.core.env.AbstractEnvironment"
