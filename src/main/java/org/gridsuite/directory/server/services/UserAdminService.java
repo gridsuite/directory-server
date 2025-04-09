@@ -8,6 +8,7 @@ package org.gridsuite.directory.server.services;
 
 import lombok.Setter;
 import org.gridsuite.directory.server.dto.UserGroupDTO;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -50,6 +51,12 @@ public class UserAdminService {
         }
     }
 
+    /**
+     * Register UserGroupDTO for reflection in native image builds.
+     * This annotation ensures Spring's AOT compiler includes the necessary reflection
+     * metadata for Jackson to properly deserialize REST responses into UserGroupDTO objects.
+     */
+    @RegisterReflectionForBinding(UserGroupDTO.class)
     public List<UserGroupDTO> getUserGroups(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + GET_USER_GROUPS_URI)
                 .buildAndExpand(sub).toUriString();
