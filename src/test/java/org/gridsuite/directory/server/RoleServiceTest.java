@@ -69,12 +69,23 @@ class RoleServiceTest {
     void testCheckAccessWhenUserHasRequiredRoles() {
         when(request.getHeader(ROLES_HEADER)).thenReturn("ADMIN_EXPLORE|USER");
         assertTrue(roleService.isUserExploreAdmin());
+        assertTrue(roleService.hasRequiredRoles(Set.of("ADMIN_EXPLORE", "GUEST"), false));
     }
 
     @Test
     void testCheckAccessWhenUserDoesNotHaveRequiredRoles() {
         when(request.getHeader(ROLES_HEADER)).thenReturn("USER|ADMIN");
         assertFalse(roleService.isUserExploreAdmin());
+        assertFalse(roleService.hasRequiredRoles(Set.of("ADMIN_EXPLORE", "GUEST"), false));
+    }
+
+    @Test
+    void testCheckAccessWhenRolesHeaderIsEmpty() {
+        when(request.getHeader(ROLES_HEADER)).thenReturn("");
+
+        boolean hasRoles = roleService.hasRequiredRoles(Set.of("ADMIN", "USER"), true);
+
+        assertFalse(hasRoles);
         verify(request).getHeader(ROLES_HEADER);
     }
 
