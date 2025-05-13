@@ -19,6 +19,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Set;
 
 import static org.gridsuite.directory.server.services.RoleService.ROLES_HEADER;
@@ -90,14 +91,19 @@ class RoleServiceTest {
     }
 
     @Test
-    void testApplicationRolesPrivateConstructor() {
-        // Testing that private constructor throws AssertionError when called (to add test coverage)
-        assertThrows(Exception.class, () -> {
-            // Using reflection to access and invoke the private constructor
-            Constructor<ApplicationRoles> constructor = ApplicationRoles.class.getDeclaredConstructor();
-            constructor.setAccessible(true);
+    void privateConstructor_shouldThrowAssertionError() throws Exception {
+        Constructor<ApplicationRoles> constructor = ApplicationRoles.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+
+        try {
             constructor.newInstance();
-        });
+            fail("Expected AssertionError was not thrown");
+        } catch (InvocationTargetException ex) {
+            // Unwrap and assert the cause
+            Throwable cause = ex.getCause();
+            assertInstanceOf(AssertionError.class, cause);
+            assertEquals("Utility class should not be instantiated", cause.getMessage());
+        }
     }
 
 }
