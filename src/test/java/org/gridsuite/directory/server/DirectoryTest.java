@@ -13,14 +13,11 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.HttpUrl;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
+import org.gridsuite.directory.server.constants.ApplicationRoles;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
@@ -29,10 +26,9 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
-import org.gridsuite.directory.server.services.UserAdminService;
+import org.gridsuite.directory.server.services.RoleService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
-import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +36,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -54,6 +51,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -74,6 +73,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -141,37 +141,29 @@ public class DirectoryTest {
     private DirectoryService directoryService;
 
     @Autowired
-    private UserAdminService userAdminService;
-
-    private MockWebServer server;
-    @Autowired
     private PermissionRepository permissionRepository;
+
+    @SpyBean
+    private RoleService roleService;
 
     @Before
     public void setup() {
-        server = new MockWebServer();
-        HttpUrl baseHttpUrl = server.url("");
-        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-
-        userAdminService.setUserAdminServerBaseUri(baseUrl);
-
-        // Ask the server for its URL. You'll need this to make HTTP requests.
-        final Dispatcher dispatcher = new Dispatcher() {
-            @NotNull
-            @Override
-            public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
-                if ("HEAD".equals(request.getMethod())) {
-                    if (path.matches("/v1/users/" + ADMIN_USER + "/isAdmin")) {
-                        return new MockResponse().setResponseCode(200);
-                    } else if (path.matches("/v1/users/.*/isAdmin")) {
-                        return new MockResponse().setResponseCode(403);
+        // Mock the RoleService to return roles based on the userId
+        when(roleService.getCurrentUserRoles())
+                .thenAnswer(invocation -> {
+                    ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+                    if (attributes == null) {
+                        return Collections.emptySet();
                     }
-                }
-                return new MockResponse().setResponseCode(418);
-            }
-        };
-        server.setDispatcher(dispatcher);
+                    HttpServletRequest request = attributes.getRequest();
+                    String userId = request.getHeader("userId");
+                    if (ADMIN_USER.equals(userId)) {
+                        return Set.of(ApplicationRoles.USER, ApplicationRoles.ADMIN_EXPLORE);
+                    } else {
+                        return Set.of(ApplicationRoles.USER);
+                    }
+                });
+
         cleanDB();
     }
 

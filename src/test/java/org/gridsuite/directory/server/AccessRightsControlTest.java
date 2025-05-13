@@ -8,15 +8,18 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import org.gridsuite.directory.server.constants.ApplicationRoles;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionEntity;
 import org.gridsuite.directory.server.repository.PermissionRepository;
+import org.gridsuite.directory.server.services.RoleService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
@@ -29,6 +32,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -39,6 +43,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.io.IOException;
 import java.util.*;
@@ -52,6 +58,7 @@ import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -85,6 +92,9 @@ public class AccessRightsControlTest {
     @Autowired
     private UserAdminService userAdminService;
 
+    @SpyBean
+    private RoleService roleService;
+
     MockWebServer server;
 
     public static final String ADMIN_USER = "ADMIN_USER";
@@ -94,7 +104,6 @@ public class AccessRightsControlTest {
     private static final UUID GROUP_TWO_ID = UUID.randomUUID();
 
     private static final String PERMISSIONS_API_PATH = "/v1/directories/{directoryUuid}/permissions";
-    private static final String IS_ADMIN_SUFFIX = "/isAdmin";
     private static final String GROUPS_SUFFIX = "/groups";
     private static final String USER_ID_HEADER = "userId";
 
@@ -107,6 +116,8 @@ public class AccessRightsControlTest {
         initializeGroupsJson();
 
         setupMockWebServer();
+
+        mockRoleService();
 
         cleanDatabase();
     }
@@ -151,14 +162,7 @@ public class AccessRightsControlTest {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = request.getMethod();
 
-                // Handle isAdmin requests
-                if ("HEAD".equals(method) && path.endsWith(IS_ADMIN_SUFFIX)) {
-                    if (path.contains("/v1/users/" + ADMIN_USER + "/")) {
-                        return new MockResponse().setResponseCode(HttpStatus.OK.value());
-                    } else {
-                        return new MockResponse().setResponseCode(HttpStatus.FORBIDDEN.value());
-                    }
-                } else if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
+                if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
                     if (path.contains("/" + USER_ONE + "/")) {
                         return jsonResponse(HttpStatus.OK, userOneGroupsJson);
                     } else if (path.contains("/" + USER_TWO + "/")) {
@@ -172,6 +176,24 @@ public class AccessRightsControlTest {
             }
         };
         server.setDispatcher(dispatcher);
+    }
+
+    private void mockRoleService() {
+        // Mock the RoleService to return roles based on the userId
+        when(roleService.getCurrentUserRoles())
+                .thenAnswer(invocation -> {
+                    ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+                    if (attributes == null) {
+                        return Collections.emptySet();
+                    }
+                    HttpServletRequest request = attributes.getRequest();
+                    String userId = request.getHeader(USER_ID_HEADER);
+                    if (ADMIN_USER.equals(userId)) {
+                        return Set.of(ApplicationRoles.USER, ApplicationRoles.ADMIN_EXPLORE);
+                    } else {
+                        return Set.of(ApplicationRoles.USER);
+                    }
+                });
     }
 
     private MockResponse jsonResponse(HttpStatus status, String body) {

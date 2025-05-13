@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
-import org.gridsuite.directory.server.services.UserAdminService;
+import org.gridsuite.directory.server.services.RoleService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -39,12 +39,15 @@ public class DirectoryController {
     private final DirectoryService service;
 
     private final DirectoryRepositoryService repositoryService;
-    private final UserAdminService userAdminService;
+    private final RoleService roleService;
 
-    public DirectoryController(DirectoryService service, DirectoryRepositoryService repositoryService, UserAdminService userAdminService) {
+    public DirectoryController(
+            DirectoryService service,
+            DirectoryRepositoryService repositoryService,
+            RoleService roleService) {
         this.service = service;
         this.repositoryService = repositoryService;
-        this.userAdminService = userAdminService;
+        this.roleService = roleService;
     }
 
     @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -196,7 +199,7 @@ public class DirectoryController {
                                                       @RequestParam(value = "targetDirectoryUuid", required = false) UUID targetDirectoryUuid,
                                                       @RequestParam(value = "recursiveCheck", required = false, defaultValue = "false") boolean recursiveCheck,
                                                       @RequestHeader("userId") String userId) {
-        if (userAdminService.isUserAdmin(userId)) {
+        if (roleService.isUserExploreAdmin()) {
             return ResponseEntity.ok().build();
         }
         PermissionCheckResult result = service.checkDirectoriesPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck);
