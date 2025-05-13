@@ -91,7 +91,7 @@ class RoleServiceTest {
     }
 
     @Test
-    void privateConstructor_shouldThrowAssertionError() throws Exception {
+    void testApplicationRolesPrivateConstructor() throws Exception {
         Constructor<ApplicationRoles> constructor = ApplicationRoles.class.getDeclaredConstructor();
         constructor.setAccessible(true);
 
