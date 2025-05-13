@@ -55,6 +55,7 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -194,13 +195,6 @@ public class AccessRightsControlTest {
                         return Set.of(ApplicationRoles.USER);
                     }
                 });
-    }
-
-    private MockResponse jsonResponse(HttpStatus status, String body) {
-        return new MockResponse()
-                .setResponseCode(status.value())
-                .setHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                .setBody(body);
     }
 
     private void cleanDatabase() {

@@ -15,6 +15,11 @@ import com.jparams.verifier.tostring.ToStringVerifier;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.directory.server.constants.ApplicationRoles;
@@ -27,8 +32,10 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.gridsuite.directory.server.services.RoleService;
+import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
+import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,6 +74,7 @@ import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
 import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDIES;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -116,6 +124,9 @@ public class DirectoryTest {
     private final String directoryUpdateDestination = "directory.update";
     private final String studyUpdateDestination = "study.update";
 
+    private static final String GROUPS_SUFFIX = "/groups";
+    private static final String EMPTY_GROUPS_JSON = "[]";
+
     @Autowired
     RestClient restClient;
 
@@ -141,6 +152,11 @@ public class DirectoryTest {
     private DirectoryService directoryService;
 
     @Autowired
+    private UserAdminService userAdminService;
+
+    MockWebServer server;
+
+    @Autowired
     private PermissionRepository permissionRepository;
 
     @SpyBean
@@ -148,6 +164,8 @@ public class DirectoryTest {
 
     @Before
     public void setup() {
+        setupMockWebServer();
+
         // Mock the RoleService to return roles based on the userId
         when(roleService.getCurrentUserRoles())
                 .thenAnswer(invocation -> {
@@ -165,6 +183,31 @@ public class DirectoryTest {
                 });
 
         cleanDB();
+    }
+
+    private void setupMockWebServer() {
+        server = new MockWebServer();
+        HttpUrl baseHttpUrl = server.url("");
+        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+
+        userAdminService.setUserAdminServerBaseUri(baseUrl);
+
+        // Set up the dispatcher to handle all requests
+        final Dispatcher dispatcher = new Dispatcher() {
+            @NotNull
+            @Override
+            public MockResponse dispatch(RecordedRequest request) {
+                String path = Objects.requireNonNull(request.getPath());
+                String method = request.getMethod();
+
+                if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
+                    return jsonResponse(HttpStatus.OK, EMPTY_GROUPS_JSON);
+                }
+
+                return new MockResponse().setResponseCode(HttpStatus.I_AM_A_TEAPOT.value());
+            }
+        };
+        server.setDispatcher(dispatcher);
     }
 
     private void cleanDB() {
