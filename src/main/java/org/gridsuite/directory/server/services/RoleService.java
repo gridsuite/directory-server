@@ -7,7 +7,8 @@
 package org.gridsuite.directory.server.services;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.gridsuite.directory.server.constants.ApplicationRoles;
+import lombok.Getter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -21,10 +22,17 @@ import java.util.Set;
  * @author Achour Berrahma <achour.berrahma at rte-france.com>
  * Service for checking user roles.
  */
+@Getter
 @Service
 public class RoleService {
     public static final String ROLES_HEADER = "roles";
     public static final String ROLE_DELIMITER = "\\|";
+
+    @Value("${gridsuite.user-roles.admin-explore:ADMIN_EXPLORE}")
+    private String adminExploreRole;
+
+    @Value("${gridsuite.user-roles.user:UTILISATEURS}")
+    private String userRole;
 
     /**
      * Checks if the current user has the required roles.
@@ -85,7 +93,7 @@ public class RoleService {
      * @throws ResponseStatusException with 403 status if the user doesn't have the required roles
      */
     public boolean isUserExploreAdmin() {
-        return hasRequiredRoles(Set.of(ApplicationRoles.ADMIN_EXPLORE), true);
+        return hasRequiredRoles(Set.of(adminExploreRole), true);
     }
 
 }

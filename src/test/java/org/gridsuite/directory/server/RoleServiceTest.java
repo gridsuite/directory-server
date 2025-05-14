@@ -7,19 +7,17 @@
 package org.gridsuite.directory.server;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.gridsuite.directory.server.constants.ApplicationRoles;
 import org.gridsuite.directory.server.services.RoleService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Set;
 
 import static org.gridsuite.directory.server.services.RoleService.ROLES_HEADER;
@@ -33,7 +31,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest(classes = {DirectoryApplication.class})
 class RoleServiceTest {
 
-    @InjectMocks
+    @Autowired
     private RoleService roleService;
 
     @Mock
@@ -88,22 +86,6 @@ class RoleServiceTest {
 
         assertFalse(hasRoles);
         verify(request).getHeader(ROLES_HEADER);
-    }
-
-    @Test
-    void testApplicationRolesPrivateConstructor() throws Exception {
-        Constructor<ApplicationRoles> constructor = ApplicationRoles.class.getDeclaredConstructor();
-        constructor.setAccessible(true);
-
-        try {
-            constructor.newInstance();
-            fail("Expected AssertionError was not thrown");
-        } catch (InvocationTargetException ex) {
-            // Unwrap and assert the cause
-            Throwable cause = ex.getCause();
-            assertInstanceOf(AssertionError.class, cause);
-            assertEquals("Utility class should not be instantiated", cause.getMessage());
-        }
     }
 
 }

@@ -14,7 +14,6 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.directory.server.constants.ApplicationRoles;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionEntity;
@@ -190,9 +189,9 @@ public class AccessRightsControlTest {
                     HttpServletRequest request = attributes.getRequest();
                     String userId = request.getHeader(USER_ID_HEADER);
                     if (ADMIN_USER.equals(userId)) {
-                        return Set.of(ApplicationRoles.USER, ApplicationRoles.ADMIN_EXPLORE);
+                        return Set.of(roleService.getUserRole(), roleService.getAdminExploreRole());
                     } else {
-                        return Set.of(ApplicationRoles.USER);
+                        return Set.of(roleService.getUserRole());
                     }
                 });
     }

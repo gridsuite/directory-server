@@ -22,7 +22,6 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
-import org.gridsuite.directory.server.constants.ApplicationRoles;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
@@ -176,9 +175,9 @@ public class DirectoryTest {
                     HttpServletRequest request = attributes.getRequest();
                     String userId = request.getHeader("userId");
                     if (ADMIN_USER.equals(userId)) {
-                        return Set.of(ApplicationRoles.USER, ApplicationRoles.ADMIN_EXPLORE);
+                        return Set.of(roleService.getUserRole(), roleService.getAdminExploreRole());
                     } else {
-                        return Set.of(ApplicationRoles.USER);
+                        return Set.of(roleService.getUserRole());
                     }
                 });
 
