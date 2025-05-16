@@ -189,9 +189,9 @@ public class AccessRightsControlTest {
                     HttpServletRequest request = attributes.getRequest();
                     String userId = request.getHeader(USER_ID_HEADER);
                     if (ADMIN_USER.equals(userId)) {
-                        return Set.of(roleService.getUserRole(), roleService.getAdminExploreRole());
+                        return Set.of("USER", roleService.getAdminExploreRole());
                     } else {
-                        return Set.of(roleService.getUserRole());
+                        return Set.of("USER");
                     }
                 });
     }

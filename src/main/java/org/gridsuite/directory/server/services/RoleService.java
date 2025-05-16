@@ -12,10 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -30,37 +28,6 @@ public class RoleService {
 
     @Value("${gridsuite.user-roles.admin-explore:ADMIN_EXPLORE}")
     private String adminExploreRole;
-
-    @Value("${gridsuite.user-roles.user:UTILISATEURS}")
-    private String userRole;
-
-    /**
-     * Checks if the current user has the required roles.
-     *
-     * @param requiredRoles    The roles required for access
-     * @param allRolesRequired If true, all roles are required; if false, any one role is sufficient
-     * @return True if the user has the required roles, false otherwise
-     */
-    public boolean hasRequiredRoles(Set<String> requiredRoles, boolean allRolesRequired) {
-        Set<String> userRoles = getCurrentUserRoles();
-
-        if (userRoles.isEmpty()) {
-            return false;
-        }
-
-        if (allRolesRequired) {
-            // User must have all required roles
-            return userRoles.containsAll(requiredRoles);
-        } else {
-            // User must have at least one of the required roles
-            for (String role : requiredRoles) {
-                if (userRoles.contains(role)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
 
     /**
      * Gets the current user's roles from the request headers.
@@ -80,20 +47,17 @@ public class RoleService {
             return Collections.emptySet();
         }
 
-        Set<String> roles = new HashSet<>();
-        String[] roleParts = rolesHeader.split(ROLE_DELIMITER);
-        Collections.addAll(roles, roleParts);
-
-        return roles;
+        return Set.of(rolesHeader.split(ROLE_DELIMITER));
     }
 
    /**
      * Checks if the user has the required roles for admin access.
      *
-     * @throws ResponseStatusException with 403 status if the user doesn't have the required roles
+     * @return True if the user has admin access, false otherwise
      */
     public boolean isUserExploreAdmin() {
-        return hasRequiredRoles(Set.of(adminExploreRole), true);
+        Set<String> userRoles = getCurrentUserRoles();
+        return !userRoles.isEmpty() && userRoles.contains(adminExploreRole);
     }
 
 }

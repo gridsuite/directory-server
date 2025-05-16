@@ -175,9 +175,9 @@ public class DirectoryTest {
                     HttpServletRequest request = attributes.getRequest();
                     String userId = request.getHeader("userId");
                     if (ADMIN_USER.equals(userId)) {
-                        return Set.of(roleService.getUserRole(), roleService.getAdminExploreRole());
+                        return Set.of("USER", roleService.getAdminExploreRole());
                     } else {
-                        return Set.of(roleService.getUserRole());
+                        return Set.of("USER");
                     }
                 });
 
