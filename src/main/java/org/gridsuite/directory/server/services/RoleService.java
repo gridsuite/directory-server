@@ -7,7 +7,6 @@
 package org.gridsuite.directory.server.services;
 
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -20,13 +19,12 @@ import java.util.Set;
  * @author Achour Berrahma <achour.berrahma at rte-france.com>
  * Service for checking user roles.
  */
-@Getter
 @Service
 public class RoleService {
     public static final String ROLES_HEADER = "roles";
     public static final String ROLE_DELIMITER = "\\|";
 
-    @Value("${gridsuite.user-roles.admin-explore:ADMIN_EXPLORE}")
+    @Value("${directory.admin-role:ADMIN_EXPLORE}")
     private String adminExploreRole;
 
     /**

@@ -8,7 +8,6 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletRequest;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -18,7 +17,6 @@ import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionEntity;
 import org.gridsuite.directory.server.repository.PermissionRepository;
-import org.gridsuite.directory.server.services.RoleService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
@@ -31,7 +29,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -42,8 +39,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.io.IOException;
 import java.util.*;
@@ -58,7 +53,6 @@ import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonRespon
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -92,20 +86,20 @@ public class AccessRightsControlTest {
     @Autowired
     private UserAdminService userAdminService;
 
-    @SpyBean
-    private RoleService roleService;
-
     MockWebServer server;
 
     public static final String ADMIN_USER = "ADMIN_USER";
+    public static final String ADMIN_ROLE = "ADMIN_EXPLORE";
     private static final String USER_ONE = "USER_ONE";
     private static final String USER_TWO = "USER_TWO";
+    private static final String USER_ROLE = "USER_ROLE";
     private static final UUID GROUP_ONE_ID = UUID.randomUUID();
     private static final UUID GROUP_TWO_ID = UUID.randomUUID();
 
     private static final String PERMISSIONS_API_PATH = "/v1/directories/{directoryUuid}/permissions";
     private static final String GROUPS_SUFFIX = "/groups";
     private static final String USER_ID_HEADER = "userId";
+    private static final String USER_ROLES_HEADER = "roles";
 
     private String userOneGroupsJson;
     private String userTwoGroupsJson;
@@ -116,8 +110,6 @@ public class AccessRightsControlTest {
         initializeGroupsJson();
 
         setupMockWebServer();
-
-        mockRoleService();
 
         cleanDatabase();
     }
@@ -176,24 +168,6 @@ public class AccessRightsControlTest {
             }
         };
         server.setDispatcher(dispatcher);
-    }
-
-    private void mockRoleService() {
-        // Mock the RoleService to return roles based on the userId
-        when(roleService.getCurrentUserRoles())
-                .thenAnswer(invocation -> {
-                    ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-                    if (attributes == null) {
-                        return Collections.emptySet();
-                    }
-                    HttpServletRequest request = attributes.getRequest();
-                    String userId = request.getHeader(USER_ID_HEADER);
-                    if (ADMIN_USER.equals(userId)) {
-                        return Set.of("USER", roleService.getAdminExploreRole());
-                    } else {
-                        return Set.of("USER");
-                    }
-                });
     }
 
     private void cleanDatabase() {
@@ -461,7 +435,8 @@ public class AccessRightsControlTest {
 
     private ResultActions getDirectoryPermissions(String userId, UUID directoryUuid) throws Exception {
         MockHttpServletRequestBuilder request = get(PERMISSIONS_API_PATH, directoryUuid)
-                .header(USER_ID_HEADER, userId);
+                .header(USER_ID_HEADER, userId)
+                .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE);
 
         return mockMvc.perform(request);
     }
@@ -470,6 +445,7 @@ public class AccessRightsControlTest {
                                                      List<PermissionDTO> permissions) throws Exception {
         MockHttpServletRequestBuilder request = put(PERMISSIONS_API_PATH, directoryUuid)
                 .header(USER_ID_HEADER, userId)
+                .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(permissions));
 
@@ -568,7 +544,8 @@ public class AccessRightsControlTest {
                         .param("accessType", permissionType.name())
                         .param("recursiveCheck", String.valueOf(recursiveCheck))
                         .param("targetDirectoryUuid", targetDirectoryUuid != null ? targetDirectoryUuid.toString() : "")
-                        .header("userId", userId))
+                        .header("userId", userId)
+                        .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE))
                 .andReturn();
     }
 
@@ -595,6 +572,7 @@ public class AccessRightsControlTest {
     private MvcResult insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes, HttpStatus expectedStatus) throws Exception {
         return mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
                 .header("userId", subElementAttributes.getOwner())
+                .header(USER_ROLES_HEADER, subElementAttributes.getOwner().equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(subElementAttributes)))
                 .andExpect(status().is(new IsEqual<>(expectedStatus.value())))
@@ -607,8 +585,10 @@ public class AccessRightsControlTest {
     }
 
     private void checkRootDirectories(String userId, List<ElementAttributes> list) throws Exception {
-        String response = mockMvc.perform(get("/v1/root-directories").header("userId", userId)
-                                          .accept(MediaType.APPLICATION_JSON))
+        String response = mockMvc.perform(get("/v1/root-directories")
+                                            .header("userId", userId)
+                                            .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE)
+                                            .accept(MediaType.APPLICATION_JSON))
                                  .andExpectAll(status().isOk(), content().contentType(APPLICATION_JSON_VALUE))
                                  .andReturn()
                                  .getResponse()
@@ -628,6 +608,7 @@ public class AccessRightsControlTest {
     private MvcResult insertRootDirectory(String userId, String rootDirectoryName, HttpStatus expectedStatus) throws Exception {
         return mockMvc.perform(post("/v1/root-directories")
                 .header("userId", userId)
+                .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, userId, null, null, null, null))))
                 .andExpect(status().is(new IsEqual<>(expectedStatus.value())))

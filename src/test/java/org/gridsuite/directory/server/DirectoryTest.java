@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
@@ -30,7 +29,6 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
-import org.gridsuite.directory.server.services.RoleService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.core.IsEqual;
@@ -42,7 +40,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
@@ -57,8 +54,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -80,7 +75,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.mockito.Mockito.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -111,6 +105,7 @@ public class DirectoryTest {
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    private static final String HEADER_USER_ROLES = "roles";
     public static final String USER_ID = "userId";
     public static final String USERID_1 = "userId1";
     public static final String USERID_2 = "userId2";
@@ -119,6 +114,8 @@ public class DirectoryTest {
     public static final String ALL_USERS = "ALL_USERS";
     private static final String NOT_ADMIN_USER = "notAdmin";
     private static final String ADMIN_USER = "adminUser";
+    public static final String NO_ADMIN_ROLE = "NO_ADMIN_ROLE";
+    public static final String ADMIN_ROLE = "ADMIN_EXPLORE";
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
     private final String studyUpdateDestination = "study.update";
@@ -158,28 +155,9 @@ public class DirectoryTest {
     @Autowired
     private PermissionRepository permissionRepository;
 
-    @SpyBean
-    private RoleService roleService;
-
     @Before
     public void setup() {
         setupMockWebServer();
-
-        // Mock the RoleService to return roles based on the userId
-        when(roleService.getCurrentUserRoles())
-                .thenAnswer(invocation -> {
-                    ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-                    if (attributes == null) {
-                        return Collections.emptySet();
-                    }
-                    HttpServletRequest request = attributes.getRequest();
-                    String userId = request.getHeader("userId");
-                    if (ADMIN_USER.equals(userId)) {
-                        return Set.of("USER", roleService.getAdminExploreRole());
-                    } else {
-                        return Set.of("USER");
-                    }
-                });
 
         cleanDB();
     }
@@ -1407,7 +1385,9 @@ public class DirectoryTest {
 
     private void checkRootDirectoriesList(String userId, List<String> elementTypes, List<ElementAttributes> list) throws Exception {
         var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
-        String response = mockMvc.perform(get("/v1/root-directories" + types).header("userId", userId))
+        String response = mockMvc.perform(get("/v1/root-directories" + types)
+                                            .header("userId", userId)
+                                            .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
                              .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                              .andReturn()
                             .getResponse()
@@ -1636,7 +1616,8 @@ public class DirectoryTest {
         String recurs = "?recursive=" + (recursive ? "true" : "false");
         String elementTypes = !CollectionUtils.isEmpty(types) ? "&elementTypes=" + String.join(",", types) : "";
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + recurs + elementTypes)
-                .header("userId", userId))
+                .header("userId", userId)
+                .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn()
                 .getResponse()
