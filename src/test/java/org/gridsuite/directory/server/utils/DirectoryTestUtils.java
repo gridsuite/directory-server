@@ -6,7 +6,10 @@
  */
 package org.gridsuite.directory.server.utils;
 
+import okhttp3.mockwebserver.MockResponse;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -25,5 +28,12 @@ public final class DirectoryTestUtils {
 
     public static DirectoryElementEntity createElement(UUID parentDirectoryUuid, String elementName, String type, String userId) {
         return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, userId, null, Instant.now(), Instant.now(), userId);
+    }
+
+    public static MockResponse jsonResponse(HttpStatus status, String body) {
+        return new MockResponse()
+                .setResponseCode(status.value())
+                .setHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                .setBody(body);
     }
 }

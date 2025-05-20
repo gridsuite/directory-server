@@ -14,8 +14,8 @@ import com.google.common.collect.Iterables;
 import com.jparams.verifier.tostring.ToStringVerifier;
 import com.vladmihalcea.sql.SQLStatementCountValidator;
 import lombok.SneakyThrows;
-import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -68,6 +68,7 @@ import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
 import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDIES;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -104,6 +105,7 @@ public class DirectoryTest {
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    private static final String HEADER_USER_ROLES = "roles";
     public static final String USER_ID = "userId";
     public static final String USERID_1 = "userId1";
     public static final String USERID_2 = "userId2";
@@ -112,9 +114,14 @@ public class DirectoryTest {
     public static final String ALL_USERS = "ALL_USERS";
     private static final String NOT_ADMIN_USER = "notAdmin";
     private static final String ADMIN_USER = "adminUser";
+    public static final String NO_ADMIN_ROLE = "NO_ADMIN_ROLE";
+    public static final String ADMIN_ROLE = "ADMIN_EXPLORE";
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
     private final String studyUpdateDestination = "study.update";
+
+    private static final String GROUPS_SUFFIX = "/groups";
+    private static final String EMPTY_GROUPS_JSON = "[]";
 
     @Autowired
     RestClient restClient;
@@ -143,36 +150,41 @@ public class DirectoryTest {
     @Autowired
     private UserAdminService userAdminService;
 
-    private MockWebServer server;
+    MockWebServer server;
+
     @Autowired
     private PermissionRepository permissionRepository;
 
     @Before
     public void setup() {
+        setupMockWebServer();
+
+        cleanDB();
+    }
+
+    private void setupMockWebServer() {
         server = new MockWebServer();
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
 
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
-        // Ask the server for its URL. You'll need this to make HTTP requests.
+        // Set up the dispatcher to handle all requests
         final Dispatcher dispatcher = new Dispatcher() {
             @NotNull
             @Override
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
-                if ("HEAD".equals(request.getMethod())) {
-                    if (path.matches("/v1/users/" + ADMIN_USER + "/isAdmin")) {
-                        return new MockResponse().setResponseCode(200);
-                    } else if (path.matches("/v1/users/.*/isAdmin")) {
-                        return new MockResponse().setResponseCode(403);
-                    }
+                String method = request.getMethod();
+
+                if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
+                    return jsonResponse(HttpStatus.OK, EMPTY_GROUPS_JSON);
                 }
-                return new MockResponse().setResponseCode(418);
+
+                return new MockResponse().setResponseCode(HttpStatus.I_AM_A_TEAPOT.value());
             }
         };
         server.setDispatcher(dispatcher);
-        cleanDB();
     }
 
     private void cleanDB() {
@@ -1373,7 +1385,9 @@ public class DirectoryTest {
 
     private void checkRootDirectoriesList(String userId, List<String> elementTypes, List<ElementAttributes> list) throws Exception {
         var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
-        String response = mockMvc.perform(get("/v1/root-directories" + types).header("userId", userId))
+        String response = mockMvc.perform(get("/v1/root-directories" + types)
+                                            .header("userId", userId)
+                                            .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
                              .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                              .andReturn()
                             .getResponse()
@@ -1602,7 +1616,8 @@ public class DirectoryTest {
         String recurs = "?recursive=" + (recursive ? "true" : "false");
         String elementTypes = !CollectionUtils.isEmpty(types) ? "&elementTypes=" + String.join(",", types) : "";
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + recurs + elementTypes)
-                .header("userId", userId))
+                .header("userId", userId)
+                .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn()
                 .getResponse()
