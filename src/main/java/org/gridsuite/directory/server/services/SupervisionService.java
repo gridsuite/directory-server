@@ -1,7 +1,9 @@
 package org.gridsuite.directory.server.services;
 
+import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
+import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.http.HttpStatus;
@@ -16,12 +18,28 @@ import java.util.UUID;
 public class SupervisionService {
     private final DirectoryRepositoryService repositoryService;
     private final DirectoryElementInfosRepository directoryElementInfosRepository;
+    private final DirectoryElementRepository directoryElementRepository;
     private final ElasticsearchOperations elasticsearchOperations;
 
-    public SupervisionService(DirectoryRepositoryService repositoryService, DirectoryElementInfosRepository directoryElementInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+    public SupervisionService(
+            DirectoryRepositoryService repositoryService,
+            DirectoryElementInfosRepository directoryElementInfosRepository,
+            ElasticsearchOperations elasticsearchOperations,
+            DirectoryElementRepository directoryElementRepository
+    ) {
         this.repositoryService = repositoryService;
         this.directoryElementInfosRepository = directoryElementInfosRepository;
         this.elasticsearchOperations = elasticsearchOperations;
+        this.directoryElementRepository = directoryElementRepository;
+    }
+
+    @Transactional(readOnly=true)
+    public List<ElementAttributes> getAllElementsByType(String type) {
+        if (type != null) {
+            return directoryElementRepository.findAllByType(type).stream().map(ElementAttributes::toElementAttributes).toList();
+        } else {
+            return directoryElementRepository.findAll().stream().map(ElementAttributes::toElementAttributes).toList();
+        }
     }
 
     // delete all directory elements without checking owner

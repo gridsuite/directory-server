@@ -25,6 +25,8 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findAllByParentId(UUID parentId);
 
+    List<DirectoryElementEntity> findAllByType(String type);
+
     List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids);
 
     List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNot(List<UUID> uuids, UUID parentUuid, String type);

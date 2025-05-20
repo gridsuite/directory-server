@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
+import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.SupervisionService;
 import org.springframework.http.MediaType;
@@ -48,6 +49,14 @@ public class SupervisionController {
         service.deleteElementsByIds(elementsUuid);
         return ResponseEntity.ok().build();
     }
+    @GetMapping("/elements")
+    @Operation(summary = "Get all elements of a given type")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of elements")})
+    public ResponseEntity<List<ElementAttributes>> getAllElements(
+            @RequestParam(value = "elementType", required = false) String elementType) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getAllElementsByType(elementType));
+    }
+
 
     @GetMapping(value = "/elasticsearch-host")
     @Operation(summary = "get the elasticsearch address")
