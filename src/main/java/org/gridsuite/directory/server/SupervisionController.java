@@ -49,6 +49,7 @@ public class SupervisionController {
         service.deleteElementsByIds(elementsUuid);
         return ResponseEntity.ok().build();
     }
+
     @GetMapping("/elements")
     @Operation(summary = "Get all elements of a given type")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of elements")})
@@ -56,7 +57,6 @@ public class SupervisionController {
             @RequestParam(value = "elementType", required = false) String elementType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getAllElementsByType(elementType));
     }
-
 
     @GetMapping(value = "/elasticsearch-host")
     @Operation(summary = "get the elasticsearch address")
