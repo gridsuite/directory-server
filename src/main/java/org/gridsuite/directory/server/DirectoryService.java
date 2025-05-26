@@ -10,10 +10,7 @@ import lombok.NonNull;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.repository.*;
-import org.gridsuite.directory.server.services.DirectoryElementInfosService;
-import org.gridsuite.directory.server.services.DirectoryRepositoryService;
-import org.gridsuite.directory.server.services.TimerService;
-import org.gridsuite.directory.server.services.UserAdminService;
+import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -49,6 +46,7 @@ public class DirectoryService {
     private final NotificationService notificationService;
     private final DirectoryRepositoryService repositoryService;
     private final UserAdminService userAdminService;
+    private final RoleService roleService;
 
     private final DirectoryElementRepository directoryElementRepository;
     private final DirectoryElementInfosService directoryElementInfosService;
@@ -61,7 +59,8 @@ public class DirectoryService {
                             DirectoryElementInfosService directoryElementInfosService,
                             PermissionRepository permissionRepository,
                             TimerService timerService,
-                            UserAdminService userAdminService) {
+                            UserAdminService userAdminService,
+                            RoleService roleService) {
         this.repositoryService = repositoryService;
         this.notificationService = notificationService;
         this.directoryElementRepository = directoryElementRepository;
@@ -69,6 +68,7 @@ public class DirectoryService {
         this.permissionRepository = permissionRepository;
         this.timerService = timerService;
         this.userAdminService = userAdminService;
+        this.roleService = roleService;
     }
 
     //TODO: this consumer is the kept here at the moment, but it will be moved to explore server later on
@@ -256,7 +256,7 @@ public class DirectoryService {
     }
 
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
-        if (!userAdminService.isUserAdmin(userId) && !hasReadPermissions(userId, List.of(directoryUuid))) {
+        if (!roleService.isUserExploreAdmin() && !hasReadPermissions(userId, List.of(directoryUuid))) {
             return List.of();
         }
         ElementAttributes elementAttributes = getElement(directoryUuid);
@@ -296,7 +296,7 @@ public class DirectoryService {
 
         List<DirectoryElementEntity> directoryElements = repositoryService.findRootDirectories();
 
-        if (!userAdminService.isUserAdmin(userId)) {
+        if (!roleService.isUserExploreAdmin()) {
             directoryElements = directoryElements.stream().filter(directoryElementEntity -> hasReadPermissions(userId, List.of(directoryElementEntity.getId()))).toList();
         }
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements);
@@ -495,7 +495,7 @@ public class DirectoryService {
         List<DirectoryElementEntity> elementEntities = repositoryService.findAllByIdIn(ids);
 
         //if the user is not an admin we filter out elements he doesn't have the permission on
-        if (!userAdminService.isUserAdmin(userId)) {
+        if (!roleService.isUserExploreAdmin()) {
             elementEntities = elementEntities.stream().filter(directoryElementEntity ->
                             hasReadPermissions(userId, List.of(directoryElementEntity.getId()))
                     ).toList();
@@ -782,7 +782,7 @@ public class DirectoryService {
     }
 
     public void validatePermissionsGetAccess(UUID directoryUuid, String userId) {
-        if (!userAdminService.isUserAdmin(userId) && !hasReadPermissions(userId, List.of(directoryUuid))) {
+        if (!roleService.isUserExploreAdmin() && !hasReadPermissions(userId, List.of(directoryUuid))) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
@@ -894,7 +894,7 @@ public class DirectoryService {
     }
 
     private void validatePermissionUpdateAccess(UUID directoryUuid, String userId) {
-        if (!userAdminService.isUserAdmin(userId) && !hasManagePermission(userId, List.of(directoryUuid))) {
+        if (!roleService.isUserExploreAdmin() && !hasManagePermission(userId, List.of(directoryUuid))) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }

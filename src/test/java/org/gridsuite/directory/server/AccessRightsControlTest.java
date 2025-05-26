@@ -49,6 +49,7 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -88,15 +89,17 @@ public class AccessRightsControlTest {
     MockWebServer server;
 
     public static final String ADMIN_USER = "ADMIN_USER";
+    public static final String ADMIN_ROLE = "ADMIN_EXPLORE";
     private static final String USER_ONE = "USER_ONE";
     private static final String USER_TWO = "USER_TWO";
+    private static final String USER_ROLE = "USER_ROLE";
     private static final UUID GROUP_ONE_ID = UUID.randomUUID();
     private static final UUID GROUP_TWO_ID = UUID.randomUUID();
 
     private static final String PERMISSIONS_API_PATH = "/v1/directories/{directoryUuid}/permissions";
-    private static final String IS_ADMIN_SUFFIX = "/isAdmin";
     private static final String GROUPS_SUFFIX = "/groups";
     private static final String USER_ID_HEADER = "userId";
+    private static final String USER_ROLES_HEADER = "roles";
 
     private String userOneGroupsJson;
     private String userTwoGroupsJson;
@@ -151,14 +154,7 @@ public class AccessRightsControlTest {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = request.getMethod();
 
-                // Handle isAdmin requests
-                if ("HEAD".equals(method) && path.endsWith(IS_ADMIN_SUFFIX)) {
-                    if (path.contains("/v1/users/" + ADMIN_USER + "/")) {
-                        return new MockResponse().setResponseCode(HttpStatus.OK.value());
-                    } else {
-                        return new MockResponse().setResponseCode(HttpStatus.FORBIDDEN.value());
-                    }
-                } else if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
+                if ("GET".equals(method) && path.endsWith(GROUPS_SUFFIX)) {
                     if (path.contains("/" + USER_ONE + "/")) {
                         return jsonResponse(HttpStatus.OK, userOneGroupsJson);
                     } else if (path.contains("/" + USER_TWO + "/")) {
@@ -172,13 +168,6 @@ public class AccessRightsControlTest {
             }
         };
         server.setDispatcher(dispatcher);
-    }
-
-    private MockResponse jsonResponse(HttpStatus status, String body) {
-        return new MockResponse()
-                .setResponseCode(status.value())
-                .setHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                .setBody(body);
     }
 
     private void cleanDatabase() {
@@ -446,7 +435,8 @@ public class AccessRightsControlTest {
 
     private ResultActions getDirectoryPermissions(String userId, UUID directoryUuid) throws Exception {
         MockHttpServletRequestBuilder request = get(PERMISSIONS_API_PATH, directoryUuid)
-                .header(USER_ID_HEADER, userId);
+                .header(USER_ID_HEADER, userId)
+                .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE);
 
         return mockMvc.perform(request);
     }
@@ -455,6 +445,7 @@ public class AccessRightsControlTest {
                                                      List<PermissionDTO> permissions) throws Exception {
         MockHttpServletRequestBuilder request = put(PERMISSIONS_API_PATH, directoryUuid)
                 .header(USER_ID_HEADER, userId)
+                .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(permissions));
 
@@ -553,7 +544,8 @@ public class AccessRightsControlTest {
                         .param("accessType", permissionType.name())
                         .param("recursiveCheck", String.valueOf(recursiveCheck))
                         .param("targetDirectoryUuid", targetDirectoryUuid != null ? targetDirectoryUuid.toString() : "")
-                        .header("userId", userId))
+                        .header("userId", userId)
+                        .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE))
                 .andReturn();
     }
 
@@ -580,6 +572,7 @@ public class AccessRightsControlTest {
     private MvcResult insertSubElement(UUID parentDirectoryUUid, ElementAttributes subElementAttributes, HttpStatus expectedStatus) throws Exception {
         return mockMvc.perform(post("/v1/directories/" + parentDirectoryUUid + "/elements")
                 .header("userId", subElementAttributes.getOwner())
+                .header(USER_ROLES_HEADER, subElementAttributes.getOwner().equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(subElementAttributes)))
                 .andExpect(status().is(new IsEqual<>(expectedStatus.value())))
@@ -592,8 +585,10 @@ public class AccessRightsControlTest {
     }
 
     private void checkRootDirectories(String userId, List<ElementAttributes> list) throws Exception {
-        String response = mockMvc.perform(get("/v1/root-directories").header("userId", userId)
-                                          .accept(MediaType.APPLICATION_JSON))
+        String response = mockMvc.perform(get("/v1/root-directories")
+                                            .header("userId", userId)
+                                            .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE)
+                                            .accept(MediaType.APPLICATION_JSON))
                                  .andExpectAll(status().isOk(), content().contentType(APPLICATION_JSON_VALUE))
                                  .andReturn()
                                  .getResponse()
@@ -613,6 +608,7 @@ public class AccessRightsControlTest {
     private MvcResult insertRootDirectory(String userId, String rootDirectoryName, HttpStatus expectedStatus) throws Exception {
         return mockMvc.perform(post("/v1/root-directories")
                 .header("userId", userId)
+                .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new RootDirectoryAttributes(rootDirectoryName, userId, null, null, null, null))))
                 .andExpect(status().is(new IsEqual<>(expectedStatus.value())))
