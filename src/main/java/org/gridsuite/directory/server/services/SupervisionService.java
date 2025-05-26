@@ -33,7 +33,7 @@ public class SupervisionService {
         this.directoryElementRepository = directoryElementRepository;
     }
 
-    @Transactional(readOnly=true)
+    @Transactional(readOnly = true)
     public List<ElementAttributes> getAllElementsByType(String type) {
         if (type != null) {
             return directoryElementRepository.findAllByType(type).stream().map(ElementAttributes::toElementAttributes).toList();
