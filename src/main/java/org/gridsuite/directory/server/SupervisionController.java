@@ -54,7 +54,7 @@ public class SupervisionController {
     @Operation(summary = "Get all elements of a given type")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of elements")})
     public ResponseEntity<List<ElementAttributes>> getAllElements(
-            @RequestParam(value = "elementType", required = false) String elementType) {
+            @RequestParam(value = "elementType") String elementType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getAllElementsByType(elementType));
     }
 

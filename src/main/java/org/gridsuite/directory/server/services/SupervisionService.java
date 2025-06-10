@@ -1,5 +1,6 @@
 package org.gridsuite.directory.server.services;
 
+import jakarta.validation.constraints.NotNull;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
@@ -34,12 +35,8 @@ public class SupervisionService {
     }
 
     @Transactional(readOnly = true)
-    public List<ElementAttributes> getAllElementsByType(String type) {
-        if (type != null) {
-            return directoryElementRepository.findAllByType(type).stream().map(ElementAttributes::toElementAttributes).toList();
-        } else {
-            return directoryElementRepository.findAll().stream().map(ElementAttributes::toElementAttributes).toList();
-        }
+    public List<ElementAttributes> getAllElementsByType(@NotNull String type) {
+        return directoryElementRepository.findAllByType(type).stream().map(ElementAttributes::toElementAttributes).toList();
     }
 
     // delete all directory elements without checking owner
