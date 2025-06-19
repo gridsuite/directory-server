@@ -1340,6 +1340,16 @@ public class DirectoryTest {
         ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_01, "userId");
         insertAndCheckSubElementInRootDir(rootDirUuid, elementAttributes);
 
+        // Test get elements by a given type
+        String res = mockMvc.perform(get("/v1/supervision/elements?elementType=" + TYPE_01))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        List<ElementAttributes> elementAttributesReceived = objectMapper.readValue(res, new TypeReference<>() {
+        });
+        assertThat(elementAttributesReceived.get(0)).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(elementAttributes);
+
         // Test get indexed elements counts
         mvcResult = mockMvc.perform(get("/v1/supervision/elements/indexation-count"))
             .andExpect(status().isOk())
