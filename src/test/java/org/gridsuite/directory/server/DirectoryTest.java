@@ -1340,7 +1340,7 @@ public class DirectoryTest {
         ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_01, "userId");
         insertAndCheckSubElementInRootDir(rootDirUuid, elementAttributes);
 
-        // Test get a type of elements
+        // Test get elements by a given type
         String res = mockMvc.perform(get("/v1/supervision/elements?elementType=" + TYPE_01))
                 .andExpect(status().isOk())
                 .andReturn()

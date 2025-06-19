@@ -52,7 +52,7 @@ public class SupervisionController {
 
     @GetMapping("/elements")
     @Operation(summary = "Get all elements of a given type")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of elements")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements matching the given type")})
     public ResponseEntity<List<ElementAttributes>> getAllElements(
             @RequestParam(value = "elementType") String elementType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getAllElementsByType(elementType));
