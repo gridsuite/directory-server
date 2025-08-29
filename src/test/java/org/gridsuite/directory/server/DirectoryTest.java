@@ -515,7 +515,7 @@ public class DirectoryTest {
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(elementWithSameNameAndTypeUuid))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isConflict());
 
         assertNbElementsInRepositories(4);
     }
