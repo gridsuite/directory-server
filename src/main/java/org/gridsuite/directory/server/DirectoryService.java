@@ -375,7 +375,7 @@ public class DirectoryService {
         }
 
         if (directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType())) {
-            throw new DirectoryException(NOT_ALLOWED);
+            throw DirectoryException.createElementNameAlreadyExists(element.getName());
         }
     }
 
