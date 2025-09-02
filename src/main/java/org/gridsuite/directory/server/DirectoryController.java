@@ -102,6 +102,14 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid));
     }
 
+    @GetMapping(value = "/elements/{elementUuid}/name", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get name of element")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Name of an element"),
+        @ApiResponse(responseCode = "404", description = "The element was not found")})
+    public ResponseEntity<String> getName(@PathVariable("elementUuid") UUID elementUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getName(elementUuid));
+    }
+
     @DeleteMapping(value = "/elements/{elementUuid}")
     @Operation(summary = "Remove directory/element")
     @ApiResponses(value = {
