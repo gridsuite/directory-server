@@ -1034,7 +1034,7 @@ public class DirectoryTest {
         MvcResult result = mockMvc.perform(get("/v1/elements/" + element1Attributes.getElementUuid() + "/name")
                         .header("userId", USER_ID))
                 .andExpectAll(status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON))
+                        content().contentType(MediaType.TEXT_PLAIN))
                 .andReturn();
         String returnedName = result.getResponse().getContentAsString();
         assertEquals(element1Attributes.getElementName(), returnedName);
