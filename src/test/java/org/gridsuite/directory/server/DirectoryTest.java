@@ -1025,6 +1025,27 @@ public class DirectoryTest {
 
     @SneakyThrows
     @Test
+    public void testGetElementName() {
+        // Insert an element named "elementName1"
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
+        ElementAttributes element1Attributes = toElementAttributes(TYPE_02_UUID, "elementName1", TYPE_02, "user1");
+        insertAndCheckSubElementInRootDir(rootDirUuid, element1Attributes);
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/" + element1Attributes.getElementUuid() + "/name")
+                        .header("userId", USER_ID))
+                .andExpectAll(status().isOk(),
+                        content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+        String returnedName = result.getResponse().getContentAsString();
+        assertEquals(element1Attributes.getElementName(), returnedName);
+
+        // 404 case
+        mockMvc.perform(get("/v1/elements/" + UUID.randomUUID() + "/name")
+                .header("userId", USER_ID)).andExpectAll(status().isNotFound());
+    }
+
+    @SneakyThrows
+    @Test
     public void testGetElement() {
         // Insert a root directory by the user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
