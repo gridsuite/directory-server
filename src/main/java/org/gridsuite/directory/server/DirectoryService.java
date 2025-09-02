@@ -469,7 +469,7 @@ public class DirectoryService {
         return path;
     }
 
-    public String getName(UUID elementUuid) {
+    public String getElementName(UUID elementUuid) {
         DirectoryElementEntity element = repositoryService.getElementEntity(elementUuid).orElseThrow(() -> new DirectoryException(NOT_FOUND));
         return element.getName();
     }
