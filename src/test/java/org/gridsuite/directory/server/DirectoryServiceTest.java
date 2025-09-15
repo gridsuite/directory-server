@@ -216,7 +216,7 @@ class DirectoryServiceTest {
         UUID randomUuid = UUID.randomUUID();
         List<UUID> list = List.of(elementUuid); // Just for Sonar issue (assertThrows)
         DirectoryException exception3 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, randomUuid, "user1"));
-        assertEquals(DirectoryException.createElementNotFound(DIRECTORY, randomUuid).getMessage(), exception3.getMessage());
+        assertEquals(new DirectoryException(DirectoryException.Type.NOT_FOUND, "blabla").getMessage(), exception3.getMessage());
     }
 
     @Test

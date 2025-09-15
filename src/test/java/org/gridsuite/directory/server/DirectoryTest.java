@@ -62,7 +62,6 @@ import java.util.stream.Collectors;
 
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
@@ -1020,7 +1019,7 @@ public class DirectoryTest {
         mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=bad_type", elementAttributes.getElementUuid()))
                         .header("userId", "Doe"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(new IsEqual<>(objectMapper.writeValueAsString(UNKNOWN_NOTIFICATION))));
+                .andExpect(content().string(new IsEqual<>(objectMapper.writeValueAsString("UNKNOWN_NOTIFICATION: The notification type 'bad_type' is unknown"))));
     }
 
     @SneakyThrows
