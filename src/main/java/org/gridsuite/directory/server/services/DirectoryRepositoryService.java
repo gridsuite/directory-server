@@ -86,10 +86,6 @@ public class DirectoryRepositoryService {
         directoryElementInfosRepository.deleteAllById(elementUuids);
     }
 
-    public boolean canRead(UUID id, String userId) {
-        return directoryElementRepository.existsByIdAndOwnerOrId(id, userId, id);
-    }
-
     public void reindexElements() {
         reindexElements(directoryElementRepository.findAll());
     }

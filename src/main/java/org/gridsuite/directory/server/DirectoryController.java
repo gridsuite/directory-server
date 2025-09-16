@@ -202,7 +202,7 @@ public class DirectoryController {
             @Header(name = "X-Permission-Error", description = "Indicates where permission check failed: PARENT_PERMISSION_DENIED, CHILD_PERMISSION_DENIED, or TARGET_PERMISSION_DENIED")
         })
     })
-    public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
+    public ResponseEntity<PermissionCheckResult> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                       @RequestParam(value = "accessType") PermissionType permissionType,
                                                       @RequestParam(value = "targetDirectoryUuid", required = false) UUID targetDirectoryUuid,
                                                       @RequestParam(value = "recursiveCheck", required = false, defaultValue = "false") boolean recursiveCheck,
@@ -210,12 +210,7 @@ public class DirectoryController {
         if (roleService.isUserExploreAdmin()) {
             return ResponseEntity.ok().build();
         }
-        PermissionCheckResult result = service.checkDirectoriesPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck);
-        if (result == PermissionCheckResult.ALLOWED) {
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).header("X-Permission-Error", result.name()).build();
-        }
+        return ResponseEntity.ok(service.checkDirectoriesPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck));
     }
 
     @GetMapping(value = "/directories/{directoryUuid}/permissions", produces = MediaType.APPLICATION_JSON_VALUE)

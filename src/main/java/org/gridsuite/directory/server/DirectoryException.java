@@ -9,7 +9,6 @@ package org.gridsuite.directory.server;
 import lombok.NonNull;
 
 import java.util.Objects;
-import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -19,7 +18,7 @@ public class DirectoryException extends RuntimeException {
     private final Type type;
 
     public DirectoryException(Type type) {
-        super(Objects.requireNonNull(type.name()));
+        super();
         this.type = type;
     }
 
@@ -30,10 +29,6 @@ public class DirectoryException extends RuntimeException {
 
     public static DirectoryException createNotificationUnknown(@NonNull String action) {
         return new DirectoryException(Type.UNKNOWN_NOTIFICATION, String.format("The notification type '%s' is unknown", action));
-    }
-
-    public static DirectoryException createElementNotFound(@NonNull String type, @NonNull UUID uuid) {
-        return new DirectoryException(Type.NOT_FOUND, String.format("%s '%s' not found !", type, uuid));
     }
 
     public static DirectoryException createElementNameAlreadyExists(@NonNull String name) {
@@ -48,7 +43,6 @@ public class DirectoryException extends RuntimeException {
         NOT_ALLOWED,
         NOT_FOUND,
         NOT_DIRECTORY,
-        IS_DIRECTORY,
         UNKNOWN_NOTIFICATION,
         NAME_ALREADY_EXISTS,
         MOVE_IN_DESCENDANT_NOT_ALLOWED,

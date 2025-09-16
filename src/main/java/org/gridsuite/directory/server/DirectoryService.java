@@ -71,6 +71,23 @@ public class DirectoryService {
         this.roleService = roleService;
     }
 
+    private DirectoryElementEntity getElementEntityOrThrow(UUID elementUuid) {
+        return directoryElementRepository.findById(elementUuid)
+            .orElseThrow(() -> new DirectoryException(NOT_FOUND, "Element %s not found".formatted(elementUuid)));
+    }
+
+    private void assertExistsAndIsDirectory(UUID elementUuid) {
+        DirectoryElementEntity elementEntity = getElementEntityOrThrow(elementUuid);
+        if (!elementEntity.getType().equals(DIRECTORY)) {
+            throw new DirectoryException(NOT_DIRECTORY);
+        }
+    }
+
+    public String getElementName(UUID elementUuid) {
+        DirectoryElementEntity element = getElementEntityOrThrow(elementUuid);
+        return element.getName();
+    }
+
     //TODO: this consumer is the kept here at the moment, but it will be moved to explore server later on
     @Transactional
     public void studyUpdated(UUID studyUuid, String errorMessage, String userId) {
@@ -94,9 +111,9 @@ public class DirectoryService {
 
     private ElementAttributes createElementWithNotif(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
         if (elementAttributes.getElementName().isBlank()) {
-            throw new DirectoryException(NOT_ALLOWED);
+            throw new DirectoryException(NOT_ALLOWED, "Empty name is not allowed for an element");
         }
-        assertDirectoryExist(parentDirectoryUuid);
+        assertExistsAndIsDirectory(parentDirectoryUuid);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, generateNewName);
         if (DIRECTORY.equals(elementAttributes.getType())) {
             insertManageUserPermission(elementEntity.getId(), userId, "");
@@ -111,7 +128,7 @@ public class DirectoryService {
     }
 
     public ElementAttributes duplicateElement(UUID elementId, UUID newElementId, UUID targetDirectoryId, String userId) {
-        DirectoryElementEntity directoryElementEntity = directoryElementRepository.findById(elementId).orElseThrow(() -> new DirectoryException(NOT_FOUND));
+        DirectoryElementEntity directoryElementEntity = getElementEntityOrThrow(elementId);
         String elementType = directoryElementEntity.getType();
         UUID parentDirectoryUuid = targetDirectoryId != null ? targetDirectoryId : directoryElementEntity.getParentId();
         ElementAttributes elementAttributes = ElementAttributes.builder()
@@ -122,25 +139,13 @@ public class DirectoryService {
                 .elementName(directoryElementEntity.getName())
                 .build();
 
-        assertDirectoryExist(parentDirectoryUuid);
+        assertExistsAndIsDirectory(parentDirectoryUuid);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, true);
 
         // Here we know that parentDirectoryUuid can't be null
         notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementAttributes.getElementName());
 
         return toElementAttributes(elementEntity);
-    }
-
-    private void assertRootDirectoryNotExist(String rootName) {
-        if (TRUE.equals(repositoryService.isRootDirectoryExist(rootName))) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
-    }
-
-    private void assertDirectoryExist(UUID dirUuid) {
-        if (!getElement(dirUuid).getType().equals(DIRECTORY)) {
-            throw new DirectoryException(NOT_DIRECTORY);
-        }
     }
 
     private DirectoryElementEntity insertElement(ElementAttributes elementAttributes, UUID parentDirectoryUuid) {
@@ -192,10 +197,11 @@ public class DirectoryService {
 
     private ElementAttributes createRootDirectoryWithNotif(RootDirectoryAttributes rootDirectoryAttributes, String userId) {
         if (rootDirectoryAttributes.getElementName().isBlank()) {
-            throw new DirectoryException(NOT_ALLOWED);
+            throw new DirectoryException(NOT_ALLOWED, "Empty name is not allowed for root directory");
         }
-
-        assertRootDirectoryNotExist(rootDirectoryAttributes.getElementName());
+        if (repositoryService.isRootDirectoryExist(rootDirectoryAttributes.getElementName())) {
+            throw new DirectoryException(NOT_ALLOWED, "Root directory %s already exists".formatted(rootDirectoryAttributes.getElementName()));
+        }
         ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
         UUID elementUuid = elementAttributes.getElementUuid();
         insertManageUserPermission(elementUuid, userId, "");
@@ -260,9 +266,6 @@ public class DirectoryService {
             return List.of();
         }
         ElementAttributes elementAttributes = getElement(directoryUuid);
-        if (elementAttributes == null) {
-            throw DirectoryException.createElementNotFound(DIRECTORY, directoryUuid);
-        }
         if (!elementAttributes.getType().equals(DIRECTORY)) {
             return List.of();
         }
@@ -310,11 +313,11 @@ public class DirectoryService {
     }
 
     public void updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
-        DirectoryElementEntity directoryElement = getDirectoryElementEntity(elementUuid);
+        DirectoryElementEntity directoryElement = getElementEntityOrThrow(elementUuid);
         if (!directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
             !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
              directoryHasElementOfNameAndType(directoryElement.getParentId(), newElementAttributes.getElementName(), directoryElement.getType())) {
-            throw new DirectoryException(NOT_ALLOWED);
+            throw new DirectoryException(NOT_ALLOWED, "A directory named %s already exists".formatted(newElementAttributes.getElementName()));
         }
 
         DirectoryElementEntity elementEntity = repositoryService.saveElement(directoryElement.update(newElementAttributes));
@@ -324,20 +327,15 @@ public class DirectoryService {
 
     @Transactional
     public void updateElementLastModifiedAttributes(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
-        DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
+        DirectoryElementEntity elementToUpdate = getElementEntityOrThrow(elementUuid);
         elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
 
     }
 
     @Transactional
     public void moveElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
-        if (elementsUuids.isEmpty()) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
-
-        validateNewDirectory(newDirectoryUuid);
-
-        elementsUuids.forEach(elementUuid -> moveElementDirectory(getDirectoryElementEntity(elementUuid), newDirectoryUuid, userId));
+        assertExistsAndIsDirectory(newDirectoryUuid);
+        elementsUuids.forEach(elementUuid -> moveElementDirectory(getElementEntityOrThrow(elementUuid), newDirectoryUuid, userId));
     }
 
     private void moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
@@ -382,15 +380,6 @@ public class DirectoryService {
     private void updateElementParentDirectory(DirectoryElementEntity element, UUID newDirectoryUuid) {
         element.setParentId(newDirectoryUuid);
         repositoryService.saveElement(element);
-    }
-
-    private void validateNewDirectory(UUID newDirectoryUuid) {
-        DirectoryElementEntity newDirectory = repositoryService.getElementEntity(newDirectoryUuid)
-                .orElseThrow(() -> DirectoryException.createElementNotFound(DIRECTORY, newDirectoryUuid));
-
-        if (!newDirectory.getType().equals(DIRECTORY)) {
-            throw new DirectoryException(NOT_DIRECTORY);
-        }
     }
 
     private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String elementName, String elementType) {
@@ -464,22 +453,13 @@ public class DirectoryService {
     public List<ElementAttributes> getPath(UUID elementUuid) {
         List<ElementAttributes> path = repositoryService.getPath(elementUuid).stream().map(ElementAttributes::toElementAttributes).toList();
         if (path.isEmpty()) {
-            throw DirectoryException.createElementNotFound(ELEMENT, elementUuid);
+            throw new DirectoryException(NOT_FOUND, "Element %s not found".formatted(elementUuid));
         }
         return path;
     }
 
-    public String getElementName(UUID elementUuid) {
-        DirectoryElementEntity element = repositoryService.getElementEntity(elementUuid).orElseThrow(() -> new DirectoryException(NOT_FOUND));
-        return element.getName();
-    }
-
     public ElementAttributes getElement(UUID elementUuid) {
-        return toElementAttributes(getDirectoryElementEntity(elementUuid));
-    }
-
-    private DirectoryElementEntity getDirectoryElementEntity(UUID elementUuid) {
-        return repositoryService.getElementEntity(elementUuid).orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
+        return toElementAttributes(getElementEntityOrThrow(elementUuid));
     }
 
     public UUID getDirectoryUuid(String directoryName, UUID parentDirectoryUuid) {
@@ -507,7 +487,7 @@ public class DirectoryService {
         }
 
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
-            throw new DirectoryException(NOT_FOUND);
+            throw new DirectoryException(NOT_FOUND, "Not all IDs were found in strict mode (expected %d but found %d)".formatted(ids.stream().distinct().count(), elementEntities.size()));
         }
 
         Map<UUID, Long> subElementsCount = getSubDirectoriesCounts(elementEntities.stream().map(DirectoryElementEntity::getId).toList(), types);
@@ -544,9 +524,6 @@ public class DirectoryService {
     }
 
     public String getDuplicateNameCandidate(UUID directoryUuid, String elementName, String elementType, String userId) {
-        if (!repositoryService.canRead(directoryUuid, userId)) {
-            throw new DirectoryException(NOT_ALLOWED);
-        }
         var idLikes = new HashSet<>(repositoryService.getNameByTypeAndParentIdAndNameStartWith(elementType, directoryUuid, elementName));
         if (!idLikes.contains(elementName)) {
             return elementName;
@@ -569,7 +546,7 @@ public class DirectoryService {
         for (String s : directoryPath) {
             UUID currentDirectoryUuid = getDirectoryUuid(s, parentDirectoryUuid);
             if (currentDirectoryUuid == null) {
-                throw new DirectoryException(NOT_FOUND);
+                throw new DirectoryException(NOT_FOUND, "No directory at path %s".formatted(s));
             } else {
                 parentDirectoryUuid = currentDirectoryUuid;
             }
@@ -653,7 +630,6 @@ public class DirectoryService {
             case READ -> checkReadPermission(userId, elementUuids);
             case WRITE -> checkWritePermission(userId, elementUuids, targetDirectoryUuid, recursiveCheck);
             case MANAGE -> checkManagePermission(userId, elementUuids);
-            default -> PermissionCheckResult.PARENT_PERMISSION_DENIED;
         };
     }
 
@@ -771,7 +747,6 @@ public class DirectoryService {
             case READ -> PermissionEntity.read(elementUuid, ALL_USERS, "");
             case WRITE -> PermissionEntity.write(elementUuid, ALL_USERS, "");
             case MANAGE -> PermissionEntity.manage(elementUuid, ALL_USERS, "");
-            default -> throw new IllegalArgumentException("Unknown permission type: " + permissionType);
         };
         permissionRepository.save(permissionEntity);
     }
@@ -781,14 +756,13 @@ public class DirectoryService {
             case READ -> PermissionEntity.read(elementUuid, "", groupId);
             case WRITE -> PermissionEntity.write(elementUuid, "", groupId);
             case MANAGE -> PermissionEntity.manage(elementUuid, "", groupId);
-            default -> throw new IllegalArgumentException("Unknown permission type: " + permissionType);
         };
         permissionRepository.save(permissionEntity);
     }
 
     public void validatePermissionsGetAccess(UUID directoryUuid, String userId) {
         if (!roleService.isUserExploreAdmin() && !hasReadPermissions(userId, List.of(directoryUuid))) {
-            throw new DirectoryException(NOT_ALLOWED);
+            throw new DirectoryException(NOT_ALLOWED, "User %s is not authorized to read in directory %s".formatted(userId, directoryUuid));
         }
     }
 
@@ -802,7 +776,7 @@ public class DirectoryService {
      * @throws DirectoryException if the user doesn't have access or the directory doesn't exist
      */
     public List<PermissionDTO> getDirectoryPermissions(UUID directoryUuid, String userId) {
-        assertDirectoryExist(directoryUuid);
+        assertExistsAndIsDirectory(directoryUuid);
         validatePermissionsGetAccess(directoryUuid, userId);
 
         List<PermissionEntity> permissions = permissionRepository.findAllByElementId(directoryUuid);
@@ -900,13 +874,13 @@ public class DirectoryService {
 
     private void validatePermissionUpdateAccess(UUID directoryUuid, String userId) {
         if (!roleService.isUserExploreAdmin() && !hasManagePermission(userId, List.of(directoryUuid))) {
-            throw new DirectoryException(NOT_ALLOWED);
+            throw new DirectoryException(NOT_ALLOWED, "User %s is not authorized to manage directory %s".formatted(userId, directoryUuid));
         }
     }
 
     @Transactional
     public void setDirectoryPermissions(UUID directoryUuid, List<PermissionDTO> permissions, String userId) {
-        assertDirectoryExist(directoryUuid);
+        assertExistsAndIsDirectory(directoryUuid);
         validatePermissionUpdateAccess(directoryUuid, userId);
 
         // Remove all permissions for this directory except for the owner
