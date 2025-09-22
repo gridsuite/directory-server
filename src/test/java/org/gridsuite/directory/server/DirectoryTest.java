@@ -31,7 +31,6 @@ import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
-import org.hamcrest.core.IsEqual;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -74,6 +73,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -1020,7 +1020,11 @@ public class DirectoryTest {
         mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=bad_type", elementAttributes.getElementUuid()))
                         .header("userId", "Doe"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(new IsEqual<>(objectMapper.writeValueAsString(UNKNOWN_NOTIFICATION))));
+                .andExpect(jsonPath("$.service").value("directory-server"))
+                .andExpect(jsonPath("$.errorCode").value(UNKNOWN_NOTIFICATION.name()))
+                .andExpect(jsonPath("$.message").value("The notification type 'bad_type' is unknown"))
+                .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+                .andExpect(jsonPath("$.path").value(String.format("/v1/elements/%s/notification", elementAttributes.getElementUuid())));
     }
 
     @SneakyThrows
