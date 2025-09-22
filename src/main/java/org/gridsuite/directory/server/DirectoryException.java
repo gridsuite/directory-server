@@ -18,14 +18,9 @@ public class DirectoryException extends RuntimeException {
 
     private final Type type;
 
-    public DirectoryException(Type type) {
-        super(Objects.requireNonNull(type.name()));
-        this.type = type;
-    }
-
     public DirectoryException(Type type, String message) {
-        super(message);
-        this.type = type;
+        super(Objects.requireNonNull(message, "message must not be null"));
+        this.type = Objects.requireNonNull(type, "type must not be null");
     }
 
     public static DirectoryException createNotificationUnknown(@NonNull String action) {
@@ -40,6 +35,10 @@ public class DirectoryException extends RuntimeException {
         return new DirectoryException(Type.NAME_ALREADY_EXISTS, String.format("Element with the same name '%s' already exists in the directory !", name));
     }
 
+    public static DirectoryException of(Type type, String message, Object... args) {
+        return new DirectoryException(type, args.length == 0 ? message : String.format(message, args));
+    }
+
     Type getType() {
         return type;
     }
@@ -48,7 +47,6 @@ public class DirectoryException extends RuntimeException {
         NOT_ALLOWED,
         NOT_FOUND,
         NOT_DIRECTORY,
-        IS_DIRECTORY,
         UNKNOWN_NOTIFICATION,
         NAME_ALREADY_EXISTS,
         MOVE_IN_DESCENDANT_NOT_ALLOWED,
