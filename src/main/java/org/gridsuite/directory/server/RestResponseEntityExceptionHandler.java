@@ -25,27 +25,18 @@ public class RestResponseEntityExceptionHandler {
 
     @ExceptionHandler(value = {DirectoryException.class})
     protected ResponseEntity<Object> handleException(RuntimeException exception) {
-        if (LOGGER.isErrorEnabled()) {
-            LOGGER.error(exception.getMessage(), exception);
-        }
         DirectoryException directoryException = (DirectoryException) exception;
-        switch (directoryException.getType()) {
-            case NOT_ALLOWED:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
-            case IS_DIRECTORY:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(IS_DIRECTORY);
-            case NOT_DIRECTORY:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_DIRECTORY);
-            case NOT_FOUND:
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND);
-            case UNKNOWN_NOTIFICATION:
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION);
-            case NAME_ALREADY_EXISTS:
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(directoryException.getMessage());
-            case MOVE_IN_DESCENDANT_NOT_ALLOWED:
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(MOVE_IN_DESCENDANT_NOT_ALLOWED);
-            default:
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        LOGGER.debug(exception.getMessage(), exception);
+        return switch (directoryException.getType()) {
+            case NOT_ALLOWED -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
+            case IS_DIRECTORY -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(IS_DIRECTORY);
+            case NOT_DIRECTORY -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_DIRECTORY);
+            case NOT_FOUND -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(NOT_FOUND);
+            case UNKNOWN_NOTIFICATION -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(UNKNOWN_NOTIFICATION);
+            case NAME_ALREADY_EXISTS ->
+                ResponseEntity.status(HttpStatus.CONFLICT).body(directoryException.getMessage());
+            case MOVE_IN_DESCENDANT_NOT_ALLOWED ->
+                ResponseEntity.status(HttpStatus.FORBIDDEN).body(MOVE_IN_DESCENDANT_NOT_ALLOWED);
+        };
     }
 }
