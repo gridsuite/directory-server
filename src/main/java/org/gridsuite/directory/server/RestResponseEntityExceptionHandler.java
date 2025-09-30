@@ -26,9 +26,7 @@ public class RestResponseEntityExceptionHandler {
     @ExceptionHandler(value = {DirectoryException.class})
     protected ResponseEntity<Object> handleException(RuntimeException exception) {
         DirectoryException directoryException = (DirectoryException) exception;
-        if (LOGGER.isErrorEnabled()) {
-            LOGGER.debug(exception.getMessage(), exception);
-        }
+        LOGGER.debug(exception.getMessage(), exception);
         return switch (directoryException.getType()) {
             case NOT_ALLOWED -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case IS_DIRECTORY -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(IS_DIRECTORY);
