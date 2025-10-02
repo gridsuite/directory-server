@@ -499,15 +499,15 @@ public class DirectoryService {
     public List<ElementAttributes> getElements(List<UUID> ids, boolean strictMode, List<String> types, String userId) {
         List<DirectoryElementEntity> elementEntities = repositoryService.findAllByIdIn(ids);
 
+        if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
+            throw new DirectoryException(NOT_FOUND);
+        }
+
         //if the user is not an admin we filter out elements he doesn't have the permission on
         if (!roleService.isUserExploreAdmin()) {
             elementEntities = elementEntities.stream().filter(directoryElementEntity ->
                             hasReadPermissions(userId, List.of(directoryElementEntity.getId()))
                     ).toList();
-        }
-
-        if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
-            throw new DirectoryException(NOT_FOUND);
         }
 
         Map<UUID, Long> subElementsCount = getSubDirectoriesCounts(elementEntities.stream().map(DirectoryElementEntity::getId).toList(), types);
