@@ -274,21 +274,21 @@ public class DirectoryService {
                     .map(ElementAttributes::toElementAttributes)
                     .toList();
         } else {
-            return getAllDirectoryElementsStream(directoryUuid, types).filter(e -> hasReadPermissions(userId, List.of(e.getElementUuid()))).toList();
+            return getAllDirectoryElementsStream(directoryUuid, types, userId).toList();
         }
     }
 
     private Stream<ElementAttributes> getOnlyElementsStream(UUID directoryUuid, List<String> types, String userId) {
-        return getAllDirectoryElementsStream(directoryUuid, types)
-                .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) && hasReadPermissions(userId, List.of(elementAttributes.getElementUuid())));
+        return getAllDirectoryElementsStream(directoryUuid, types, userId)
+                .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY));
     }
 
-    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types) {
+    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
         List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentId(directoryUuid);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements);
         return directoryElements
                 .stream()
-                .filter(e -> e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
+                .filter(e -> (e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType())) && hasReadPermissions(userId, List.of(e.getId())))
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
@@ -429,7 +429,7 @@ public class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
     }
 
     /**
