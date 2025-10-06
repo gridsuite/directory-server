@@ -270,17 +270,17 @@ public class DirectoryService {
             List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(directoryUuid).stream().toList();
             return descendents
                     .stream()
-                    .filter(e -> types.isEmpty() || types.contains(e.getType()))
+                    .filter(e -> (types.isEmpty() || types.contains(e.getType())) && hasReadPermissions(userId, List.of(e.getId())))
                     .map(ElementAttributes::toElementAttributes)
                     .toList();
         } else {
-            return getAllDirectoryElementsStream(directoryUuid, types).toList();
+            return getAllDirectoryElementsStream(directoryUuid, types).filter(e -> hasReadPermissions(userId, List.of(e.getElementUuid()))).toList();
         }
     }
 
-    private Stream<ElementAttributes> getOnlyElementsStream(UUID directoryUuid, List<String> types) {
+    private Stream<ElementAttributes> getOnlyElementsStream(UUID directoryUuid, List<String> types, String userId) {
         return getAllDirectoryElementsStream(directoryUuid, types)
-                .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY));
+                .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY) && hasReadPermissions(userId, List.of(elementAttributes.getElementUuid())));
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types) {
@@ -313,7 +313,7 @@ public class DirectoryService {
         DirectoryElementEntity directoryElement = getDirectoryElementEntity(elementUuid);
         if (!directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
             !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
-             directoryHasElementOfNameAndType(directoryElement.getParentId(), newElementAttributes.getElementName(), directoryElement.getType())) {
+             directoryHasElementOfNameAndType(directoryElement.getParentId(), newElementAttributes.getElementName(), directoryElement.getType(), userId)) {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
@@ -350,7 +350,7 @@ public class DirectoryService {
         List<DirectoryElementEntity> descendents = isDirectory ? repositoryService.findAllDescendants(element.getId()).stream().toList() : List.of();
 
         // validate move elements
-        validateElementForMove(element, newDirectoryUuid, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()));
+        validateElementForMove(element, newDirectoryUuid, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()), userId);
 
         // we update the parent of the moving element
         updateElementParentDirectory(element, newDirectoryUuid);
@@ -369,12 +369,12 @@ public class DirectoryService {
 
     }
 
-    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, Set<UUID> descendentsUuids) {
+    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, Set<UUID> descendentsUuids, String userId) {
         if (newDirectoryUuid == element.getId() || descendentsUuids.contains(newDirectoryUuid)) {
             throw new DirectoryException(MOVE_IN_DESCENDANT_NOT_ALLOWED);
         }
 
-        if (directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType())) {
+        if (directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType(), userId)) {
             throw DirectoryException.createElementNameAlreadyExists(element.getName());
         }
     }
@@ -393,8 +393,8 @@ public class DirectoryService {
         }
     }
 
-    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String elementName, String elementType) {
-        return getOnlyElementsStream(directoryUUID, List.of(elementType))
+    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String elementName, String elementType, String userId) {
+        return getOnlyElementsStream(directoryUUID, List.of(elementType), userId)
             .anyMatch(
                 e -> e.getElementName().equals(elementName)
             );
