@@ -249,19 +249,12 @@ public class DirectoryService {
     }
 
     private Map<UUID, Long> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> types, String userId) {
-        Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
-        Map<UUID, List<DirectoryElementEntity>> descendants = repositoryService.findAllByParentIdInAndTypeIn(subDirectories, types).stream()
-                .collect(Collectors.groupingBy(DirectoryElementEntity::getParentId));
-        for (Map.Entry<UUID, List<DirectoryElementEntity>> entry : descendants.entrySet()) {
-            UUID parentId = entry.getKey();
-            List<DirectoryElementEntity> childElements = entry.getValue();
-            long readableCount = childElements.stream()
-                    .filter(child -> hasReadPermissions(userId, List.of(child.getId())))
-                    .count();
-
-            subdirectoriesCountsMap.put(parentId, readableCount);
-        }
-        return subdirectoriesCountsMap;
+        return repositoryService.findAllByParentIdInAndTypeIn(subDirectories, types).stream()
+                .filter(child -> hasReadPermissions(userId, List.of(child.getId())))
+                .collect(Collectors.groupingBy(
+                        DirectoryElementEntity::getParentId,
+                        Collectors.counting()
+                ));
     }
 
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
