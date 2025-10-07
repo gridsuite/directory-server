@@ -95,6 +95,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     interface ElementParentage {
         UUID getId();
+
         UUID getParentId();
     }
 
