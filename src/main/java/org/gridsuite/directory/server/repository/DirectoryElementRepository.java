@@ -93,6 +93,11 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     )
     List<DirectoryElementEntity> findAllDescendants(@Param("elementId") UUID elementId);
 
-    @Query("SELECT d FROM DirectoryElementEntity d WHERE d.parentId IN :parentIds AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes)")
-    List<DirectoryElementEntity> findAllByParentIdsAndElementTypes(List<UUID> parentIds, List<String> elementTypes);
+    interface ElementParentage {
+        UUID getId();
+        UUID getParentId();
+    }
+
+    @Query("SELECT d.id AS id, d.parentId AS parentId FROM DirectoryElementEntity d WHERE d.parentId IN :parentIds AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes)")
+    List<ElementParentage> findAllByParentIdsAndElementTypes(List<UUID> parentIds, List<String> elementTypes);
 }

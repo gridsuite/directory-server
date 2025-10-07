@@ -113,7 +113,7 @@ public class DirectoryRepositoryService {
         return directoryElementRepository.findAllByParentId(parentId);
     }
 
-    public List<DirectoryElementEntity> findAllByParentIdInAndTypeIn(List<UUID> parentIds, List<String> types) {
+    public List<DirectoryElementRepository.ElementParentage> findAllByParentIdInAndTypeIn(List<UUID> parentIds, List<String> types) {
         return directoryElementRepository.findAllByParentIdsAndElementTypes(parentIds, types);
     }
 

@@ -252,7 +252,7 @@ public class DirectoryService {
         return repositoryService.findAllByParentIdInAndTypeIn(subDirectories, types).stream()
                 .filter(child -> hasReadPermissions(userId, List.of(child.getId())))
                 .collect(Collectors.groupingBy(
-                        DirectoryElementEntity::getParentId,
+                        DirectoryElementRepository.ElementParentage::getParentId,
                         Collectors.counting()
                 ));
     }
