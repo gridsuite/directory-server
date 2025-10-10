@@ -11,7 +11,6 @@ import org.gridsuite.directory.server.dto.UserGroupDTO;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -45,11 +44,7 @@ public class UserAdminService {
     @RegisterReflectionForBinding(UserGroupDTO.class)
     public List<UserGroupDTO> getUserGroups(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + GET_USER_GROUPS_URI)
-                .buildAndExpand(sub).toUriString();
-        try {
-            return List.of(Objects.requireNonNull(restTemplate.getForEntity(userAdminServerBaseUri + path, UserGroupDTO[].class).getBody()));
-        } catch (HttpStatusCodeException e) {
-            return List.of();
-        }
+            .buildAndExpand(sub).toUriString();
+        return List.of(Objects.requireNonNull(restTemplate.getForEntity(userAdminServerBaseUri + path, UserGroupDTO[].class).getBody()));
     }
 }

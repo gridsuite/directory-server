@@ -61,7 +61,7 @@ import java.util.stream.Collectors;
 
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
+import static org.gridsuite.directory.server.DirectoryBusinessErrorCode.DIRECTORY_NOTIFICATION_UNKNOWN;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
@@ -1020,10 +1020,10 @@ public class DirectoryTest {
         mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=bad_type", elementAttributes.getElementUuid()))
                         .header("userId", "Doe"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.service").value("directory-server"))
-                .andExpect(jsonPath("$.errorCode").value(UNKNOWN_NOTIFICATION.name()))
-                .andExpect(jsonPath("$.message").value("The notification type 'bad_type' is unknown"))
+                .andExpect(jsonPath("$.server").value("directory-server"))
+                .andExpect(jsonPath("$.businessErrorCode").value(DIRECTORY_NOTIFICATION_UNKNOWN.value()))
                 .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+                .andExpect(jsonPath("$.detail").value("The notification type 'bad_type' is unknown"))
                 .andExpect(jsonPath("$.path").value(String.format("/v1/elements/%s/notification", elementAttributes.getElementUuid())));
     }
 

@@ -6,76 +6,64 @@
  */
 package org.gridsuite.directory.server;
 
-import com.powsybl.ws.commons.error.ErrorResponse;
-import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.powsybl.ws.commons.error.AbstractBaseRestExceptionHandler;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
+import com.powsybl.ws.commons.error.ServerNameProvider;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.time.Instant;
+import java.util.Optional;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  */
 @ControllerAdvice
-public class RestResponseEntityExceptionHandler {
+public class RestResponseEntityExceptionHandler
+    extends AbstractBaseRestExceptionHandler<DirectoryException, DirectoryBusinessErrorCode> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RestResponseEntityExceptionHandler.class);
-    private static final String SERVICE_NAME = "directory-server";
-    private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
+    public RestResponseEntityExceptionHandler(ServerNameProvider serverNameProvider) {
+        super(serverNameProvider);
+    }
 
-    @ExceptionHandler(DirectoryException.class)
-    protected ResponseEntity<ErrorResponse> handleDirectoryException(DirectoryException exception, HttpServletRequest request) {
-        HttpStatus status = switch (exception.getType()) {
-            case NOT_ALLOWED, NOT_DIRECTORY, MOVE_IN_DESCENDANT_NOT_ALLOWED -> HttpStatus.FORBIDDEN;
-            case NOT_FOUND -> HttpStatus.NOT_FOUND;
-            case UNKNOWN_NOTIFICATION -> HttpStatus.BAD_REQUEST;
-            case NAME_ALREADY_EXISTS -> HttpStatus.CONFLICT;
+    @Override
+    protected Optional<PowsyblWsProblemDetail> getRemoteError(DirectoryException ex) {
+        return ex.getRemoteError();
+    }
+
+    @Override
+    protected Optional<DirectoryBusinessErrorCode> getBusinessCode(DirectoryException ex) {
+        return ex.getErrorCode();
+    }
+
+    @Override
+    protected HttpStatus mapStatus(DirectoryBusinessErrorCode errorCode) {
+        return switch (errorCode) {
+            case DIRECTORY_ELEMENT_NOT_FOUND, DIRECTORY_DIRECTORY_NOT_FOUND_IN_PATH -> HttpStatus.NOT_FOUND;
+            case DIRECTORY_ELEMENT_NAME_CONFLICT -> HttpStatus.CONFLICT;
+            case DIRECTORY_NOTIFICATION_UNKNOWN -> HttpStatus.BAD_REQUEST;
+            case DIRECTORY_REMOTE_ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;
+            case DIRECTORY_PERMISSION_DENIED,
+                 DIRECTORY_ELEMENT_NAME_BLANK,
+                 DIRECTORY_ROOT_ALREADY_EXISTS,
+                 DIRECTORY_NOT_DIRECTORY,
+                 DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED,
+                 DIRECTORY_MOVE_SELECTION_EMPTY,
+                 DIRECTORY_CANNOT_DELETE_ELEMENT -> HttpStatus.FORBIDDEN;
         };
-        return ResponseEntity.status(status)
-            .body(buildErrorResponse(request, status, exception.getType().name(), exception.getMessage()));
     }
 
-    @ExceptionHandler(Exception.class)
-    protected ResponseEntity<ErrorResponse> handleAllExceptions(Exception exception, HttpServletRequest request) {
-        HttpStatus status = resolveStatus(exception);
-        String message = exception.getMessage() != null ? exception.getMessage() : status.getReasonPhrase();
-        return ResponseEntity.status(status)
-            .body(buildErrorResponse(request, status, status.name(), message));
+    @Override
+    protected DirectoryBusinessErrorCode defaultRemoteErrorCode() {
+        return DirectoryBusinessErrorCode.DIRECTORY_REMOTE_ERROR;
     }
 
-    private HttpStatus resolveStatus(Exception exception) {
-        if (exception instanceof ResponseStatusException responseStatusException) {
-            return HttpStatus.valueOf(responseStatusException.getStatusCode().value());
-        }
-        if (exception instanceof HttpStatusCodeException httpStatusCodeException) {
-            return HttpStatus.valueOf(httpStatusCodeException.getStatusCode().value());
-        }
-        if (exception instanceof ServletRequestBindingException) {
-            return HttpStatus.BAD_REQUEST;
-        }
-        if (exception instanceof NoResourceFoundException) {
-            return HttpStatus.NOT_FOUND;
-        }
-        return HttpStatus.INTERNAL_SERVER_ERROR;
-    }
-
-    private ErrorResponse buildErrorResponse(HttpServletRequest request, HttpStatus status, String errorCode, String message) {
-        return new ErrorResponse(
-            SERVICE_NAME,
-            errorCode,
-            message,
-            status.value(),
-            Instant.now(),
-            request.getRequestURI(),
-            request.getHeader(CORRELATION_ID_HEADER)
+    @Override
+    protected DirectoryException wrapRemote(PowsyblWsProblemDetail remoteError) {
+        return new DirectoryException(
+            DirectoryBusinessErrorCode.DIRECTORY_REMOTE_ERROR,
+            remoteError.getDetail(),
+            remoteError
         );
     }
 }

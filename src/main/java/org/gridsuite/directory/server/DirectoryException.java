@@ -6,49 +6,63 @@
  */
 package org.gridsuite.directory.server;
 
+import com.powsybl.ws.commons.error.AbstractPowsyblWsException;
+import com.powsybl.ws.commons.error.BusinessErrorCode;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.NonNull;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  */
-public class DirectoryException extends RuntimeException {
+public class DirectoryException extends AbstractPowsyblWsException {
 
-    private final Type type;
+    private final DirectoryBusinessErrorCode errorCode;
+    private final PowsyblWsProblemDetail remoteError;
 
-    public DirectoryException(Type type, String message) {
+    public DirectoryException(DirectoryBusinessErrorCode errorCode, String message) {
+        this(errorCode, message, null);
+    }
+
+    public DirectoryException(DirectoryBusinessErrorCode errorCode, String message, PowsyblWsProblemDetail remoteError) {
         super(Objects.requireNonNull(message, "message must not be null"));
-        this.type = Objects.requireNonNull(type, "type must not be null");
+        this.errorCode = Objects.requireNonNull(errorCode, "errorCode must not be null");
+        this.remoteError = remoteError;
     }
 
     public static DirectoryException createNotificationUnknown(@NonNull String action) {
-        return new DirectoryException(Type.UNKNOWN_NOTIFICATION, String.format("The notification type '%s' is unknown", action));
+        return new DirectoryException(DirectoryBusinessErrorCode.DIRECTORY_NOTIFICATION_UNKNOWN,
+                String.format("The notification type '%s' is unknown", action));
     }
 
     public static DirectoryException createElementNotFound(@NonNull String type, @NonNull UUID uuid) {
-        return new DirectoryException(Type.NOT_FOUND, String.format("%s '%s' not found !", type, uuid));
+        return new DirectoryException(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NOT_FOUND,
+                String.format("%s '%s' not found !", type, uuid));
     }
 
     public static DirectoryException createElementNameAlreadyExists(@NonNull String name) {
-        return new DirectoryException(Type.NAME_ALREADY_EXISTS, String.format("Element with the same name '%s' already exists in the directory !", name));
+        return new DirectoryException(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NAME_CONFLICT,
+                String.format("Element with the same name '%s' already exists in the directory !", name));
     }
 
-    public static DirectoryException of(Type type, String message, Object... args) {
-        return new DirectoryException(type, args.length == 0 ? message : String.format(message, args));
+    public static DirectoryException of(DirectoryBusinessErrorCode errorCode, String message, Object... args) {
+        return new DirectoryException(errorCode, args.length == 0 ? message : String.format(message, args));
     }
 
-    Type getType() {
-        return type;
+    public Optional<DirectoryBusinessErrorCode> getErrorCode() {
+        return Optional.of(errorCode);
     }
 
-    public enum Type {
-        NOT_ALLOWED,
-        NOT_FOUND,
-        NOT_DIRECTORY,
-        UNKNOWN_NOTIFICATION,
-        NAME_ALREADY_EXISTS,
-        MOVE_IN_DESCENDANT_NOT_ALLOWED,
+    @Override
+    public Optional<BusinessErrorCode> getBusinessErrorCode() {
+        return Optional.ofNullable(errorCode);
+    }
+
+    public Optional<PowsyblWsProblemDetail> getRemoteError() {
+        return Optional.ofNullable(remoteError);
     }
 }
