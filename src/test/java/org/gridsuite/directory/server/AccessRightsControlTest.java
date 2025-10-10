@@ -81,6 +81,9 @@ public class AccessRightsControlTest {
     private DirectoryElementRepository directoryElementRepository;
 
     @Autowired
+    private DirectoryService directoryService;
+
+    @Autowired
     private PermissionRepository permissionRepository;
 
     @Autowired
@@ -316,6 +319,36 @@ public class AccessRightsControlTest {
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"));
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, "user1"), HttpStatus.CONFLICT);
         insertSubElement(dirUuid1, toElementAttributes(null, "elementName1", TYPE_01, ADMIN_USER), HttpStatus.CONFLICT);
+    }
+
+    @Test
+    public void testDirectoryContentWithPermissions() throws Exception {
+        // user1 owns a dir with 2 sub-dirs
+        UUID rootUuid1 = insertRootDirectory("user1", "root1");
+        UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"));
+        UUID dirUuid2 = insertSubElement(rootUuid1, toElementAttributes(null, "dir2", DIRECTORY, "user1"));
+
+        // both user1 ans user2 can see them
+        assertEquals(2, directoryService.getDirectoryElements(rootUuid1, List.of(DIRECTORY), false, "user1").size());
+        assertEquals(2, directoryService.getDirectoryElements(rootUuid1, List.of(DIRECTORY), false, "user2").size());
+
+        // user1 restraints access to dir2
+        List<PermissionDTO> newPermissions = List.of(
+                new PermissionDTO(false, List.of(), PermissionType.READ),
+                new PermissionDTO(false, List.of(), PermissionType.WRITE)
+        );
+        updateDirectoryPermissions("user1", dirUuid2, newPermissions).andExpect(status().isOk());
+
+        // only user1 still sees 2 sub-dirs ; users2 only 1
+        assertEquals(2, directoryService.getDirectoryElements(rootUuid1, List.of(DIRECTORY), false, "user1").size());
+        assertEquals(1, directoryService.getDirectoryElements(rootUuid1, List.of(DIRECTORY), false, "user2").size());
+
+        // user1 restraints access to dir1
+        updateDirectoryPermissions("user1", dirUuid1, newPermissions).andExpect(status().isOk());
+
+        // only user1 still sees 2 sub-dirs ; users2 nothing
+        assertEquals(2, directoryService.getDirectoryElements(rootUuid1, List.of(DIRECTORY), false, "user1").size());
+        assertEquals(0, directoryService.getDirectoryElements(rootUuid1, List.of(DIRECTORY), false, "user2").size());
     }
 
     @Test
