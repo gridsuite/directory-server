@@ -1123,18 +1123,18 @@ public class DirectoryTest {
     @Test
     public void testGetElementWithNonAdminUser() {
         // Insert a root directory by the user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", ADMIN_USER);
 
         // Insert an element of type TYPE_02 in the root directory by the user1
-        ElementAttributes element1Attributes = toElementAttributes(TYPE_02_UUID, "elementName1", TYPE_02, "user1");
+        ElementAttributes element1Attributes = toElementAttributes(TYPE_02_UUID, "elementName1", TYPE_02, ADMIN_USER);
         insertAndCheckSubElementInRootDir(rootDirUuid, element1Attributes);
 
         // Insert an element of type TYPE_03 in the root directory by the user1
-        ElementAttributes element2Attributes = toElementAttributes(TYPE_03_UUID, "elementName2", TYPE_03, "user1");
+        ElementAttributes element2Attributes = toElementAttributes(TYPE_03_UUID, "elementName2", TYPE_03, ADMIN_USER);
         insertAndCheckSubElementInRootDir(rootDirUuid, element2Attributes);
 
         // Insert an element of type TYPE_03 in the root directory by the user1
-        ElementAttributes element3Attributes = toElementAttributes(UUID.randomUUID(), "elementName3", TYPE_03, "user1");
+        ElementAttributes element3Attributes = toElementAttributes(UUID.randomUUID(), "elementName3", TYPE_03, ADMIN_USER);
         insertAndCheckSubElementInRootDir(rootDirUuid, element3Attributes);
 
         ElementAttributes rootDirectory = getElements(List.of(rootDirUuid), "user1", false, 200).get(0);
