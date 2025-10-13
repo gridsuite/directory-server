@@ -105,16 +105,16 @@ public class DirectoryRepositoryService {
                 .orElse(null);
     }
 
-    public List<DirectoryElementRepository.SubDirectoryCount> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes) {
-        return directoryElementRepository.getSubDirectoriesCounts(subDirectories, elementTypes);
-    }
-
     public List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids) {
         return directoryElementRepository.findAllByIdIn(uuids);
     }
 
     public List<DirectoryElementEntity> findAllByParentId(UUID parentId) {
         return directoryElementRepository.findAllByParentId(parentId);
+    }
+
+    public List<DirectoryElementRepository.ElementParentage> findAllByParentIdInAndTypeIn(List<UUID> parentIds, List<String> types) {
+        return directoryElementRepository.findAllByParentIdsAndElementTypes(parentIds, types);
     }
 
     public List<DirectoryElementEntity> findRootDirectories() {

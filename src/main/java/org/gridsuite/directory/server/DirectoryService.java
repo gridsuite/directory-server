@@ -248,11 +248,14 @@ public class DirectoryService {
         insertElement(elementAttributes, parentDirectoryUuid);
     }
 
-    private Map<UUID, Long> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> types) {
-        List<DirectoryElementRepository.SubDirectoryCount> subdirectoriesCountsList = repositoryService.getSubDirectoriesCounts(subDirectories, types);
-        Map<UUID, Long> subdirectoriesCountsMap = new HashMap<>();
-        subdirectoriesCountsList.forEach(e -> subdirectoriesCountsMap.put(e.getId(), e.getCount()));
-        return subdirectoriesCountsMap;
+    private Map<UUID, Long> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> types, String userId) {
+        List<UUID> readableSubDirectories = subDirectories.stream().filter(dirId -> hasReadPermissions(userId, List.of(dirId))).toList();
+        return repositoryService.findAllByParentIdInAndTypeIn(readableSubDirectories, types).stream()
+                .filter(child -> hasReadPermissions(userId, List.of(child.getId())))
+                .collect(Collectors.groupingBy(
+                        DirectoryElementRepository.ElementParentage::getParentId,
+                        Collectors.counting()
+                ));
     }
 
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
@@ -270,25 +273,25 @@ public class DirectoryService {
             List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(directoryUuid).stream().toList();
             return descendents
                     .stream()
-                    .filter(e -> types.isEmpty() || types.contains(e.getType()))
+                    .filter(e -> (types.isEmpty() || types.contains(e.getType())) && hasReadPermissions(userId, List.of(e.getId())))
                     .map(ElementAttributes::toElementAttributes)
                     .toList();
         } else {
-            return getAllDirectoryElementsStream(directoryUuid, types).toList();
+            return getAllDirectoryElementsStream(directoryUuid, types, userId).toList();
         }
     }
 
-    private Stream<ElementAttributes> getOnlyElementsStream(UUID directoryUuid, List<String> types) {
-        return getAllDirectoryElementsStream(directoryUuid, types)
+    private Stream<ElementAttributes> getOnlyElementsStream(UUID directoryUuid, List<String> types, String userId) {
+        return getAllDirectoryElementsStream(directoryUuid, types, userId)
                 .filter(elementAttributes -> !elementAttributes.getType().equals(DIRECTORY));
     }
 
-    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types) {
+    private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
         List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentId(directoryUuid);
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements, userId);
         return directoryElements
                 .stream()
-                .filter(e -> e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType()))
+                .filter(e -> (e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType())) && hasReadPermissions(userId, List.of(e.getId())))
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
@@ -299,21 +302,21 @@ public class DirectoryService {
         if (!roleService.isUserExploreAdmin()) {
             directoryElements = directoryElements.stream().filter(directoryElementEntity -> hasReadPermissions(userId, List.of(directoryElementEntity.getId()))).toList();
         }
-        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements);
+        Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements, userId);
         return directoryElements.stream()
                 .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
                 .toList();
     }
 
-    private Map<UUID, Long> getSubDirectoriesCountsMap(List<String> types, List<DirectoryElementEntity> directoryElements) {
-        return getSubDirectoriesCounts(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types);
+    private Map<UUID, Long> getSubDirectoriesCountsMap(List<String> types, List<DirectoryElementEntity> directoryElements, String userId) {
+        return getSubDirectoriesCounts(directoryElements.stream().map(DirectoryElementEntity::getId).toList(), types, userId);
     }
 
     public void updateElement(UUID elementUuid, ElementAttributes newElementAttributes, String userId) {
         DirectoryElementEntity directoryElement = getDirectoryElementEntity(elementUuid);
         if (!directoryElement.isAttributesUpdatable(newElementAttributes, userId) ||
             !directoryElement.getName().equals(newElementAttributes.getElementName()) &&
-             directoryHasElementOfNameAndType(directoryElement.getParentId(), newElementAttributes.getElementName(), directoryElement.getType())) {
+             directoryHasElementOfNameAndType(directoryElement.getParentId(), newElementAttributes.getElementName(), directoryElement.getType(), userId)) {
             throw new DirectoryException(NOT_ALLOWED);
         }
 
@@ -350,7 +353,7 @@ public class DirectoryService {
         List<DirectoryElementEntity> descendents = isDirectory ? repositoryService.findAllDescendants(element.getId()).stream().toList() : List.of();
 
         // validate move elements
-        validateElementForMove(element, newDirectoryUuid, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()));
+        validateElementForMove(element, newDirectoryUuid, descendents.stream().map(DirectoryElementEntity::getId).collect(Collectors.toSet()), userId);
 
         // we update the parent of the moving element
         updateElementParentDirectory(element, newDirectoryUuid);
@@ -369,12 +372,12 @@ public class DirectoryService {
 
     }
 
-    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, Set<UUID> descendentsUuids) {
+    private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, Set<UUID> descendentsUuids, String userId) {
         if (newDirectoryUuid == element.getId() || descendentsUuids.contains(newDirectoryUuid)) {
             throw new DirectoryException(MOVE_IN_DESCENDANT_NOT_ALLOWED);
         }
 
-        if (directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType())) {
+        if (directoryHasElementOfNameAndType(newDirectoryUuid, element.getName(), element.getType(), userId)) {
             throw DirectoryException.createElementNameAlreadyExists(element.getName());
         }
     }
@@ -393,8 +396,8 @@ public class DirectoryService {
         }
     }
 
-    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String elementName, String elementType) {
-        return getOnlyElementsStream(directoryUUID, List.of(elementType))
+    private boolean directoryHasElementOfNameAndType(UUID directoryUUID, String elementName, String elementType, String userId) {
+        return getOnlyElementsStream(directoryUUID, List.of(elementType), userId)
             .anyMatch(
                 e -> e.getElementName().equals(elementName)
             );
@@ -429,7 +432,7 @@ public class DirectoryService {
     }
 
     private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of()).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
+        getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
     }
 
     /**
@@ -502,15 +505,15 @@ public class DirectoryService {
         //if the user is not an admin we filter out elements he doesn't have the permission on
         if (!roleService.isUserExploreAdmin()) {
             elementEntities = elementEntities.stream().filter(directoryElementEntity ->
-                            hasReadPermissions(userId, List.of(directoryElementEntity.getId()))
-                    ).toList();
+                    hasReadPermissions(userId, List.of(directoryElementEntity.getId()))
+            ).toList();
         }
 
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
             throw new DirectoryException(NOT_FOUND);
         }
 
-        Map<UUID, Long> subElementsCount = getSubDirectoriesCounts(elementEntities.stream().map(DirectoryElementEntity::getId).toList(), types);
+        Map<UUID, Long> subElementsCount = getSubDirectoriesCounts(elementEntities.stream().map(DirectoryElementEntity::getId).toList(), types, userId);
 
         return elementEntities.stream()
                 .map(attribute -> toElementAttributes(attribute, subElementsCount.getOrDefault(attribute.getId(), 0L)))
