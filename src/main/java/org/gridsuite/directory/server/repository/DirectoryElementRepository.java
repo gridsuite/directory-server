@@ -57,15 +57,6 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     boolean existsByIdAndOwnerOrId(UUID id, String owner, UUID id2);
 
-    interface SubDirectoryCount {
-        UUID getId();
-
-        Long getCount();
-    }
-
-    @Query("SELECT d.parentId AS id, COUNT(*) AS count FROM DirectoryElementEntity d WHERE d.parentId IN :subDirectories AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes) GROUP BY d.parentId")
-    List<SubDirectoryCount> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> elementTypes);
-
     @Transactional
     void deleteById(UUID id);
 
@@ -101,4 +92,13 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
                     "WHERE e.id IN (SELECT dh.element_id FROM DescendantHierarchy dh) AND e.id != :elementId"
     )
     List<DirectoryElementEntity> findAllDescendants(@Param("elementId") UUID elementId);
+
+    interface ElementParentage {
+        UUID getId();
+
+        UUID getParentId();
+    }
+
+    @Query("SELECT d.id AS id, d.parentId AS parentId FROM DirectoryElementEntity d WHERE d.parentId IN :parentIds AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes)")
+    List<ElementParentage> findAllByParentIdsAndElementTypes(List<UUID> parentIds, List<String> elementTypes);
 }
