@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
@@ -45,8 +46,7 @@ class RestResponseEntityExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getBusinessErrorCode())
-            .isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("directory.elementNotFound"));
+        assertEquals("directory.elementNotFound", response.getBody().getBusinessErrorCode());
     }
 
     @Test
@@ -67,7 +67,7 @@ class RestResponseEntityExceptionHandlerTest {
         assertThat(body).isNotNull();
         assertThat(body.getDetail()).isEqualTo("Denied");
         assertThat(body.getChain()).hasSize(1);
-        assertThat(body.getChain().getFirst().fromServer()).isEqualTo(PowsyblWsProblemDetail.ServerName.of("directory-server"));
+        assertEquals("directory-server", body.getChain().getFirst().getFromServer());
     }
 
     @Test
@@ -86,8 +86,7 @@ class RestResponseEntityExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         PowsyblWsProblemDetail body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getBusinessErrorCode())
-            .isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("directory.remoteError"));
+        assertEquals("directory.remoteError", body.getBusinessErrorCode());
         assertThat(body.getDetail()).contains("remote server");
     }
 
@@ -110,8 +109,7 @@ class RestResponseEntityExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getBusinessErrorCode())
-            .isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("directory.downstreamNotFound"));
+        assertEquals("directory.downstreamNotFound", response.getBody().getBusinessErrorCode());
     }
 
     private static final class TestRestResponseEntityExceptionHandler extends RestResponseEntityExceptionHandler {
