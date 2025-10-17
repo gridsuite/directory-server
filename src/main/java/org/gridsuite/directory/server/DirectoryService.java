@@ -273,7 +273,7 @@ public class DirectoryService {
             List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(directoryUuid).stream().toList();
             return descendents
                     .stream()
-                    .filter(e -> (types.isEmpty() || types.contains(e.getType())) &&  hasReadPermissions(userId, List.of(e.getId())))
+                    .filter(e -> (types.isEmpty() || types.contains(e.getType())) && hasReadPermissions(userId, List.of(e.getId())))
                     .map(ElementAttributes::toElementAttributes)
                     .toList();
         } else {
