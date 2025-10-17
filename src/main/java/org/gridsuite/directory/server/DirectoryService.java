@@ -259,7 +259,7 @@ public class DirectoryService {
     }
 
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
-        if (!roleService.isUserExploreAdmin() && !hasReadPermissions(userId, List.of(directoryUuid))) {
+        if (!hasReadPermissions(userId, List.of(directoryUuid))) {
             return List.of();
         }
         ElementAttributes elementAttributes = getElement(directoryUuid);
@@ -790,7 +790,7 @@ public class DirectoryService {
     }
 
     public void validatePermissionsGetAccess(UUID directoryUuid, String userId) {
-        if (!roleService.isUserExploreAdmin() && !hasReadPermissions(userId, List.of(directoryUuid))) {
+        if (!hasReadPermissions(userId, List.of(directoryUuid))) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
