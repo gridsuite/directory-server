@@ -749,7 +749,7 @@ public class DirectoryService {
 
     private boolean hasManagePermission(String userId, List<UUID> elementUuids) {
         List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
-        return elements.stream().allMatch(element ->
+        return roleService.isUserExploreAdmin() || elements.stream().allMatch(element ->
             //If it's a directory we check its own write permission else we check the permission on the element parent directory
             checkPermission(userId, List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), MANAGE)
         );
@@ -902,7 +902,7 @@ public class DirectoryService {
     }
 
     private void validatePermissionUpdateAccess(UUID directoryUuid, String userId) {
-        if (!roleService.isUserExploreAdmin() && !hasManagePermission(userId, List.of(directoryUuid))) {
+        if (!hasManagePermission(userId, List.of(directoryUuid))) {
             throw new DirectoryException(NOT_ALLOWED);
         }
     }
