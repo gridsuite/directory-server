@@ -6,8 +6,7 @@
  */
 package org.gridsuite.directory.server;
 
-import com.powsybl.ws.commons.error.AbstractPowsyblWsException;
-import com.powsybl.ws.commons.error.BusinessErrorCode;
+import com.powsybl.ws.commons.error.AbstractBusinessException;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.NonNull;
 
@@ -19,7 +18,7 @@ import java.util.UUID;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  */
-public class DirectoryException extends AbstractPowsyblWsException {
+public class DirectoryException extends AbstractBusinessException {
 
     private final DirectoryBusinessErrorCode errorCode;
     private final PowsyblWsProblemDetail remoteError;
@@ -53,13 +52,9 @@ public class DirectoryException extends AbstractPowsyblWsException {
         return new DirectoryException(errorCode, args.length == 0 ? message : String.format(message, args));
     }
 
-    public Optional<DirectoryBusinessErrorCode> getErrorCode() {
-        return Optional.of(errorCode);
-    }
-
     @Override
-    public Optional<BusinessErrorCode> getBusinessErrorCode() {
-        return Optional.ofNullable(errorCode);
+    public DirectoryBusinessErrorCode getBusinessErrorCode() {
+        return errorCode;
     }
 
     public Optional<PowsyblWsProblemDetail> getRemoteError() {

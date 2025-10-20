@@ -24,20 +24,20 @@ class DirectoryExceptionTest {
     void staticFactoriesProduceExpectedMessages() {
         DirectoryException notification = DirectoryException.createNotificationUnknown("ARCHIVE");
         assertThat(notification.getMessage()).contains("ARCHIVE");
-        assertThat(notification.getErrorCode()).contains(DirectoryBusinessErrorCode.DIRECTORY_NOTIFICATION_UNKNOWN);
+        assertThat(notification.getBusinessErrorCode()).isEqualTo(DirectoryBusinessErrorCode.DIRECTORY_NOTIFICATION_UNKNOWN);
 
         DirectoryException notFound = DirectoryException.createElementNotFound("Folder", UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
         assertThat(notFound.getMessage()).contains("Folder");
-        assertThat(notFound.getErrorCode()).contains(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NOT_FOUND);
+        assertThat(notFound.getBusinessErrorCode()).isEqualTo(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NOT_FOUND);
 
         DirectoryException conflict = DirectoryException.createElementNameAlreadyExists("report");
         assertThat(conflict.getMessage()).contains("report");
-        assertThat(conflict.getErrorCode()).contains(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NAME_CONFLICT);
+        assertThat(conflict.getBusinessErrorCode()).isEqualTo(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NAME_CONFLICT);
 
         DirectoryException formatted = DirectoryException.of(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NAME_BLANK,
             "Element '%s' invalid", "x");
         assertThat(formatted.getMessage()).isEqualTo("Element 'x' invalid");
-        assertThat(formatted.getErrorCode()).contains(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NAME_BLANK);
+        assertThat(formatted.getBusinessErrorCode()).isEqualTo(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NAME_BLANK);
     }
 
     @Test
@@ -54,6 +54,6 @@ class DirectoryExceptionTest {
             remote);
 
         assertThat(exception.getRemoteError()).contains(remote);
-        assertThat(exception.getBusinessErrorCode()).contains(DirectoryBusinessErrorCode.DIRECTORY_REMOTE_ERROR);
+        assertThat(exception.getBusinessErrorCode()).isEqualTo(DirectoryBusinessErrorCode.DIRECTORY_REMOTE_ERROR);
     }
 }

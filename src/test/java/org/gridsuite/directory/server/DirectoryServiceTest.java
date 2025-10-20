@@ -119,7 +119,7 @@ class DirectoryServiceTest {
 
         // Insert the same element in the same directory throws an exception
         DirectoryException directoryException = assertThrows(DirectoryException.class, () -> directoryService.createElement(elementAttributes, rootUuid, "User1", false));
-        assertEquals(DIRECTORY_ELEMENT_NAME_CONFLICT, directoryException.getErrorCode().get());
+        assertEquals(DIRECTORY_ELEMENT_NAME_CONFLICT, directoryException.getBusinessErrorCode());
         assertEquals(DirectoryException.createElementNameAlreadyExists(elementAttributes.getElementName()).getMessage(), directoryException.getMessage());
 
         // Insert the same element in the same directory with new name generation does not throw an exception
@@ -138,7 +138,7 @@ class DirectoryServiceTest {
         InOrder inOrder = inOrder(directoryService);
         when(directoryService.getDuplicateNameCandidate(root2Uuid, elementAttributes.getElementName(), elementAttributes.getType(), "User1")).thenReturn(elementAttributes.getElementName());
         directoryException = assertThrows(DirectoryException.class, () -> directoryService.duplicateElement(element2Uuid, root2Uuid, root2Uuid, "User1"));
-        assertEquals(DIRECTORY_ELEMENT_NAME_CONFLICT, directoryException.getErrorCode().get());
+        assertEquals(DIRECTORY_ELEMENT_NAME_CONFLICT, directoryException.getBusinessErrorCode());
         assertEquals(DirectoryException.createElementNameAlreadyExists(elementAttributes.getElementName()).getMessage(), directoryException.getMessage());
         inOrder.verify(directoryService, calls(MAX_RETRY)).getDuplicateNameCandidate(root2Uuid, elementAttributes.getElementName(), elementAttributes.getType(), "User1");
     }
@@ -204,7 +204,7 @@ class DirectoryServiceTest {
         // move directory to it's descendent
         List<UUID> list = List.of(dirUuid); // Just for Sonar issue (assertThrows)
         DirectoryException exception1 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, subDirUuid, "user1"));
-        assertEquals(DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED, exception1.getErrorCode().get());
+        assertEquals(DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED, exception1.getBusinessErrorCode());
     }
 
     @Test
@@ -232,6 +232,6 @@ class DirectoryServiceTest {
 
         List<UUID> list = List.of(elementUuid1); // Just for Sonar issue (assertThrows)
         DirectoryException exception2 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, elementUuid2, "user1"));
-        assertEquals(DIRECTORY_NOT_DIRECTORY, exception2.getErrorCode().get());
+        assertEquals(DIRECTORY_NOT_DIRECTORY, exception2.getBusinessErrorCode());
     }
 }

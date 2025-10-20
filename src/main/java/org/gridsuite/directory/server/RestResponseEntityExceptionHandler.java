@@ -32,8 +32,8 @@ public class RestResponseEntityExceptionHandler
     }
 
     @Override
-    protected Optional<DirectoryBusinessErrorCode> getBusinessCode(DirectoryException ex) {
-        return ex.getErrorCode();
+    protected DirectoryBusinessErrorCode getBusinessCode(DirectoryException ex) {
+        return ex.getBusinessErrorCode();
     }
 
     @Override
