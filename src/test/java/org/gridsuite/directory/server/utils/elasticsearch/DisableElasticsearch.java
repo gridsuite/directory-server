@@ -7,7 +7,10 @@
 package org.gridsuite.directory.server.utils.elasticsearch;
 
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.Mockito;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.lang.annotation.*;
@@ -17,11 +20,24 @@ import java.lang.annotation.*;
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+@TestPropertySource(properties = {
+    "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration"
+})
 @Inherited
-@MockBean(EmbeddedElasticsearch.class)
-@MockBean(DirectoryElementInfosRepository.class)
-@TestPropertySource(properties = DisableElasticsearch.DISABLE_PROPERTY_NAME + "=true")
+@Import(DisableElasticsearch.MockConfig.class)
 public @interface DisableElasticsearch {
-    String DISABLE_PROPERTY_NAME = "test.disable.data-elasticsearch";
+
+    @TestConfiguration(proxyBeanMethods = false)
+    class MockConfig {
+        @Bean
+        public EmbeddedElasticsearch embeddedElasticsearch() {
+            return Mockito.mock(EmbeddedElasticsearch.class);
+        }
+
+        @Bean
+        public DirectoryElementInfosRepository directoryElementInfosRepository() {
+            return Mockito.mock(DirectoryElementInfosRepository.class);
+        }
+    }
 }
 
