@@ -529,12 +529,7 @@ public class DirectoryService {
     }
 
     public void notify(@NonNull String notificationName, @NonNull UUID elementUuid, @NonNull String userId) {
-        NotificationType notification;
-        try {
-            notification = NotificationType.valueOf(notificationName.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException(String.format("The notification type '%s' is unknown", notificationName), e);
-        }
+        NotificationType notification = NotificationType.valueOf(notificationName.toUpperCase());
 
         if (notification == NotificationType.UPDATE_DIRECTORY) {
             ElementAttributes elementAttributes = getElement(elementUuid);
@@ -542,7 +537,7 @@ public class DirectoryService {
 
             notifyDirectoryHasChanged(parentUuid != null ? parentUuid : elementUuid, userId, elementAttributes.getElementName());
         } else {
-            throw new RuntimeException(String.format("The notification type '%s' is unknown", notification.name()));
+            throw new IllegalArgumentException(String.format("The notification type '%s' is unknown", notification.name()));
         }
     }
 
