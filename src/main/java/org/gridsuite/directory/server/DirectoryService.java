@@ -134,7 +134,7 @@ public class DirectoryService {
 
     private void assertRootDirectoryNotExist(String rootName) {
         if (repositoryService.isRootDirectoryExist(rootName)) {
-            throw DirectoryException.of(DIRECTORY_ROOT_ALREADY_EXISTS, "Root directory '%s' already exists", rootName);
+            throw DirectoryException.of(DIRECTORY_ELEMENT_NAME_CONFLICT, "Root directory '%s' already exists", rootName);
         }
     }
 
@@ -533,7 +533,7 @@ public class DirectoryService {
         try {
             notification = NotificationType.valueOf(notificationName.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw DirectoryException.createNotificationUnknown(notificationName);
+            throw new RuntimeException(String.format("The notification type '%s' is unknown", notificationName), e);
         }
 
         if (notification == NotificationType.UPDATE_DIRECTORY) {
@@ -542,7 +542,7 @@ public class DirectoryService {
 
             notifyDirectoryHasChanged(parentUuid != null ? parentUuid : elementUuid, userId, elementAttributes.getElementName());
         } else {
-            throw DirectoryException.createNotificationUnknown(notification.name());
+            throw new RuntimeException(String.format("The notification type '%s' is unknown", notification.name()));
         }
     }
 
@@ -576,7 +576,7 @@ public class DirectoryService {
         for (String s : directoryPath) {
             UUID currentDirectoryUuid = getDirectoryUuid(s, parentDirectoryUuid);
             if (currentDirectoryUuid == null) {
-                throw DirectoryException.of(DIRECTORY_DIRECTORY_NOT_FOUND_IN_PATH, "Directory '%s' not found in path", s);
+                throw DirectoryException.of(DIRECTORY_ELEMENT_NOT_FOUND, "Directory '%s' not found in path", s);
             } else {
                 parentDirectoryUuid = currentDirectoryUuid;
             }

@@ -16,17 +16,11 @@ import com.powsybl.ws.commons.error.BusinessErrorCode;
 public enum DirectoryBusinessErrorCode implements BusinessErrorCode {
     DIRECTORY_PERMISSION_DENIED("directory.permissionDenied"),
     DIRECTORY_ELEMENT_NAME_BLANK("directory.elementNameBlank"),
-    DIRECTORY_ROOT_ALREADY_EXISTS("directory.rootAlreadyExists"),
     DIRECTORY_NOT_DIRECTORY("directory.notDirectory"),
     DIRECTORY_ELEMENT_NAME_CONFLICT("directory.elementNameConflict"),
     DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED("directory.moveInDescendantNotAllowed"),
     DIRECTORY_MOVE_SELECTION_EMPTY("directory.moveSelectionEmpty"),
-    DIRECTORY_ELEMENT_NOT_FOUND("directory.elementNotFound"),
-    DIRECTORY_DIRECTORY_NOT_FOUND_IN_PATH("directory.directoryNotFoundInPath"),
-    DIRECTORY_NOTIFICATION_UNKNOWN("directory.notificationUnknown"),
-    DIRECTORY_CANNOT_DELETE_ELEMENT("directory.cannotDeleteElement"),
-    DIRECTORY_REMOTE_ERROR("directory.remoteError");
-
+    DIRECTORY_ELEMENT_NOT_FOUND("directory.elementNotFound");
     private final String code;
 
     DirectoryBusinessErrorCode(String code) {

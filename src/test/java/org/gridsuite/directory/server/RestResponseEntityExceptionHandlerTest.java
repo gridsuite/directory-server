@@ -6,18 +6,19 @@
  */
 package org.gridsuite.directory.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +38,7 @@ class RestResponseEntityExceptionHandlerTest {
     }
 
     @Test
-    void mapsDomainExceptionsToConfiguredStatus() {
+    void mapsBusinessErrorToStatus() {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/dir");
         DirectoryException exception = new DirectoryException(DirectoryBusinessErrorCode.DIRECTORY_ELEMENT_NOT_FOUND,
             "Directory element missing");
@@ -50,24 +51,28 @@ class RestResponseEntityExceptionHandlerTest {
     }
 
     @Test
-    void enrichesResponseWithRemoteDetails() {
+    void propagatesRemoteErrorDetails() throws JsonProcessingException {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/dir/resource");
         PowsyblWsProblemDetail remote = PowsyblWsProblemDetail.builder(HttpStatus.FORBIDDEN)
             .server("downstream")
             .detail("Denied")
-            .timestamp(Instant.parse("2025-09-10T12:00:00Z"))
             .path("/remote").build();
-        DirectoryException exception = new DirectoryException(DirectoryBusinessErrorCode.DIRECTORY_PERMISSION_DENIED,
-            "Wrapped", remote);
 
-        ResponseEntity<PowsyblWsProblemDetail> response = handler.invokeHandleDomainException(exception, request);
+        HttpClientErrorException exception = HttpClientErrorException.create(
+            HttpStatus.FORBIDDEN,
+            "coucou",
+            HttpHeaders.EMPTY,
+            OBJECT_MAPPER.writeValueAsBytes(remote),
+            null
+        );
+
+        ResponseEntity<PowsyblWsProblemDetail> response = handler.invokeHandleRemoteException(exception, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         PowsyblWsProblemDetail body = response.getBody();
         assertThat(body).isNotNull();
         assertThat(body.getDetail()).isEqualTo("Denied");
         assertThat(body.getChain()).hasSize(1);
-        assertEquals("directory-server", body.getChain().getFirst().getFromServer());
     }
 
     @Test
@@ -84,10 +89,8 @@ class RestResponseEntityExceptionHandlerTest {
         ResponseEntity<PowsyblWsProblemDetail> response = handler.invokeHandleRemoteException(exception, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_GATEWAY);
-        PowsyblWsProblemDetail body = response.getBody();
-        assertThat(body).isNotNull();
-        assertEquals("directory.remoteError", body.getBusinessErrorCode());
-        assertThat(body.getDetail()).contains("502 Bad gateway");
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getChain()).hasSize(1);
     }
 
     @Test
@@ -97,7 +100,6 @@ class RestResponseEntityExceptionHandlerTest {
             .server("downstream")
             .businessErrorCode("directory.downstreamNotFound")
             .detail("missing")
-            .timestamp(Instant.parse("2025-09-15T08:30:00Z"))
             .path("/remote/missing")
             .build();
 

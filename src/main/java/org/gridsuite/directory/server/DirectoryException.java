@@ -7,11 +7,10 @@
 package org.gridsuite.directory.server;
 
 import com.powsybl.ws.commons.error.AbstractBusinessException;
-import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -21,21 +20,10 @@ import java.util.UUID;
 public class DirectoryException extends AbstractBusinessException {
 
     private final DirectoryBusinessErrorCode errorCode;
-    private final PowsyblWsProblemDetail remoteError;
 
     public DirectoryException(DirectoryBusinessErrorCode errorCode, String message) {
-        this(errorCode, message, null);
-    }
-
-    public DirectoryException(DirectoryBusinessErrorCode errorCode, String message, PowsyblWsProblemDetail remoteError) {
         super(Objects.requireNonNull(message, "message must not be null"));
         this.errorCode = Objects.requireNonNull(errorCode, "errorCode must not be null");
-        this.remoteError = remoteError;
-    }
-
-    public static DirectoryException createNotificationUnknown(@NonNull String action) {
-        return new DirectoryException(DirectoryBusinessErrorCode.DIRECTORY_NOTIFICATION_UNKNOWN,
-                String.format("The notification type '%s' is unknown", action));
     }
 
     public static DirectoryException createElementNotFound(@NonNull String type, @NonNull UUID uuid) {
@@ -52,12 +40,10 @@ public class DirectoryException extends AbstractBusinessException {
         return new DirectoryException(errorCode, args.length == 0 ? message : String.format(message, args));
     }
 
+    @NotNull
     @Override
     public DirectoryBusinessErrorCode getBusinessErrorCode() {
         return errorCode;
     }
 
-    public Optional<PowsyblWsProblemDetail> getRemoteError() {
-        return Optional.ofNullable(remoteError);
-    }
 }

@@ -308,7 +308,7 @@ public class AccessRightsControlTest {
     public void testExistence() throws Exception {
         // Insert root directory with same name not allowed
         UUID rootUuid1 = insertRootDirectory("user1", "root1");
-        insertRootDirectory("user1", "root1", HttpStatus.FORBIDDEN);
+        insertRootDirectory("user1", "root1", HttpStatus.CONFLICT);
 
         // Insert elements with same name in a directory not allowed
         UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"));
