@@ -33,7 +33,7 @@ public class RestResponseEntityExceptionHandler
     @Override
     protected HttpStatus mapStatus(DirectoryBusinessErrorCode errorCode) {
         return switch (errorCode) {
-            case DIRECTORY_ELEMENT_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case DIRECTORY_ELEMENT_NOT_FOUND, DIRECTORY_SOME_ELEMENTS_ARE_MISSING -> HttpStatus.NOT_FOUND;
             case DIRECTORY_ELEMENT_NAME_CONFLICT -> HttpStatus.CONFLICT;
             case DIRECTORY_PERMISSION_DENIED,
                  DIRECTORY_ELEMENT_NAME_BLANK,

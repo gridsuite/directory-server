@@ -511,7 +511,7 @@ public class DirectoryService {
         }
 
         if (strictMode && elementEntities.size() != ids.stream().distinct().count()) {
-            throw DirectoryException.of(DIRECTORY_ELEMENT_NOT_FOUND, "Some requested elements were not found");
+            throw DirectoryException.of(DIRECTORY_SOME_ELEMENTS_ARE_MISSING, "Some requested elements are missing");
         }
 
         Map<UUID, Long> subElementsCount = getSubDirectoriesCounts(elementEntities.stream().map(DirectoryElementEntity::getId).toList(), types);

@@ -19,6 +19,7 @@ public enum DirectoryBusinessErrorCode implements BusinessErrorCode {
     DIRECTORY_NOT_DIRECTORY("directory.notDirectory"),
     DIRECTORY_ELEMENT_NAME_CONFLICT("directory.elementNameConflict"),
     DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED("directory.moveInDescendantNotAllowed"),
+    DIRECTORY_SOME_ELEMENTS_ARE_MISSING("directory.someElementsAreMissing"),
     DIRECTORY_ELEMENT_NOT_FOUND("directory.elementNotFound");
     private final String code;
 
