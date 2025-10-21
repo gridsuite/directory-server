@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server;
 
+import org.gridsuite.directory.server.error.DirectoryBusinessErrorCode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 

@@ -9,6 +9,7 @@ package org.gridsuite.directory.server;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
+import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
@@ -28,7 +29,7 @@ import static org.gridsuite.directory.server.DirectoryService.MAX_RETRY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
-import static org.gridsuite.directory.server.DirectoryBusinessErrorCode.*;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 

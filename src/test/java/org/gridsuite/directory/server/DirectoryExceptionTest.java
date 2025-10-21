@@ -6,6 +6,8 @@
  */
 package org.gridsuite.directory.server;
 
+import org.gridsuite.directory.server.error.DirectoryBusinessErrorCode;
+import org.gridsuite.directory.server.error.DirectoryException;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;

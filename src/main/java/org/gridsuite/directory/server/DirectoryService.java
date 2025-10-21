@@ -9,6 +9,7 @@ package org.gridsuite.directory.server;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.*;
 import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,7 +25,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.directory.server.DirectoryBusinessErrorCode.*;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.*;
@@ -334,10 +335,6 @@ public class DirectoryService {
 
     @Transactional
     public void moveElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
-        if (elementsUuids.isEmpty()) {
-            throw DirectoryException.of(DIRECTORY_MOVE_SELECTION_EMPTY, "Cannot move elements: no elements provided");
-        }
-
         validateNewDirectory(newDirectoryUuid);
 
         elementsUuids.forEach(elementUuid -> moveElementDirectory(getDirectoryElementEntity(elementUuid), newDirectoryUuid, userId));

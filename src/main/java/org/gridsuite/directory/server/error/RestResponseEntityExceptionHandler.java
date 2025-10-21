@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.directory.server;
+package org.gridsuite.directory.server.error;
 
 import com.powsybl.ws.commons.error.AbstractBaseRestExceptionHandler;
 import com.powsybl.ws.commons.error.ServerNameProvider;
@@ -38,8 +38,7 @@ public class RestResponseEntityExceptionHandler
             case DIRECTORY_PERMISSION_DENIED,
                  DIRECTORY_ELEMENT_NAME_BLANK,
                  DIRECTORY_NOT_DIRECTORY,
-                 DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED,
-                 DIRECTORY_MOVE_SELECTION_EMPTY -> HttpStatus.FORBIDDEN;
+                 DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED -> HttpStatus.FORBIDDEN;
         };
     }
 
