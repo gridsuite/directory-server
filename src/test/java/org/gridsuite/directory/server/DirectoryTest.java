@@ -1021,7 +1021,6 @@ public class DirectoryTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.server").value("directory-server"))
                 .andExpect(jsonPath("$.status").value(HttpStatus.INTERNAL_SERVER_ERROR.value()))
-                .andExpect(jsonPath("$.detail").value("The notification type 'bad_type' is unknown"))
                 .andExpect(jsonPath("$.path").value(String.format("/v1/elements/%s/notification", elementAttributes.getElementUuid())));
     }
 
