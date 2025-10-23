@@ -165,7 +165,7 @@
             <dependency>
                 <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-ws-commons</artifactId>
-                <version>1.29.0</version>
+                <version>1.30.0</version>
             </dependency>
             <!-- imports -->
             <dependency>
