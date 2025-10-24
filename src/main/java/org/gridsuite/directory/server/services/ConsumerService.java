@@ -12,6 +12,7 @@ package org.gridsuite.directory.server.services;
  */
 
 import org.gridsuite.directory.server.DirectoryService;
+import org.gridsuite.directory.server.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +21,12 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import static org.gridsuite.directory.server.NotificationService.HEADER_ERROR;
-import static org.gridsuite.directory.server.NotificationService.HEADER_USER_ID;
+import static org.gridsuite.directory.server.NotificationService.*;
 
 @Service
 public class ConsumerService {
@@ -41,10 +43,12 @@ public class ConsumerService {
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
 
     DirectoryService directoryService;
+    private final NotificationService notificationService;
 
     @Autowired
-    public ConsumerService(DirectoryService directoryService) {
+    public ConsumerService(DirectoryService directoryService, NotificationService notificationService) {
         this.directoryService = directoryService;
+        this.notificationService = notificationService;
     }
 
     @Bean
@@ -79,5 +83,21 @@ public class ConsumerService {
                 LOGGER.error(e.toString(), e);
             }
         };
+    }
+
+    public void consumeCaseExportSucceeded(Message<String> msg) {
+        Optional.ofNullable(msg.getHeaders().get(HEADER_CASE_UUID, String.class))
+                .map(UUID::fromString)
+                .ifPresent(caseUuid -> {
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                    UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID)).toString());
+                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                    notificationService.emitCaseExportSucceeded(caseUuid, userId, exportUuid, errorMessage);
+                });
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeCaseExportSucceeded() {
+        return this::consumeCaseExportSucceeded;
     }
 }

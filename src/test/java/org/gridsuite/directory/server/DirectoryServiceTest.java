@@ -12,6 +12,7 @@ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosReposit
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.ConsumerService;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,13 +20,14 @@ import org.mockito.InOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.GenericMessage;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.MAX_RETRY;
+import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
@@ -48,8 +50,11 @@ class DirectoryServiceTest {
     @MockBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
-    @MockBean
+    @SpyBean
     NotificationService notificationService;
+
+    @SpyBean
+    ConsumerService consumeService;
 
     @BeforeEach
     public void setup() {
@@ -234,5 +239,26 @@ class DirectoryServiceTest {
         List<UUID> list = List.of(elementUuid1); // Just for Sonar issue (assertThrows)
         DirectoryException exception2 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, elementUuid2, "user1"));
         assertEquals(DIRECTORY_NOT_DIRECTORY, exception2.getBusinessErrorCode());
+    }
+
+    @Test
+    void testConsumeCaseExportSucceeded() {
+        UUID caseUuid = UUID.randomUUID();
+        UUID exportUuid = UUID.randomUUID();
+        String userId = "user1";
+        String errorMessage = "test error";
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(HEADER_CASE_UUID, caseUuid.toString());
+        headers.put(HEADER_USER_ID, userId);
+        headers.put(HEADER_EXPORT_UUID, exportUuid.toString());
+        headers.put(HEADER_ERROR, errorMessage);
+        Message<String> message = new GenericMessage<>("", headers);
+        consumeService.consumeCaseExportSucceeded(message);
+        verify(notificationService, times(1)).emitCaseExportSucceeded(
+                eq(caseUuid),
+                eq(userId),
+                eq(exportUuid),
+                eq(errorMessage)
+        );
     }
 }
