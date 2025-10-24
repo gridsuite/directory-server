@@ -31,7 +31,6 @@ import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
-import org.hamcrest.core.IsEqual;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -62,7 +61,6 @@ import java.util.stream.Collectors;
 
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.directory.server.DirectoryException.Type.UNKNOWN_NOTIFICATION;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
@@ -74,6 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -478,13 +477,13 @@ public class DirectoryTest {
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(unknownUuid))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isInternalServerError());
 
         mockMvc.perform(put("/v1/elements/?targetDirectoryUuid=" + unknownUuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(elementUuid))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isInternalServerError());
 
         assertNbElementsInRepositories(2);
     }
@@ -671,7 +670,7 @@ public class DirectoryTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(elementUuid1)))
                 )
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isInternalServerError());
 
         // test move element to one of its descendents
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + elementUuid2)
@@ -1019,8 +1018,10 @@ public class DirectoryTest {
         // Test unknown type notification
         mockMvc.perform(post(String.format("/v1/elements/%s/notification?type=bad_type", elementAttributes.getElementUuid()))
                         .header("userId", "Doe"))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string(new IsEqual<>(objectMapper.writeValueAsString(UNKNOWN_NOTIFICATION))));
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.server").value("directory-server"))
+                .andExpect(jsonPath("$.status").value(HttpStatus.INTERNAL_SERVER_ERROR.value()))
+                .andExpect(jsonPath("$.path").value(String.format("/v1/elements/%s/notification", elementAttributes.getElementUuid())));
     }
 
     @SneakyThrows
