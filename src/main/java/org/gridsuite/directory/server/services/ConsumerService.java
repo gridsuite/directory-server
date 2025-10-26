@@ -21,8 +21,6 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -85,19 +83,15 @@ public class ConsumerService {
         };
     }
 
-    public void consumeCaseExportSucceeded(Message<String> msg) {
-        Optional.ofNullable(msg.getHeaders().get(HEADER_CASE_UUID, String.class))
-                .map(UUID::fromString)
-                .ifPresent(caseUuid -> {
-                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
-                    UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID)).toString());
-                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
-                    notificationService.emitCaseExportSucceeded(caseUuid, userId, exportUuid, errorMessage);
-                });
+    public void consumeCaseExportFinished(Message<String> msg) {
+        String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+        UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) msg.getHeaders().get(HEADER_EXPORT_UUID)) : null;
+        String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+        notificationService.emitCaseExportFinished(userId, exportUuid, errorMessage);
     }
 
     @Bean
-    public Consumer<Message<String>> consumeCaseExportSucceeded() {
-        return this::consumeCaseExportSucceeded;
+    public Consumer<Message<String>> consumeCaseExportFinished() {
+        return this::consumeCaseExportFinished;
     }
 }

@@ -240,23 +240,16 @@ class DirectoryServiceTest {
     }
 
     @Test
-    void testConsumeCaseExportSucceeded() {
-        UUID caseUuid = UUID.randomUUID();
+    void testConsumeCaseExportFinished() {
         UUID exportUuid = UUID.randomUUID();
         String userId = "user1";
         String errorMessage = "test error";
         Map<String, Object> headers = new HashMap<>();
-        headers.put(HEADER_CASE_UUID, caseUuid.toString());
         headers.put(HEADER_USER_ID, userId);
         headers.put(HEADER_EXPORT_UUID, exportUuid.toString());
         headers.put(HEADER_ERROR, errorMessage);
         Message<String> message = new GenericMessage<>("", headers);
-        consumeService.consumeCaseExportSucceeded(message);
-        verify(notificationService, times(1)).emitCaseExportSucceeded(
-                eq(caseUuid),
-                eq(userId),
-                eq(exportUuid),
-                eq(errorMessage)
-        );
+        consumeService.consumeCaseExportFinished(message);
+        verify(notificationService, times(1)).emitCaseExportFinished(eq(userId), eq(exportUuid), eq(errorMessage));
     }
 }
