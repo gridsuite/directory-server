@@ -4,7 +4,7 @@ spring:
 
   cloud:
     function:
-      definition: consumeStudyUpdate;consumeElementUpdate
+      definition: consumeStudyUpdate;consumeElementUpdate;consumeCaseExportFinished
     stream:
       default-binder: rabbit
       bindings:
@@ -15,6 +15,9 @@ spring:
           group: directoryStudyUpdateGroup
         consumeElementUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.update
+          group: directoryElementUpdateGroup
+        consumeCaseExportFinished-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.export.finished
           group: directoryElementUpdateGroup
       output-bindings: publishDirectoryUpdate-out-0
 
