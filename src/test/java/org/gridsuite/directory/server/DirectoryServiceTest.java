@@ -250,6 +250,6 @@ class DirectoryServiceTest {
         headers.put(HEADER_ERROR, errorMessage);
         Message<String> message = new GenericMessage<>("", headers);
         consumeService.consumeCaseExportFinished(message);
-        verify(notificationService, times(1)).emitCaseExportFinished(eq(userId), eq(exportUuid), eq(errorMessage));
+        verify(notificationService, times(1)).emitCaseExportFinished(userId, exportUuid, errorMessage);
     }
 }
