@@ -8,7 +8,7 @@ package org.gridsuite.directory.server.error;
 
 import com.powsybl.ws.commons.error.AbstractBaseRestExceptionHandler;
 import com.powsybl.ws.commons.error.ServerNameProvider;
-import org.jetbrains.annotations.NotNull;
+import lombok.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 
@@ -24,7 +24,7 @@ public class RestResponseEntityExceptionHandler
         super(serverNameProvider);
     }
 
-    @NotNull
+    @NonNull
     @Override
     protected DirectoryBusinessErrorCode getBusinessCode(DirectoryException ex) {
         return ex.getBusinessErrorCode();

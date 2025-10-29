@@ -8,7 +8,6 @@ package org.gridsuite.directory.server.error;
 
 import com.powsybl.ws.commons.error.AbstractBusinessException;
 import lombok.NonNull;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -40,7 +39,7 @@ public class DirectoryException extends AbstractBusinessException {
         return new DirectoryException(errorCode, args.length == 0 ? message : String.format(message, args));
     }
 
-    @NotNull
+    @NonNull
     @Override
     public DirectoryBusinessErrorCode getBusinessErrorCode() {
         return errorCode;

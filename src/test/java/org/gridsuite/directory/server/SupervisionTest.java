@@ -16,10 +16,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -41,16 +41,16 @@ class SupervisionTest {
     @Autowired
     SupervisionService supervisionService;
 
-    @MockBean
+    @MockitoBean
     DirectoryElementRepository directoryElementRepository;
 
-    @MockBean
+    @MockitoBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
-    @MockBean
+    @MockitoBean
     ElasticsearchOperations elasticsearchOperations;
 
-    @MockBean
+    @MockitoBean
     IndexOperations indexOperations;
 
     @Test

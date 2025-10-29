@@ -17,8 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
 import java.util.Optional;
@@ -39,16 +39,16 @@ class DirectoryServiceTest {
     public static final String TYPE_01 = "TYPE_01";
     public static final String TYPE_02 = "TYPE_02";
 
-    @SpyBean
+    @MockitoSpyBean
     DirectoryService directoryService;
 
-    @SpyBean
+    @MockitoSpyBean
     DirectoryElementRepository directoryElementRepository;
 
-    @MockBean
+    @MockitoBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
-    @MockBean
+    @MockitoBean
     NotificationService notificationService;
 
     @BeforeEach
