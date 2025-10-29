@@ -69,5 +69,57 @@
         ]
       }
     ]
+  },
+  {
+    "name": "liquibase.changelog.ChangeLogHistoryServiceFactory",
+    "condition": {
+      "typeReachable": "liquibase.changelog.ChangeLogHistoryServiceFactory"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  },
+  {
+    "name": "liquibase.changelog.FastCheckService",
+    "condition": {
+      "typeReachable": "liquibase.changelog.FastCheckService"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  },
+  {
+    "name": "liquibase.changelog.StandardChangeLogHistoryService",
+    "condition": {
+      "typeReachable": "liquibase.changelog.StandardChangeLogHistoryService"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
+  },
+  {
+    "name": "liquibase.changelog.visitor.ValidatingVisitorGeneratorFactory",
+    "condition": {
+      "typeReachable": "liquibase.changelog.visitor.ValidatingVisitorGeneratorFactory"
+    },
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+        ]
+      }
+    ]
   }
 ]
