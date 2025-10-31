@@ -82,8 +82,7 @@ public class NotificationService {
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_EXPORT_UUID, exportUuid)
                 .setHeader(HEADER_ERROR, error)
-                .setHeader(HEADER_NOTIFICATION_TYPE, CASE_EXPORT_FINISHED)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES);
+                .setHeader(HEADER_NOTIFICATION_TYPE, CASE_EXPORT_FINISHED);
         sendUpdateMessage(messageBuilder.build());
     }
 }
