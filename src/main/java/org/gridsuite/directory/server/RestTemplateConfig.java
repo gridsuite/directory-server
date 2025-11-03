@@ -8,6 +8,7 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -23,8 +24,8 @@ import org.springframework.web.client.RestTemplate;
 public class RestTemplateConfig {
 
     @Bean
-    public RestTemplate restTemplate() {
-        final RestTemplate restTemplate = new RestTemplate();
+    public RestTemplate restTemplate(RestTemplateBuilder builder) {
+        final RestTemplate restTemplate = builder.build();
 
         for (int i = 0; i < restTemplate.getMessageConverters().size(); i++) {
             final HttpMessageConverter<?> httpMessageConverter = restTemplate.getMessageConverters().get(i);
