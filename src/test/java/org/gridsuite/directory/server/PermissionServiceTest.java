@@ -68,7 +68,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
-public class AccessRightsControlTest {
+public class PermissionServiceTest {
     public static final String TYPE_01 = "TYPE_01";
 
     @Autowired

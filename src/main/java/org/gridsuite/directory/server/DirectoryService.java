@@ -246,9 +246,9 @@ public class DirectoryService {
     }
 
     private Map<UUID, Long> getSubDirectoriesCounts(List<UUID> subDirectories, List<String> types, String userId) {
-        List<UUID> readableSubDirectories = subDirectories.stream().filter(dirId -> hasReadPermissions(userId, List.of(dirId))).toList();
+        List<UUID> readableSubDirectories = subDirectories.stream().filter(dirId -> permissionService.hasReadPermissions(userId, List.of(dirId))).toList();
         return repositoryService.findAllByParentIdInAndTypeIn(readableSubDirectories, types).stream()
-            .filter(child -> hasReadPermissions(userId, List.of(child.getId())))
+            .filter(child -> permissionService.hasReadPermissions(userId, List.of(child.getId())))
             .collect(Collectors.groupingBy(
                 DirectoryElementRepository.ElementParentage::getParentId,
                 Collectors.counting()
@@ -256,7 +256,7 @@ public class DirectoryService {
     }
 
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
-        if (!hasReadPermissions(userId, List.of(directoryUuid))) {
+        if (!permissionService.hasReadPermissions(userId, List.of(directoryUuid))) {
             return List.of();
         }
         ElementAttributes elementAttributes = getElement(directoryUuid);
@@ -270,7 +270,7 @@ public class DirectoryService {
             List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(directoryUuid).stream().toList();
             return descendents
                 .stream()
-                .filter(e -> (types.isEmpty() || types.contains(e.getType())) && hasReadPermissions(userId, List.of(e.getId())))
+                .filter(e -> (types.isEmpty() || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
                 .map(ElementAttributes::toElementAttributes)
                 .toList();
         } else {
@@ -288,7 +288,7 @@ public class DirectoryService {
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements, userId);
         return directoryElements
             .stream()
-            .filter(e -> (e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType())) && hasReadPermissions(userId, List.of(e.getId())))
+            .filter(e -> (e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
             .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
@@ -297,7 +297,7 @@ public class DirectoryService {
         List<DirectoryElementEntity> directoryElements = repositoryService.findRootDirectories();
 
         if (!roleService.isUserExploreAdmin()) {
-            directoryElements = directoryElements.stream().filter(directoryElementEntity -> hasReadPermissions(userId, List.of(directoryElementEntity.getId()))).toList();
+            directoryElements = directoryElements.stream().filter(directoryElementEntity -> permissionService.hasReadPermissions(userId, List.of(directoryElementEntity.getId()))).toList();
         }
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements, userId);
         return directoryElements.stream()
@@ -504,7 +504,7 @@ public class DirectoryService {
         //if the user is not an admin we filter out elements he doesn't have the permission on
         if (!roleService.isUserExploreAdmin()) {
             elementEntities = elementEntities.stream().filter(directoryElementEntity ->
-                hasReadPermissions(userId, List.of(directoryElementEntity.getId()))
+                permissionService.hasReadPermissions(userId, List.of(directoryElementEntity.getId()))
             ).toList();
         }
 
@@ -633,14 +633,6 @@ public class DirectoryService {
         );
     }
 
-    public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {
-        return permissionService.hasReadPermissions(userId, elementUuids);
-    }
-
-    public void validatePermissionsGetAccess(UUID directoryUuid, String userId) {
-        permissionService.validateReadAccess(directoryUuid, userId);
-    }
-
     /**
      * Retrieves the permission settings for a directory, organized by permission type.
      * Returns exactly one PermissionDTO for each permission type (READ, WRITE, MANAGE).
@@ -652,8 +644,7 @@ public class DirectoryService {
      */
     public List<PermissionDTO> getDirectoryPermissions(UUID directoryUuid, String userId) {
         assertDirectoryExist(directoryUuid);
-        validatePermissionsGetAccess(directoryUuid, userId);
-
+        permissionService.validateReadAccess(directoryUuid, userId);
         return permissionService.getDirectoryPermissions(directoryUuid);
     }
 
