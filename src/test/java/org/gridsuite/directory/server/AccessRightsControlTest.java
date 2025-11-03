@@ -44,7 +44,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.directory.server.DirectoryService.ALL_USERS;
+import static org.gridsuite.directory.server.services.PermissionService.ALL_USERS;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;

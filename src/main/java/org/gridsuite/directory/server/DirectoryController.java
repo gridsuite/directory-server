@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.gridsuite.directory.server.services.PermissionService;
 import org.gridsuite.directory.server.services.RoleService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -40,14 +41,17 @@ public class DirectoryController {
 
     private final DirectoryRepositoryService repositoryService;
     private final RoleService roleService;
+    private final PermissionService permissionService;
 
     public DirectoryController(
             DirectoryService service,
             DirectoryRepositoryService repositoryService,
-            RoleService roleService) {
+            RoleService roleService,
+            PermissionService permissionService) {
         this.service = service;
         this.repositoryService = repositoryService;
         this.roleService = roleService;
+        this.permissionService = permissionService;
     }
 
     @PostMapping(value = "/root-directories", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -210,7 +214,7 @@ public class DirectoryController {
         if (roleService.isUserExploreAdmin()) {
             return ResponseEntity.ok().build();
         }
-        PermissionCheckResult result = service.checkDirectoriesPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck);
+        PermissionCheckResult result = permissionService.checkDirectoriesPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck);
         if (result == PermissionCheckResult.ALLOWED) {
             return ResponseEntity.ok().build();
         } else {
