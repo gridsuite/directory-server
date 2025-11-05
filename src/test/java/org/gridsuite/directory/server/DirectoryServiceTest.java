@@ -9,6 +9,7 @@ package org.gridsuite.directory.server;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
+import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.ConsumerService;
@@ -17,10 +18,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.*;
 
@@ -30,6 +31,7 @@ import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -39,19 +41,19 @@ class DirectoryServiceTest {
     public static final String TYPE_01 = "TYPE_01";
     public static final String TYPE_02 = "TYPE_02";
 
-    @SpyBean
+    @MockitoSpyBean
     DirectoryService directoryService;
 
-    @SpyBean
+    @MockitoSpyBean
     DirectoryElementRepository directoryElementRepository;
 
-    @MockBean
+    @MockitoBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
-    @SpyBean
+    @MockitoBean
     NotificationService notificationService;
 
-    @SpyBean
+    @MockitoSpyBean
     ConsumerService consumeService;
 
     @BeforeEach
@@ -123,7 +125,7 @@ class DirectoryServiceTest {
 
         // Insert the same element in the same directory throws an exception
         DirectoryException directoryException = assertThrows(DirectoryException.class, () -> directoryService.createElement(elementAttributes, rootUuid, "User1", false));
-        assertEquals(DirectoryException.Type.NAME_ALREADY_EXISTS, directoryException.getType());
+        assertEquals(DIRECTORY_ELEMENT_NAME_CONFLICT, directoryException.getBusinessErrorCode());
         assertEquals(DirectoryException.createElementNameAlreadyExists(elementAttributes.getElementName()).getMessage(), directoryException.getMessage());
 
         // Insert the same element in the same directory with new name generation does not throw an exception
@@ -142,7 +144,7 @@ class DirectoryServiceTest {
         InOrder inOrder = inOrder(directoryService);
         when(directoryService.getDuplicateNameCandidate(root2Uuid, elementAttributes.getElementName(), elementAttributes.getType(), "User1")).thenReturn(elementAttributes.getElementName());
         directoryException = assertThrows(DirectoryException.class, () -> directoryService.duplicateElement(element2Uuid, root2Uuid, root2Uuid, "User1"));
-        assertEquals(DirectoryException.Type.NAME_ALREADY_EXISTS, directoryException.getType());
+        assertEquals(DIRECTORY_ELEMENT_NAME_CONFLICT, directoryException.getBusinessErrorCode());
         assertEquals(DirectoryException.createElementNameAlreadyExists(elementAttributes.getElementName()).getMessage(), directoryException.getMessage());
         inOrder.verify(directoryService, calls(MAX_RETRY)).getDuplicateNameCandidate(root2Uuid, elementAttributes.getElementName(), elementAttributes.getType(), "User1");
     }
@@ -208,7 +210,7 @@ class DirectoryServiceTest {
         // move directory to it's descendent
         List<UUID> list = List.of(dirUuid); // Just for Sonar issue (assertThrows)
         DirectoryException exception1 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, subDirUuid, "user1"));
-        assertEquals(DirectoryException.Type.MOVE_IN_DESCENDANT_NOT_ALLOWED, exception1.getType());
+        assertEquals(DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED, exception1.getBusinessErrorCode());
     }
 
     @Test
@@ -236,7 +238,7 @@ class DirectoryServiceTest {
 
         List<UUID> list = List.of(elementUuid1); // Just for Sonar issue (assertThrows)
         DirectoryException exception2 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, elementUuid2, "user1"));
-        assertEquals(DirectoryException.Type.NOT_DIRECTORY, exception2.getType());
+        assertEquals(DIRECTORY_NOT_DIRECTORY, exception2.getBusinessErrorCode());
     }
 
     @Test
