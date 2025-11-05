@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -50,7 +51,7 @@ class DirectoryServiceTest {
     @MockitoBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
-    @MockitoBean
+    @MockitoSpyBean
     NotificationService notificationService;
 
     @MockitoSpyBean
