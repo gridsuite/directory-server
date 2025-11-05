@@ -18,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -30,9 +29,9 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.MAX_RETRY;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
-import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
