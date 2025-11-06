@@ -50,7 +50,7 @@ class DirectoryServiceTest {
     @MockitoBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
 
-    @MockitoSpyBean
+    @MockitoBean
     NotificationService notificationService;
 
     @MockitoSpyBean
