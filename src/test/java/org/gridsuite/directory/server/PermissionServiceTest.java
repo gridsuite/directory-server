@@ -520,7 +520,7 @@ public class PermissionServiceTest {
         //     └── subDir1 (owned by ADMIN_USER)
         UUID dir1User1 = insertSubElement(rootDir1User1, toElementAttributes(null, "dir1User1", DIRECTORY, user1));
         UUID dir2User1 = insertSubElement(rootDir2User1, toElementAttributes(null, "dir2User1", DIRECTORY, user1));
-        UUID subDir1 = insertSubElement(dir1User1, toElementAttributes(null, "subDir1", DIRECTORY, ADMIN_USER));
+        insertSubElement(dir1User1, toElementAttributes(null, "subDir1", DIRECTORY, ADMIN_USER));
 
         // Create test element in user2's directory
         UUID elementUser2 = insertSubElement(rootDir1User2, toElementAttributes(null, "element1", TYPE_01, user2));
