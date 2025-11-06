@@ -27,9 +27,9 @@ import java.util.UUID;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.MAX_RETRY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 

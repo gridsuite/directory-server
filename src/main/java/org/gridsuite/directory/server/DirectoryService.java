@@ -25,10 +25,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.*;
-import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
