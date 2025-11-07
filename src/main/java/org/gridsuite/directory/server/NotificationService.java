@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.integration.support.MessageBuilder;
+import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +38,8 @@ public class NotificationService {
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_IS_DIRECTORY_MOVING = "isDirectoryMoving";
     public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
+    public static final String HEADER_EXPORT_UUID = "exportUuid";
+    public static final String CASE_EXPORT_FINISHED = "caseExportFinished";
     private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
 
@@ -71,6 +74,16 @@ public class NotificationService {
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_ELEMENT_UUID, elementUuid)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_ELEMENT_DELETE);
+        sendUpdateMessage(messageBuilder.build());
+    }
+
+    public void emitCaseExportFinished(String userId, UUID exportUuid, @Nullable String error) {
+        MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
+                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_EXPORT_UUID, exportUuid)
+                .setHeader(HEADER_ERROR, error)
+                .setHeader(HEADER_NOTIFICATION_TYPE, CASE_EXPORT_FINISHED)
+                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES);
         sendUpdateMessage(messageBuilder.build());
     }
 }

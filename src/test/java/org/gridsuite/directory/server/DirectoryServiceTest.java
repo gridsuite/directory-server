@@ -12,6 +12,7 @@ import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosReposit
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.PermissionService;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,9 @@ class DirectoryServiceTest {
 
     @MockitoBean
     NotificationService notificationService;
+
+    @MockitoBean
+    PermissionService permissionService;
 
     @BeforeEach
     public void setup() {

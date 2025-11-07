@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2020, RTE (http://www.rte-france.com)
+  Copyright (c) 2025, RTE (http://www.rte-france.com)
   This Source Code Form is subject to the terms of the Mozilla Public
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -44,7 +44,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.directory.server.DirectoryService.ALL_USERS;
+import static org.gridsuite.directory.server.services.PermissionService.ALL_USERS;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
@@ -68,7 +68,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
-public class AccessRightsControlTest {
+public class PermissionServiceTest {
     public static final String TYPE_01 = "TYPE_01";
 
     @Autowired
@@ -520,7 +520,7 @@ public class AccessRightsControlTest {
         //     └── subDir1 (owned by ADMIN_USER)
         UUID dir1User1 = insertSubElement(rootDir1User1, toElementAttributes(null, "dir1User1", DIRECTORY, user1));
         UUID dir2User1 = insertSubElement(rootDir2User1, toElementAttributes(null, "dir2User1", DIRECTORY, user1));
-        UUID subDir1 = insertSubElement(dir1User1, toElementAttributes(null, "subDir1", DIRECTORY, ADMIN_USER));
+        insertSubElement(dir1User1, toElementAttributes(null, "subDir1", DIRECTORY, ADMIN_USER));
 
         // Create test element in user2's directory
         UUID elementUser2 = insertSubElement(rootDir1User2, toElementAttributes(null, "element1", TYPE_01, user2));

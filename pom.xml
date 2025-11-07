@@ -68,7 +68,7 @@
                                 </publishRegistry>
                             </docker>
                             <image>
-                                <builder>paketobuildpacks/builder-jammy-tiny</builder>
+                                <builder>paketobuildpacks/builder-jammy-base</builder>
                                 <env>
                                     <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
                                     <!--
