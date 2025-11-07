@@ -6,6 +6,9 @@
       },
       {
         "pattern":"\\Qorg/gridsuite/directory/server/repository/DirectoryElementRepository$SubDirectoryCount.class\\E"
+      },
+      {
+        "pattern": "org/joda/time/tz/data/.*"
       }
     ]
   }
