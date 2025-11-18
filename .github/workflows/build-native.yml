@@ -28,7 +28,7 @@ jobs:
           mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
           -Ddocker.publishRegistry.username=gridsuiteci
           -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }}
-          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server
+          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native
           -Dspring-boot.build-image.publish=true
 
       - name: Build Docker Native image - Tag
@@ -37,5 +37,5 @@ jobs:
           mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
           -Ddocker.publishRegistry.username=gridsuiteci
           -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }}
-          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server:${GITHUB_REF_NAME#v}
+          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native:${GITHUB_REF_NAME#v}
           -Dspring-boot.build-image.publish=true

@@ -10,7 +10,7 @@ jobs:
   build:
     uses: powsybl/github-ci/.github/workflows/build-backend-app-generic.yml@aaae75875296657028f2805e7a3fbdb1418b8b95
     with:
-      dockerImage: docker.io/gridsuite/directory-server-jvm
+      dockerImage: docker.io/gridsuite/directory-server
       dockerUsername: gridsuiteci
       eventType: directory_server_updated
     secrets:
