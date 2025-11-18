@@ -484,13 +484,13 @@ public class DirectoryTest {
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(unknownUuid))))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
 
         mockMvc.perform(put("/v1/elements/?targetDirectoryUuid=" + unknownUuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(elementUuid))))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
 
         assertNbElementsInRepositories(2);
     }
@@ -677,7 +677,7 @@ public class DirectoryTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(elementUuid1)))
                 )
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
 
         // test move element to one of its descendents
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + elementUuid2)
