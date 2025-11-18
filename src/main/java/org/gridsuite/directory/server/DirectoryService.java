@@ -101,7 +101,7 @@ public class DirectoryService {
         }
 
         // Here we know that parentDirectoryUuid can't be null
-        notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementAttributes.getElementName());
+        notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementEntity.getName());
 
         return toElementAttributes(elementEntity);
     }
@@ -123,7 +123,7 @@ public class DirectoryService {
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, true);
 
         // Here we know that parentDirectoryUuid can't be null
-        notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementAttributes.getElementName());
+        notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementEntity.getName());
 
         return toElementAttributes(elementEntity);
     }
