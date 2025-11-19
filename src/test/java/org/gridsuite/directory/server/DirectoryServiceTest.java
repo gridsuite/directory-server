@@ -239,4 +239,40 @@ class DirectoryServiceTest {
         DirectoryException exception2 = assertThrows(DirectoryException.class, () -> directoryService.moveElementsDirectory(list, elementUuid2, "user1"));
         assertEquals(DIRECTORY_NOT_DIRECTORY, exception2.getBusinessErrorCode());
     }
+
+    @Test
+    void testCreateExistingElementNotification() {
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
+        UUID rootUuid = rootAttributes.getElementUuid();
+        reset(notificationService);
+
+        // create first element "element1"
+        ElementAttributes elementAttributes = toElementAttributes(null, "element1", "TYPE1", "user1");
+        directoryService.createElement(elementAttributes, rootUuid, "user1", true);
+        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, elementAttributes.getElementName(), "user1", null, true, false, NotificationType.UPDATE_DIRECTORY);
+
+        // create second element "element1" renamed "element1(1)"
+        directoryService.createElement(elementAttributes, rootUuid, "user1", true);
+        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, elementAttributes.getElementName() + "(1)", "user1", null, true, false, NotificationType.UPDATE_DIRECTORY);
+
+        verifyNoMoreInteractions(notificationService);
+    }
+
+    @Test
+    void testDuplicateElementNotification() {
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
+        UUID rootUuid = rootAttributes.getElementUuid();
+        reset(notificationService);
+
+        // create first element "element1"
+        ElementAttributes elementAttributes = toElementAttributes(null, "element1", "TYPE1", "user1");
+        ElementAttributes newElementAttributes = directoryService.createElement(elementAttributes, rootUuid, "user1", true);
+        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, elementAttributes.getElementName(), "user1", null, true, false, NotificationType.UPDATE_DIRECTORY);
+
+        // duplicate "element1" renamed "element1(1)"
+        directoryService.duplicateElement(newElementAttributes.getElementUuid(), UUID.randomUUID(), rootUuid, "user1");
+        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, elementAttributes.getElementName() + "(1)", "user1", null, true, false, NotificationType.UPDATE_DIRECTORY);
+
+        verifyNoMoreInteractions(notificationService);
+    }
 }
