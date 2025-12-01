@@ -29,6 +29,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
+import org.gridsuite.directory.server.services.ConsumerService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.jetbrains.annotations.NotNull;
@@ -46,8 +47,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.GenericMessage;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -69,6 +72,7 @@ import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYP
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -153,6 +157,9 @@ public class DirectoryTest {
 
     @Autowired
     private PermissionRepository permissionRepository;
+
+    @MockitoSpyBean
+    ConsumerService consumeService;
 
     @Before
     public void setup() {
@@ -477,13 +484,13 @@ public class DirectoryTest {
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(unknownUuid))))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
 
         mockMvc.perform(put("/v1/elements/?targetDirectoryUuid=" + unknownUuid)
                         .header("userId", "Doe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(elementUuid))))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isNotFound());
 
         assertNbElementsInRepositories(2);
     }
@@ -670,7 +677,7 @@ public class DirectoryTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(elementUuid1)))
                 )
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());
 
         // test move element to one of its descendents
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + elementUuid2)
@@ -2167,5 +2174,22 @@ public class DirectoryTest {
         mockMvc
                 .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
                 .andExpectAll(status().isForbidden()).andReturn();
+    }
+
+    @Test
+    public void testConsumeCaseExportFinished() {
+        UUID exportUuid = UUID.randomUUID();
+        String userId = "user1";
+        String errorMessage = "test error";
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(HEADER_USER_ID, userId);
+        headers.put(HEADER_EXPORT_UUID, exportUuid.toString());
+        headers.put(HEADER_ERROR, errorMessage);
+        Message<String> message = new GenericMessage<>("", headers);
+        consumeService.consumeCaseExportFinished(message);
+        var mess = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertNotNull(mess);
+        assertEquals(exportUuid, mess.getHeaders().get(HEADER_EXPORT_UUID));
+        output.clear();
     }
 }
