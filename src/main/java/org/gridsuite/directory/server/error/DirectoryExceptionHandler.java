@@ -6,21 +6,25 @@
  */
 package org.gridsuite.directory.server.error;
 
-import com.powsybl.ws.commons.error.AbstractBaseRestExceptionHandler;
+import com.powsybl.ws.commons.error.AbstractBusinessExceptionHandler;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import com.powsybl.ws.commons.error.ServerNameProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.NonNull;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  */
 @ControllerAdvice
-public class RestResponseEntityExceptionHandler
-    extends AbstractBaseRestExceptionHandler<DirectoryException, DirectoryBusinessErrorCode> {
+public class DirectoryExceptionHandler
+    extends AbstractBusinessExceptionHandler<DirectoryException, DirectoryBusinessErrorCode> {
 
-    public RestResponseEntityExceptionHandler(ServerNameProvider serverNameProvider) {
+    public DirectoryExceptionHandler(ServerNameProvider serverNameProvider) {
         super(serverNameProvider);
     }
 
@@ -42,4 +46,9 @@ public class RestResponseEntityExceptionHandler
         };
     }
 
+    @ExceptionHandler(DirectoryException.class)
+    protected ResponseEntity<PowsyblWsProblemDetail> handleDirectoryException(
+        DirectoryException exception, HttpServletRequest request) {
+        return super.handleDomainException(exception, request);
+    }
 }
