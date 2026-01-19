@@ -6,7 +6,6 @@
  */
 package org.gridsuite.directory.server.services;
 
-import org.gridsuite.directory.server.dto.PermissionCheckResult;
 import org.gridsuite.directory.server.dto.PermissionDTO;
 import org.gridsuite.directory.server.dto.PermissionType;
 import org.gridsuite.directory.server.dto.UserGroupDTO;
@@ -21,11 +20,11 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.DIRECTORY_PERMISSION_DENIED;
 import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -63,15 +62,14 @@ public class PermissionService {
      * @param targetDirectoryUuid Optional target directory UUID (for move operations)
      * @param permissionType      Type of permission to check (READ, WRITE, MANAGE)
      * @param recursiveCheck      Whether to check permissions recursively on children
-     * @return PermissionCheckResult indicating where permission check failed, or ALLOWED if successful
      */
-    public PermissionCheckResult checkDirectoriesPermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid,
+    public void checkDirectoriesPermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid,
                                                             PermissionType permissionType, boolean recursiveCheck) {
-        return switch (permissionType) {
+        switch (permissionType) {
             case READ -> checkReadPermission(userId, elementUuids);
             case WRITE -> checkWritePermission(userId, elementUuids, targetDirectoryUuid, recursiveCheck);
             case MANAGE -> checkManagePermission(userId, elementUuids);
-        };
+        }
     }
 
     public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {
@@ -139,32 +137,44 @@ public class PermissionService {
         permissionRepository.save(PermissionEntity.read(elementUuid, ALL_USERS, ""));
     }
 
-    private PermissionCheckResult checkReadPermission(String userId, List<UUID> elementUuids) {
-        return hasReadPermissions(userId, elementUuids) ?
-            PermissionCheckResult.ALLOWED :
-            PermissionCheckResult.PARENT_PERMISSION_DENIED;
+    private void checkReadPermission(String userId, List<UUID> elementUuids) {
+        if (!hasReadPermissions(userId, elementUuids)) {
+            throw new DirectoryException(
+                    DIRECTORY_PARENT_PERMISSION_DENIED,
+                    "User " + userId + " does not have read permission on parent folder"
+            );
+        }
     }
 
-    private PermissionCheckResult checkManagePermission(String userId, List<UUID> elementUuids) {
-        return hasManagePermission(userId, elementUuids) ?
-            PermissionCheckResult.ALLOWED :
-            PermissionCheckResult.PARENT_PERMISSION_DENIED;
+    private void checkManagePermission(String userId, List<UUID> elementUuids) {
+        if (!hasManagePermission(userId, elementUuids)) {
+            throw new DirectoryException(
+                    DIRECTORY_PARENT_PERMISSION_DENIED,
+                    "User " + userId + " does not have manage permission on parent folder"
+            );
+        }
     }
 
-    private PermissionCheckResult checkWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, boolean recursiveCheck) {
+    private void checkWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, boolean recursiveCheck) {
         List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
 
         // First, check parent permissions
         for (DirectoryElementEntity element : elements) {
             UUID idToCheck = element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId();
             if (!checkPermission(userId, List.of(idToCheck), WRITE)) {
-                return PermissionCheckResult.PARENT_PERMISSION_DENIED;
+                throw new DirectoryException(
+                        DIRECTORY_PARENT_PERMISSION_DENIED,
+                        "User " + userId + " does not have write permission on parent folder"
+                );
             }
         }
 
         // Next, check target directory permission if specified
         if (targetDirectoryUuid != null && !checkPermission(userId, List.of(targetDirectoryUuid), WRITE)) {
-            return PermissionCheckResult.TARGET_PERMISSION_DENIED;
+            throw new DirectoryException(
+                    DIRECTORY_TARGET_PERMISSION_DENIED,
+                    "User " + userId + " does not have write permission on target folder"
+            );
         }
 
         // Finally, check child permissions if recursive check is enabled
@@ -177,14 +187,14 @@ public class PermissionService {
                         .map(DirectoryElementEntity::getId)
                         .toList();
                     if (!descendantsUuids.isEmpty() && !checkPermission(userId, descendantsUuids, WRITE)) {
-                        return PermissionCheckResult.CHILD_PERMISSION_DENIED;
+                        throw new DirectoryException(
+                                DIRECTORY_CHILD_PERMISSION_DENIED,
+                                "User " + userId + " does not have write permission on descendant folder"
+                        );
                     }
                 }
             }
         }
-
-        // All checks passed
-        return PermissionCheckResult.ALLOWED;
     }
 
     private boolean checkPermission(String userId, List<UUID> elementUuids, PermissionType permissionType) {

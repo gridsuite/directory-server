@@ -15,6 +15,9 @@ import com.powsybl.ws.commons.error.BusinessErrorCode;
  */
 public enum DirectoryBusinessErrorCode implements BusinessErrorCode {
     DIRECTORY_PERMISSION_DENIED("directory.permissionDenied"),
+    DIRECTORY_PARENT_PERMISSION_DENIED("directory.parentPermissionDenied"),
+    DIRECTORY_TARGET_PERMISSION_DENIED("directory.targetPermissionDenied"),
+    DIRECTORY_CHILD_PERMISSION_DENIED("directory.childPermissionDenied"),
     DIRECTORY_ELEMENT_NAME_BLANK("directory.elementNameBlank"),
     DIRECTORY_NOT_DIRECTORY("directory.notDirectory"),
     DIRECTORY_ELEMENT_NAME_CONFLICT("directory.elementNameConflict"),

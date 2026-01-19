@@ -1945,7 +1945,7 @@ public class DirectoryTest {
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(subDirAttributes));
         //The subDirAttributes is created by the userId,so the userId1 is not allowed to delete it.
         mockMvc
-                .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", subDirAttributes.getElementUuid()).header(USER_ID, USERID_1))
+                .perform(get("/v1/elements/authorized?accessType=WRITE&ids={ids}&targetDirectoryUuid", subDirAttributes.getElementUuid()).header(USER_ID, USERID_1))
                 .andExpectAll(status().isForbidden()).andReturn();
     }
 
@@ -2172,7 +2172,7 @@ public class DirectoryTest {
 
         // The elementAttributes is created by the userId,so it is not updated by USERID_1
         mockMvc
-                .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
+                .perform(get("/v1/elements/authorized?accessType=WRITE&ids={ids}&targetDirectoryUuid", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
                 .andExpectAll(status().isForbidden()).andReturn();
     }
 
