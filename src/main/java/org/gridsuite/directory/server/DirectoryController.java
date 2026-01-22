@@ -196,7 +196,7 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getCasesCount(userId));
     }
 
-    @RequestMapping(method = RequestMethod.GET, value = "/elements/authorized")
+    @GetMapping(value = "/elements/authorized")
     @Operation(summary = "Control elements access permissions for a user")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "All elements are accessible"),
