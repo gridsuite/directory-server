@@ -156,6 +156,10 @@ public class PermissionService {
     }
 
     private void checkWritePermission(String userId, List<UUID> elementUuids, UUID targetDirectoryUuid, boolean recursiveCheck) {
+        if (roleService.isUserExploreAdmin()) {
+            return;
+        }
+
         List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
 
         // First, check parent permissions
