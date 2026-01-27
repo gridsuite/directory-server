@@ -6,14 +6,17 @@
  */
 package org.gridsuite.directory.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.error.DirectoryBusinessErrorCode;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionEntity;
 import org.gridsuite.directory.server.repository.PermissionRepository;
@@ -41,6 +44,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -529,15 +533,15 @@ public class PermissionServiceTest {
 
         // 1. PARENT_PERMISSION_DENIED: User2 tries to modify user1's directory
         MvcResult result = performPermissionCheck(user2, List.of(dir1User1), null, WRITE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.PARENT_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_PARENT_PERMISSION_DENIED);
 
         // 2. TARGET_PERMISSION_DENIED: User1 tries to move their directory to user2's root directory
         result = performPermissionCheck(user1, List.of(dir1User1), rootDir1User2, WRITE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.TARGET_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_TARGET_PERMISSION_DENIED);
 
         // 3. CHILD_PERMISSION_DENIED: User1 tries to move a directory containing admin-owned subdirectory
         result = performPermissionCheck(user1, List.of(dir1User1), dir2User1, WRITE, true);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.CHILD_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_CHILD_PERMISSION_DENIED);
 
         // 4. ALLOWED: Admin can move any directory (even with recursive check)
         result = performPermissionCheck(ADMIN_USER, List.of(dir1User1), rootDirAdmin, WRITE, true);
@@ -553,15 +557,15 @@ public class PermissionServiceTest {
 
         // 7. MANAGE Permission: User cannot manage another user's directory
         result = performPermissionCheck(user2, List.of(rootDir1User1), null, PermissionType.MANAGE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.PARENT_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_PARENT_PERMISSION_DENIED);
 
         // 8. Multiple directories with mixed permissions
         result = performPermissionCheck(user1, List.of(rootDir1User1, rootDir1User2), null, WRITE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.PARENT_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_PARENT_PERMISSION_DENIED);
 
         // 9. Test moving multiple elements with different parents (should fail)
         result = performPermissionCheck(user1, List.of(dir1User1, elementUser2), rootDirAdmin, WRITE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, PermissionCheckResult.PARENT_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_PARENT_PERMISSION_DENIED);
     }
 
     /**
@@ -572,7 +576,7 @@ public class PermissionServiceTest {
                                              boolean recursiveCheck) throws Exception {
         String ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
 
-        return mockMvc.perform(head("/v1/elements")
+        return mockMvc.perform(get("/v1/elements/authorized")
                         .param("ids", ids)
                         .param("accessType", permissionType.name())
                         .param("recursiveCheck", String.valueOf(recursiveCheck))
@@ -585,13 +589,13 @@ public class PermissionServiceTest {
     /**
      * Helper method to assert the permission check result
      */
-    private void assertPermissionResult(MvcResult result, HttpStatus expectedStatus, PermissionCheckResult expectedHeaderValue) {
+    private void assertPermissionResult(MvcResult result, HttpStatus expectedStatus, DirectoryBusinessErrorCode expectedBusinessCode) throws UnsupportedEncodingException, JsonProcessingException {
         assertEquals("Status code should match", expectedStatus.value(), result.getResponse().getStatus());
 
-        if (expectedHeaderValue != null) {
-            assertEquals("X-Permission-Error header should match",
-                    expectedHeaderValue.toString(),
-                    result.getResponse().getHeader("X-Permission-Error"));
+        if (expectedBusinessCode != null) {
+            assertEquals("Business code in problem detail should match",
+                    expectedBusinessCode.value(),
+                    objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class).getBusinessErrorCode());
         }
     }
 

@@ -8,7 +8,6 @@ package org.gridsuite.directory.server;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -197,14 +196,12 @@ public class DirectoryController {
         return ResponseEntity.ok().body(service.getCasesCount(userId));
     }
 
-    @RequestMapping(method = RequestMethod.HEAD, value = "/elements")
+    @GetMapping(value = "/elements/authorized")
     @Operation(summary = "Control elements access permissions for a user")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "All elements are accessible"),
         @ApiResponse(responseCode = "404", description = "At least one element was not found"),
-        @ApiResponse(responseCode = "403", description = "Access forbidden", headers = {
-            @Header(name = "X-Permission-Error", description = "Indicates where permission check failed: PARENT_PERMISSION_DENIED, CHILD_PERMISSION_DENIED, or TARGET_PERMISSION_DENIED")
-        })
+        @ApiResponse(responseCode = "403", description = "Access forbidden")
     })
     public ResponseEntity<Void> areElementsAccessible(@RequestParam("ids") List<UUID> elementUuids,
                                                       @RequestParam(value = "accessType") PermissionType permissionType,
@@ -214,12 +211,8 @@ public class DirectoryController {
         if (roleService.isUserExploreAdmin()) {
             return ResponseEntity.ok().build();
         }
-        PermissionCheckResult result = permissionService.checkDirectoriesPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck);
-        if (result == PermissionCheckResult.ALLOWED) {
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).header("X-Permission-Error", result.name()).build();
-        }
+        permissionService.checkDirectoriesPermission(userId, elementUuids, targetDirectoryUuid, permissionType, recursiveCheck);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/directories/{directoryUuid}/permissions", produces = MediaType.APPLICATION_JSON_VALUE)
