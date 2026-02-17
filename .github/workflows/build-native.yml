@@ -6,12 +6,11 @@ on:
       - 'main'
     tags:
       - 'v[0-9]*'
-  pull_request:
-
 
 jobs:
   build-native-image:
     runs-on: ubuntu-latest
+    environment: 'release'
     steps:
       - name: Setup GraalVM
         uses: graalvm/setup-graalvm@v1
@@ -24,5 +23,19 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Build Docker Native image - Main
+        if: github.ref == 'refs/heads/main'
         run: >
           mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
+          -Ddocker.publishRegistry.username=gridsuiteci
+          -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }}
+          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native
+          -Dspring-boot.build-image.publish=true
+
+      - name: Build Docker Native image - Tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: >
+          mvn --batch-mode spring-boot:build-image -Pnative -DskipTests
+          -Ddocker.publishRegistry.username=gridsuiteci
+          -Ddocker.publishRegistry.password=${{ secrets.DOCKERHUB_TOKEN }}
+          -Dspring-boot.build-image.imageName=docker.io/gridsuite/directory-server-native:${GITHUB_REF_NAME#v}
+          -Dspring-boot.build-image.publish=true
