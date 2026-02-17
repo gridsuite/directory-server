@@ -168,6 +168,7 @@
                 <groupId>org.testcontainers</groupId>
                 <artifactId>testcontainers</artifactId>
                 <version>${testcontainers.version}</version>
+                <scope>test</scope>
             </dependency>
 
             <!-- imports -->
@@ -184,12 +185,6 @@
                 <groupId>com.jparams</groupId>
                 <artifactId>to-string-verifier</artifactId>
                 <version>${to-string-verifier-version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>elasticsearch</artifactId>
-                <version>${testcontainers.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
