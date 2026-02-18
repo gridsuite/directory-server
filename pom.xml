@@ -51,6 +51,8 @@
         <sonar.projectKey>org.gridsuite:directory-server</sonar.projectKey>
         <!-- FIXME to remove when powsybl-ws-dependencies upgrades to springboot 3.5.9 -->
         <testcontainers.version>1.21.4</testcontainers.version>
+        <!-- FIXME to remove when powsybl-ws-dependencies upgrades to springboot 3.5.9 -->
+        <spring-boot-maven-plugin.version>3.4.12</spring-boot-maven-plugin.version>
     </properties>
 
     <profiles>
@@ -61,6 +63,7 @@
                     <plugin>
                         <groupId>org.springframework.boot</groupId>
                         <artifactId>spring-boot-maven-plugin</artifactId>
+                        <version>${spring-boot-maven-plugin.version}</version>
                         <configuration>
                             <docker>
                                 <publishRegistry>
