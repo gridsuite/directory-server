@@ -13,14 +13,14 @@ jobs:
     environment: 'release'
     steps:
       - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
+        uses: graalvm/setup-graalvm@54b4f5a65c1a84b2fdfdc2078fe43df32819e4b1 # v1 v1.4.5
         with:
           java-version: '21'
           distribution: 'graalvm'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@50fbc622fc4ef5163becd7fab6573eac35f8462e # v1 v1.2.0
 
       - name: Build Docker Native image - Main
         if: github.ref == 'refs/heads/main'
