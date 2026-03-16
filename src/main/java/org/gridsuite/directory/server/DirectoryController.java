@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -111,6 +112,17 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element was not found")})
     public ResponseEntity<String> getElementName(@PathVariable("elementUuid") UUID elementUuid) {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(service.getElementName(elementUuid));
+    }
+
+    @GetMapping(value = "/element-names")
+    @Operation(summary = "Get element names from ids given as parameters")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Names of the elements"),
+        @ApiResponse(responseCode = "404", description = "At least one element was not found"),
+    })
+    public ResponseEntity<Map<UUID, String>> getElementNames(@RequestParam("ids") List<UUID> elementUuids,
+                                                             @RequestParam(value = "strictMode", required = false, defaultValue = "true") Boolean strictMode) {
+        return ResponseEntity.ok().body(service.getElementNames(elementUuids, strictMode));
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}")
