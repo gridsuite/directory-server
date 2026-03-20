@@ -114,7 +114,7 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(service.getElementName(elementUuid));
     }
 
-    @GetMapping(value = "/element-names")
+    @GetMapping(value = "/element/names")
     @Operation(summary = "Get element names from ids given as parameters")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Names of the elements"),
