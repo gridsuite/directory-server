@@ -30,6 +30,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.gridsuite.directory.server.services.ConsumerService;
+import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.jetbrains.annotations.NotNull;
@@ -74,6 +75,7 @@ import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -104,6 +106,12 @@ public class DirectoryTest {
     private static final UUID TYPE_01_UPDATE_ACCESS_RIGHT_UUID = UUID.randomUUID();
     private static final UUID TYPE_03_UUID = UUID.randomUUID();
     private static final UUID TYPE_02_UUID = UUID.randomUUID();
+
+    private static final UUID ELEMENT_ID_1 = UUID.randomUUID();
+    private static final UUID ELEMENT_ID_2 = UUID.randomUUID();
+
+    private static final String ELEMENT_NAME_1 = "element1";
+    private static final String ELEMENT_NAME_2 = "element2";
 
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
@@ -160,6 +168,9 @@ public class DirectoryTest {
 
     @MockitoSpyBean
     ConsumerService consumeService;
+
+    @MockitoSpyBean
+    DirectoryRepositoryService directoryRepositoryService;
 
     @Before
     public void setup() {
@@ -2191,5 +2202,63 @@ public class DirectoryTest {
         assertNotNull(mess);
         assertEquals(exportUuid, mess.getHeaders().get(HEADER_EXPORT_UUID));
         output.clear();
+    }
+
+    @Test
+    public void getElementNames() throws Exception {
+        DirectoryElementEntity e1 = new DirectoryElementEntity();
+        e1.setId(ELEMENT_ID_1);
+        e1.setName(ELEMENT_NAME_1);
+
+        DirectoryElementEntity e2 = new DirectoryElementEntity();
+        e2.setId(ELEMENT_ID_2);
+        e2.setName(ELEMENT_NAME_2);
+
+        when(directoryRepositoryService.findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2)))
+            .thenReturn(List.of(e1, e2));
+
+        // with strictMode = true
+        mockMvc.perform(get("/v1/elements/names")
+                .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
+                .param("strictMode", "true"))
+            .andExpectAll(status().isOk())
+            .andExpect(jsonPath("$.['" + ELEMENT_ID_1 + "']").value(ELEMENT_NAME_1))
+            .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").value(ELEMENT_NAME_2));
+
+        // with strictMode = false
+        mockMvc.perform(get("/v1/elements/names")
+                .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
+                .param("strictMode", "false"))
+            .andExpectAll(status().isOk())
+            .andExpect(jsonPath("$.['" + ELEMENT_ID_1 + "']").value(ELEMENT_NAME_1))
+            .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").value(ELEMENT_NAME_2));
+
+        verify(directoryRepositoryService, times(2)).findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2));
+    }
+
+    @Test
+    public void getElementNamesWithNotFoundElements() throws Exception {
+        DirectoryElementEntity e1 = new DirectoryElementEntity();
+        e1.setId(ELEMENT_ID_1);
+        e1.setName(ELEMENT_NAME_1);
+
+        when(directoryRepositoryService.findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2)))
+            .thenReturn(List.of(e1));
+
+        // with strictMode = true, throws notFound exception
+        mockMvc.perform(get("/v1/elements/names")
+                .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
+                .param("strictMode", "true"))
+            .andExpectAll(status().isNotFound());
+
+        // with strictMode = false, returns only found elements
+        mockMvc.perform(get("/v1/elements/names")
+                .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
+                .param("strictMode", "false"))
+            .andExpectAll(status().isOk())
+            .andExpect(jsonPath("$.['" + ELEMENT_ID_1 + "']").value(ELEMENT_NAME_1))
+            .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").doesNotExist());
+
+        verify(directoryRepositoryService, times(2)).findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2));
     }
 }
