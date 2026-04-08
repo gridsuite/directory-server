@@ -41,93 +41,13 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>49.0.0</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>50.0.0</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.directory.server</liquibase-hibernate-package>
         <to-string-verifier-version>1.4.8</to-string-verifier-version>
-        <native-buildtools.version>0.11.2</native-buildtools.version>
-        <graalvm.version>23.1.2</graalvm.version>
         <db-util.version>1.0.5</db-util.version>
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:directory-server</sonar.projectKey>
-        <!-- FIXME to remove when powsybl-ws-dependencies upgrades to springboot 3.5.9 -->
-        <testcontainers.version>1.21.4</testcontainers.version>
-        <!-- FIXME to remove when powsybl-ws-dependencies upgrades to springboot 3.5.9 -->
-        <spring-boot-maven-plugin.version>3.4.12</spring-boot-maven-plugin.version>
     </properties>
-
-    <profiles>
-        <profile>
-            <id>native</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.springframework.boot</groupId>
-                        <artifactId>spring-boot-maven-plugin</artifactId>
-                        <version>${spring-boot-maven-plugin.version}</version>
-                        <configuration>
-                            <docker>
-                                <publishRegistry>
-                                    <username>${docker.publishRegistry.username}</username>
-                                    <password>${docker.publishRegistry.password}</password>
-                                </publishRegistry>
-                            </docker>
-                            <image>
-                                <builder>paketobuildpacks/builder-jammy-base</builder>
-                                <env>
-                                    <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
-                                    <!--
-                                    Without compatibility the image built on GitHub can't be run on our platforms.
-                                    The error message is: "The current machine does not support all the following CPU
-                                    features that are required by the image: [CX8, CMOV, FXSR, MMX, SSE, SSE2, SSE3,
-                                    SSSE3, SSE4_1, SSE4_2, POPCNT, LZCNT, AVX, AVX2, BMI1, BMI2, FMA]."
-                                     -->
-                                    <BP_NATIVE_IMAGE_BUILD_ARGUMENTS>-march=compatibility</BP_NATIVE_IMAGE_BUILD_ARGUMENTS>
-                                    <!-- Enable internet access -->
-                                    <HTTP_PROXY>${env.HTTP_PROXY}</HTTP_PROXY>
-                                    <HTTPS_PROXY>${env.HTTPS_PROXY}</HTTPS_PROXY>
-                                    <NO_PROXY>${env.NO_PROXY}</NO_PROXY>
-                                    <!--
-                                    SPRING_PROFILES_ACTIVE: remove extra profiles. This is used for example to remove the "local" profile
-                                    which allows running apps in an IDE and have it connect to localhost for its dependencies
-
-                                    SPRING_CONFIG_LOCATION: change the working dir from spring config location to /config. The working dir
-                                    is RW in /home, while the config is RO in /config. Keep the other spring default locations.
-                                    -->
-                                    <BPE_SPRING_PROFILES_ACTIVE>default</BPE_SPRING_PROFILES_ACTIVE>
-                                    <BPE_SPRING_CONFIG_LOCATION>optional:classpath:/;optional:classpath:/config/;optional:file:/config/;optional:file:/config/*/</BPE_SPRING_CONFIG_LOCATION>
-                                </env>
-                            </image>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>process-aot</id>
-                                <goals>
-                                    <goal>process-aot</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.graalvm.buildtools</groupId>
-                        <artifactId>native-maven-plugin</artifactId>
-                        <version>${native-buildtools.version}</version>
-                        <configuration>
-                            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
-                            <requiredVersion>${graalvm.version}</requiredVersion>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>add-reachability-metadata</id>
-                                <goals>
-                                    <goal>add-reachability-metadata</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
     <build>
         <pluginManagement>
@@ -166,13 +86,6 @@
     <dependencyManagement>
         <dependencies>
             <!-- overrides of imports -->
-            <!-- FIXME to remove when powsybl-ws-dependencies upgrades to springboot 3.5.9 -->
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers</artifactId>
-                <version>${testcontainers.version}</version>
-                <scope>test</scope>
-            </dependency>
 
             <!-- imports -->
             <dependency>
@@ -298,7 +211,6 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>elasticsearch</artifactId>
-            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
