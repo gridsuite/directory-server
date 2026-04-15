@@ -146,7 +146,9 @@ class SupervisionTest {
 
         assertEquals(1, result.size());
         verify(directoryElementRepository, times(1)).findAllByTypeAndLastModificationDateBefore(eq("STUDY"), any(Instant.class));
-        assertThrows(ResponseStatusException.class, () -> supervisionService.getUnmodifiedElementsByType("STUDY", Duration.ofDays(-365)));
+
+        var invalidDuration = Duration.ofDays(-365);
+        assertThrows(ResponseStatusException.class, () -> supervisionService.getUnmodifiedElementsByType("STUDY", invalidDuration));
     }
 
     @AfterEach
