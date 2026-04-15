@@ -1,6 +1,7 @@
 package org.gridsuite.directory.server.services;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.NonNull;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
@@ -42,7 +43,10 @@ public class SupervisionService {
     }
 
     @Transactional(readOnly = true)
-    public List<ElementAttributes> getUnmodifiedElementsByType(@NotNull String type, Duration duration) {
+    public List<ElementAttributes> getUnmodifiedElementsByType(@NotNull String type, @NonNull Duration duration) {
+        if (duration.isNegative() || duration.isZero()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "duration must be strictly positive");
+        }
         Instant threshold = Instant.now().minus(duration);
         return directoryElementRepository.findAllByTypeAndLastModificationDateBefore(type, threshold).stream().map(ElementAttributes::toElementAttributes).toList();
     }
