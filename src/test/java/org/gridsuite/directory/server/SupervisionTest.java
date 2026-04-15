@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server;
 
+import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -22,7 +23,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -130,6 +133,19 @@ class SupervisionTest {
         verify(elasticsearchOperations, times(1)).indexOps(DirectoryElementInfos.class);
         verify(indexOperations, times(1)).delete();
         verify(indexOperations, times(1)).createWithMapping();
+    }
+
+    @Test
+    void testGetElementsNotModifiedSince() {
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(UUID.randomUUID(), null, "name", "STUDY", "userId", "description", Instant.now().minus(400, ChronoUnit.DAYS), Instant.now().minus(400, ChronoUnit.DAYS), "userId");
+
+        when(directoryElementRepository.findAllByTypeAndLastModificationDateBefore(eq("STUDY"), any(Instant.class)))
+                .thenReturn(List.of(elementEntity));
+
+        List<ElementAttributes> result = supervisionService.getUnmodifiedElementsByType("STUDY", Duration.ofDays(365));
+
+        assertEquals(1, result.size());
+        verify(directoryElementRepository, times(1)).findAllByTypeAndLastModificationDateBefore(eq("STUDY"), any(Instant.class));
     }
 
     @AfterEach

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +39,12 @@ public class SupervisionService {
     @Transactional(readOnly = true)
     public List<ElementAttributes> getAllElementsByType(@NotNull String type) {
         return directoryElementRepository.findAllByType(type).stream().map(ElementAttributes::toElementAttributes).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ElementAttributes> getUnmodifiedElementsByType(@NotNull String type, Duration duration) {
+        Instant threshold = Instant.now().minus(duration);
+        return directoryElementRepository.findAllByTypeAndLastModificationDateBefore(type, threshold).stream().map(ElementAttributes::toElementAttributes).toList();
     }
 
     // delete all directory elements without checking owner
