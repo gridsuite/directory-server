@@ -60,7 +60,7 @@ public class SupervisionController {
     }
 
     @GetMapping(value = "/elements/unmodified")
-    @Operation(summary = "Get all elements of a given type where the modification date exceed the given duration")
+    @Operation(summary = "Get all elements of a given type where the last modification date exceed the given duration")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements matching the given type exceeding the given duration")})
     public ResponseEntity<List<ElementAttributes>> getUnmodifiedElements(
             @RequestParam(value = "elementType") String elementType, @RequestParam Duration duration) {
