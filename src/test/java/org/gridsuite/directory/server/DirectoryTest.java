@@ -68,8 +68,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
-import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDIES;
+import static org.gridsuite.directory.server.services.ConsumerService.*;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.junit.Assert.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -1313,7 +1312,7 @@ public class DirectoryTest {
         input.send(MessageBuilder.withPayload("")
             .setHeader(HEADER_STUDY_UUID, studyUuid.toString())
             .setHeader(HEADER_USER_ID, userId)
-            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_CREATION_FINISHED)
             .setHeader(HEADER_ERROR, "error")
             .build(), studyUpdateDestination);
 

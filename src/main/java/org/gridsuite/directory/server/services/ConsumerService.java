@@ -35,7 +35,7 @@ public class ConsumerService {
 
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
-    public static final String UPDATE_TYPE_STUDIES = "studies";
+    public static final String UPDATE_TYPE_STUDY_CREATION_FINISHED = "studyCreationFinished";
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
@@ -73,8 +73,8 @@ public class ConsumerService {
                 String error = message.getHeaders().get(HEADER_ERROR, String.class);
                 String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
                 String updateType = message.getHeaders().get(HEADER_UPDATE_TYPE, String.class);
-                // UPDATE_TYPE_STUDIES is the update type used when inserting or duplicating studies, and when a study import fails
-                if (UPDATE_TYPE_STUDIES.equals(updateType) && studyUuidHeader != null) {
+                // UPDATE_TYPE_STUDY_CREATION_FINISHED is the update type used when study insertion or duplication is finished, and when a study import fails
+                if (UPDATE_TYPE_STUDY_CREATION_FINISHED.equals(updateType) && studyUuidHeader != null) {
                     directoryService.studyUpdated(UUID.fromString(studyUuidHeader), error, userId);
                 }
             } catch (Exception e) {
