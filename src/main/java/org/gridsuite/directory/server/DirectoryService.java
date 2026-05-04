@@ -156,7 +156,8 @@ public class DirectoryService {
             elementAttributes.getDescription(),
             now,
             now,
-            elementAttributes.getOwner());
+            elementAttributes.getOwner(),
+            List.of());
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
@@ -255,6 +256,7 @@ public class DirectoryService {
             ));
     }
 
+    @Transactional(readOnly = true)
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
         if (!permissionService.hasReadPermissions(userId, List.of(directoryUuid))) {
             return List.of();
@@ -476,6 +478,7 @@ public class DirectoryService {
         return element.getName();
     }
 
+    @Transactional(readOnly = true)
     public ElementAttributes getElement(UUID elementUuid) {
         return toElementAttributes(getDirectoryElementEntity(elementUuid));
     }

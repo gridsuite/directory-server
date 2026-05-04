@@ -10,8 +10,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.ReferenceEntity;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
@@ -46,8 +48,16 @@ public class ElementAttributes {
 
     private String lastModifiedBy;
 
+    private List<ReferenceAttributes> references;
+
     public boolean isOwnedBy(@NonNull String userId) {
         return owner.equals(userId);
+    }
+
+    public static List<ReferenceAttributes> toReferencesAttributes(@NonNull DirectoryElementEntity entity) {
+        return entity.getReferences().stream()
+                .map(ReferenceEntity::toReferenceAttributes)
+                .toList();
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
@@ -55,7 +65,7 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), toReferencesAttributes(entity), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
@@ -79,10 +89,21 @@ public class ElementAttributes {
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull String userId,
                                                         long subdirectoriesCount, String elementDescription, Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
+        return toElementAttributes(elementUuid, elementName, elementType, userId, List.of(), subdirectoriesCount, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
+    }
+
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+                                                        @NonNull String userId, List<ReferenceAttributes> references,
+                                                        long subdirectoriesCount, String elementDescription, Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
         return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
-            .type(elementType).owner(userId).creationDate(creationDate)
-            .subdirectoriesCount(subdirectoriesCount).description(elementDescription)
-            .lastModificationDate(lastModificationDate).lastModifiedBy(lastModifiedBy)
+            .type(elementType)
+            .owner(userId)
+            .creationDate(creationDate)
+            .subdirectoriesCount(subdirectoriesCount)
+            .description(elementDescription)
+            .references(references)
+            .lastModificationDate(lastModificationDate)
+            .lastModifiedBy(lastModifiedBy)
             .build();
     }
 }

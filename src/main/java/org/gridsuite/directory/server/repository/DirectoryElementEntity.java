@@ -6,14 +6,14 @@
  */
 package org.gridsuite.directory.server.repository;
 
+import jakarta.persistence.*;
 import lombok.*;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-
-import jakarta.persistence.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -61,6 +61,10 @@ public class DirectoryElementEntity {
 
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JoinColumn(name = "element_id", foreignKey = @ForeignKey(name = "element_id_fk"))
+    private List<ReferenceEntity> references = new ArrayList<>();
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
