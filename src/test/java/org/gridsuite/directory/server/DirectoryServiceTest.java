@@ -13,6 +13,7 @@ import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.PermissionService;
+import org.gridsuite.directory.server.utils.DirectoryTestUtils;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,10 +28,8 @@ import java.util.UUID;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.MAX_RETRY;
-import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
-import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -119,7 +118,7 @@ class DirectoryServiceTest {
         UUID rootUuid = rootAttributes.getElementUuid();
 
         // Insert a new element
-        ElementAttributes elementAttributes = toElementAttributes(null, "element1", "TYPE", "user1");
+        ElementAttributes elementAttributes = DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", "user1");
         UUID elementUuid = directoryService.createElement(elementAttributes, rootUuid, "User1", false).getElementUuid();
 
         // Insert the same element in the same directory throws an exception

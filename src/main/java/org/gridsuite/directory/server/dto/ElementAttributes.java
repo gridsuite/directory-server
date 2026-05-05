@@ -55,9 +55,23 @@ public class ElementAttributes {
     }
 
     public static List<ReferenceAttributes> toReferencesAttributes(@NonNull DirectoryElementEntity entity) {
-        return entity.getReferences().stream()
-                .map(ReferenceEntity::toReferenceAttributes)
-                .toList();
+        return java.util.Optional.ofNullable(entity.getReferences())
+            .orElseGet(List::of)
+            .stream()
+            .map(ReferenceEntity::toReferenceAttributes)
+            .toList();
+    }
+
+    public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity) {
+        ElementAttributes attributes = toElementAttributes(entity, 0L);
+        attributes.setReferences(toReferencesAttributes(entity));
+        return attributes;
+    }
+
+    public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
+        ElementAttributes attributes = toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
+        attributes.setReferences(toReferencesAttributes(entity));
+        return attributes;
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity) {
@@ -65,45 +79,27 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), toReferencesAttributes(entity), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
         return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(), rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, @NonNull String userId) {
-        return toElementAttributes(elementUuid, elementName, elementType, userId, 0L, null, null, null, null);
-    }
-
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        @NonNull String userId, @NonNull String elementDescription) {
-        return toElementAttributes(elementUuid, elementName, elementType, userId, 0L, elementDescription, null, null, null);
-    }
-
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        @NonNull String userId, String elementDescription, Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
-        return toElementAttributes(elementUuid, elementName, elementType, userId, 0L, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
-    }
-
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull String userId,
                                                         long subdirectoriesCount, String elementDescription, Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
-        return toElementAttributes(elementUuid, elementName, elementType, userId, List.of(), subdirectoriesCount, elementDescription, creationDate, lastModificationDate, lastModifiedBy);
-    }
-
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        @NonNull String userId, List<ReferenceAttributes> references,
-                                                        long subdirectoriesCount, String elementDescription, Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
-        return ElementAttributes.builder().elementUuid(elementUuid).elementName(elementName)
+        return ElementAttributes.builder()
+            .elementUuid(elementUuid)
+            .elementName(elementName)
             .type(elementType)
             .owner(userId)
             .creationDate(creationDate)
             .subdirectoriesCount(subdirectoriesCount)
             .description(elementDescription)
-            .references(references)
             .lastModificationDate(lastModificationDate)
             .lastModifiedBy(lastModifiedBy)
+            .references(List.of())
             .build();
     }
 }

@@ -32,7 +32,6 @@ import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.gridsuite.directory.server.services.ConsumerService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.MatcherJson;
-import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -65,11 +64,12 @@ import java.util.stream.Collectors;
 
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.services.ConsumerService.*;
+import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
+import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDY_CREATION_FINISHED;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.*;
@@ -85,7 +85,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
-@DisableElasticsearch
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 public class DirectoryTest {
     public static final String TYPE_01 = "TYPE_01";
@@ -281,20 +280,19 @@ public class DirectoryTest {
         ElementAttributes elementAttributes = toElementAttributes(elementUUID, "type01", TYPE_01, "Doe");
         insertAndCheckSubElement(directory2UUID, elementAttributes);
         SQLStatementCountValidator.reset();
-        //directoryService.getElement(elementUUID);
-        //directoryService.getAllDirectoryElementsStream(rootDirUuid, List.of(DIRECTORY), "user1");
-        //List<ElementAttributes> path = getPath(elementUUID, "Doe");
+        List<ElementAttributes> path = getPath(elementUUID, "Doe");
 
-        //There is only recursive query and SQLStatementCountValidator ignore them
+        // There is only request with entity graph
+        // SQLStatementCountValidator ignore native queries
         assertRequestsCount(0, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
-//        assertEquals(
-//                path.stream()
-//                    .map(ElementAttributes::getElementUuid)
-//                    .collect(Collectors.toList()),
-//                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, elementUUID)
-//        );
+        assertEquals(
+                path.stream()
+                    .map(ElementAttributes::getElementUuid)
+                    .collect(Collectors.toList()),
+                Arrays.asList(rootDirUuid, directory1UUID, directory2UUID, elementUUID)
+        );
     }
 
     @Test
@@ -1762,7 +1760,7 @@ public class DirectoryTest {
     public void testCreateElementInDirectory() {
         String userId = "user";
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
-        ElementAttributes elementAttributes = ElementAttributes.toElementAttributes(UUID.randomUUID(), "elementName", TYPE_05, "user", null, now, now, userId);
+        ElementAttributes elementAttributes = ElementAttributes.toElementAttributes(UUID.randomUUID(), "elementName", TYPE_05, "user", 0L, null, now, now, userId);
         String requestBody = objectMapper.writeValueAsString(elementAttributes);
         mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
                         .header("userId", userId)

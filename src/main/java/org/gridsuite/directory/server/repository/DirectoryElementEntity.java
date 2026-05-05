@@ -62,7 +62,7 @@ public class DirectoryElementEntity {
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "element_id", foreignKey = @ForeignKey(name = "element_id_fk"))
     private List<ReferenceEntity> references = new ArrayList<>();
 

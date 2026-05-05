@@ -28,8 +28,8 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertThrows;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -115,7 +115,7 @@ public class ElementAttributesTest {
         String formattedCreationDate = formatter.format(creationDate);
 
         assertEquals(
-            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + formattedCreationDate + "\",\"lastModificationDate\":\"" + formattedCreationDate + "\",\"lastModifiedBy\":\"userId\"}",
+            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + formattedCreationDate + "\",\"lastModificationDate\":\"" + formattedCreationDate + "\",\"lastModifiedBy\":\"userId\",\"references\":[]}",
             toJsonString(toElementAttributes(UUID.fromString("21297976-7445-44f1-9ccf-910cbb2f84f8"), "name", DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"))
         );
     }
@@ -135,7 +135,8 @@ public class ElementAttributesTest {
                 toJsonString("description", elementAttributes.getDescription()),
                 toJsonString("creationDate", elementAttributes.getCreationDate()),
                 toJsonString("lastModificationDate", elementAttributes.getLastModificationDate()),
-                toJsonString("lastModifiedBy", elementAttributes.getLastModifiedBy())
+                toJsonString("lastModifiedBy", elementAttributes.getLastModifiedBy()),
+                toJsonString("references", elementAttributes.getReferences())
             )
             .filter(Objects::nonNull)
             .collect(toReversedList()).stream()

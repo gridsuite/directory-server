@@ -8,7 +8,9 @@
             <column name="reference_id" type="UUID"/>
             <column name="reference_name" type="VARCHAR(255)"/>
             <column name="reference_type" type="VARCHAR(255)"/>
-            <column name="element_id" type="UUID"/>
+            <column name="element_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
     </changeSet>
     <changeSet author="amarsli (generated)" id="1777477329203-2">
