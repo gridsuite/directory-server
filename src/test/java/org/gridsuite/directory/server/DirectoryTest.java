@@ -2191,4 +2191,35 @@ public class DirectoryTest {
         assertEquals(exportUuid, mess.getHeaders().get(HEADER_EXPORT_UUID));
         output.clear();
     }
+
+    @Test
+    public void testGetElementsNotModifiedSince() throws Exception {
+        UUID uuidNewRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID).getElementUuid();
+        ElementAttributes recentElement = toElementAttributes(UUID.randomUUID(), "recentElement", TYPE_01, USER_ID, "descr recent");
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, recentElement);
+
+        DirectoryElementEntity oldElement = new DirectoryElementEntity(
+                UUID.randomUUID(), uuidNewRootDirectory, "oldElement", TYPE_01, USER_ID, "descr old",
+                Instant.now().minus(400, ChronoUnit.DAYS),
+                Instant.now().minus(400, ChronoUnit.DAYS),
+                USER_ID
+        );
+        directoryElementRepository.save(oldElement);
+
+        MvcResult mvcResult = mockMvc
+                .perform(get("/v1/supervision/elements/unmodified")
+                        .param("elementType", TYPE_01)
+                        .param("duration", "P365D"))
+                .andExpect(status().isOk())
+                .andReturn();
+        List<ElementAttributes> result = objectMapper.readValue(
+                mvcResult.getResponse().getContentAsString(),
+                new TypeReference<List<ElementAttributes>>() { }
+        );
+
+        assertEquals(1, result.size());
+        assertEquals(oldElement.getId(), result.get(0).getElementUuid());
+
+        output.clear();
+    }
 }
