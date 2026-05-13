@@ -78,9 +78,6 @@ public class DirectoryElementEntity {
         if (isDescriptionUpdated) {
             this.description = newElementAttributes.getDescription();
         }
-        if (isDescriptionUpdated || isElementNameUpdated) {
-            updateModificationAttributes(lastModifiedBy, Instant.now());
-        }
         return this;
     }
 

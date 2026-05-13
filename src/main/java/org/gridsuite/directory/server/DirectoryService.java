@@ -497,6 +497,14 @@ public class DirectoryService {
         return element.getName();
     }
 
+    public Map<UUID, String> getElementNames(List<UUID> elementUuids, boolean strictMode) {
+        List<DirectoryElementEntity> elements = repositoryService.findAllByIdIn(elementUuids);
+        if (strictMode && elements.size() != elementUuids.stream().distinct().count()) {
+            throw DirectoryException.of(DIRECTORY_SOME_ELEMENTS_ARE_MISSING, "Some requested elements are missing");
+        }
+        return elements.stream().collect(Collectors.toMap(DirectoryElementEntity::getId, DirectoryElementEntity::getName));
+    }
+
     public ElementAttributes getElement(UUID elementUuid) {
         return toElementAttributes(getDirectoryElementEntity(elementUuid));
     }
