@@ -7,10 +7,15 @@
 package org.gridsuite.directory.server;
 
 import lombok.NonNull;
-import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.PermissionDTO;
+import org.gridsuite.directory.server.dto.ReferenceAttributes;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
-import org.gridsuite.directory.server.repository.*;
+import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.ReferenceEntity;
 import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -25,10 +30,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
-import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -334,7 +339,7 @@ public class DirectoryService {
     public void createElementReference(UUID elementUuid, ReferenceAttributes referenceAttributes, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
         ReferenceEntity referenceEntity = new ReferenceEntity(
-            UUID.randomUUID(),
+            null,
             referenceAttributes.getReferenceId(),
             referenceAttributes.getReferenceType(),
             referenceAttributes.getReferenceName()

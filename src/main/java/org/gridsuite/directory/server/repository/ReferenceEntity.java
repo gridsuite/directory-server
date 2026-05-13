@@ -25,6 +25,7 @@ import java.util.UUID;
 public class ReferenceEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private UUID id;
 

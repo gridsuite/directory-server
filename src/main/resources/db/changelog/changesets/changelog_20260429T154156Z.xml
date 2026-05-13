@@ -8,17 +8,11 @@
             <column name="reference_id" type="UUID"/>
             <column name="reference_name" type="VARCHAR(255)"/>
             <column name="reference_type" type="VARCHAR(255)"/>
-            <column name="element_id" type="UUID">
-                <constraints nullable="false"/>
-            </column>
+            <column name="element_id" type="UUID"/>
         </createTable>
-    </changeSet>
-    <changeSet author="amarsli (generated)" id="1777477329203-2">
         <createIndex indexName="element_idx" tableName="reference">
             <column name="element_id"/>
         </createIndex>
-    </changeSet>
-    <changeSet author="amarsli (generated)" id="1777477329203-3">
         <addForeignKeyConstraint baseColumnNames="element_id" baseTableName="reference" constraintName="element_id_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="element" validate="true"/>
     </changeSet>
 </databaseChangeLog>

@@ -60,7 +60,7 @@ public class DirectoryElementEntity {
     private String lastModifiedBy;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "element_id", foreignKey = @ForeignKey(name = "element_id_fk"))
+    @JoinColumn(name = "element_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "element_id_fk"))
     private List<ReferenceEntity> references = new ArrayList<>();
 
     // Return a list that cannot be modified to avoid side effects
