@@ -6,17 +6,14 @@
  */
 package org.gridsuite.directory.server.repository;
 
+import jakarta.persistence.*;
 import lombok.*;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
-
-import jakarta.persistence.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
@@ -61,6 +58,15 @@ public class DirectoryElementEntity {
 
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "element_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "element_id_fk"))
+    private List<ReferenceEntity> references = new ArrayList<>();
+
+    // Return a list that cannot be modified to avoid side effects
+    public List<ReferenceEntity> getReferences() {
+        return Collections.unmodifiableList(references);
+    }
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
@@ -107,5 +113,13 @@ public class DirectoryElementEntity {
                 .pathName(path.stream().map(DirectoryElementEntity::getName).toList())
                 .lastModificationDate(getLastModificationDate())
                 .build();
+    }
+
+    public void addReference(ReferenceEntity reference) {
+        this.references.add(reference);
+    }
+
+    public void removeReference(UUID referenceUuid) {
+        this.references.removeIf(reference -> reference.getReferenceId().equals(referenceUuid));
     }
 }

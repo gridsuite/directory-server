@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server.repository;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -23,11 +24,15 @@ import java.util.UUID;
 @Repository
 public interface DirectoryElementRepository extends JpaRepository<DirectoryElementEntity, UUID> {
 
+    @EntityGraph(attributePaths = {"references"}, type = EntityGraph.EntityGraphType.LOAD)
     List<DirectoryElementEntity> findAllByParentId(UUID parentId);
 
     List<DirectoryElementEntity> findAllByType(String type);
 
     List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids);
+
+    @EntityGraph(attributePaths = {"references"}, type = EntityGraph.EntityGraphType.LOAD)
+    List<DirectoryElementEntity> findAllWithReferencesByIdIn(List<UUID> ids);
 
     List<DirectoryElementEntity> findAllByIdInAndParentIdAndTypeNot(List<UUID> uuids, UUID parentUuid, String type);
 

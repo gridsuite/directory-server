@@ -28,8 +28,8 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertThrows;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
@@ -56,8 +56,8 @@ public class ElementAttributesTest {
     public void testElementEntityUpdate() {
         Instant localCreationDate = Instant.now();
 
-        DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", localCreationDate, localCreationDate, "userId");
-        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", TYPE_01, "userId", "description", localCreationDate, localCreationDate, "userId");
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", localCreationDate, localCreationDate, "userId", List.of());
+        DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", TYPE_01, "userId", "description", localCreationDate, localCreationDate, "userId", List.of());
 
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), "userId"));
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().build(), "userId"));
@@ -87,8 +87,8 @@ public class ElementAttributesTest {
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", "description"));
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId"));
 
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId")));
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId"), 1L));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId", List.of())));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId", List.of()), 1L));
         verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", "userId", "description", creationDate, creationDate, "userId")));
 
         assertThrows(NullPointerException.class, () -> toElementAttributes((DirectoryElementEntity) null));
@@ -115,7 +115,7 @@ public class ElementAttributesTest {
         String formattedCreationDate = formatter.format(creationDate);
 
         assertEquals(
-            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + formattedCreationDate + "\",\"lastModificationDate\":\"" + formattedCreationDate + "\",\"lastModifiedBy\":\"userId\"}",
+            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + formattedCreationDate + "\",\"lastModificationDate\":\"" + formattedCreationDate + "\",\"lastModifiedBy\":\"userId\",\"references\":[]}",
             toJsonString(toElementAttributes(UUID.fromString("21297976-7445-44f1-9ccf-910cbb2f84f8"), "name", DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"))
         );
     }
@@ -135,7 +135,8 @@ public class ElementAttributesTest {
                 toJsonString("description", elementAttributes.getDescription()),
                 toJsonString("creationDate", elementAttributes.getCreationDate()),
                 toJsonString("lastModificationDate", elementAttributes.getLastModificationDate()),
-                toJsonString("lastModifiedBy", elementAttributes.getLastModifiedBy())
+                toJsonString("lastModifiedBy", elementAttributes.getLastModifiedBy()),
+                toJsonString("references", elementAttributes.getReferences())
             )
             .filter(Objects::nonNull)
             .collect(toReversedList()).stream()

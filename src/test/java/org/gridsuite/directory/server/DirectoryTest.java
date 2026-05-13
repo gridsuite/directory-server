@@ -22,6 +22,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
@@ -32,6 +33,7 @@ import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.gridsuite.directory.server.services.ConsumerService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.UserAdminService;
+import org.gridsuite.directory.server.utils.DirectoryTestUtils;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -65,20 +67,18 @@ import java.util.stream.Collectors;
 
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.services.ConsumerService.*;
+import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
+import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDY_CREATION_FINISHED;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -295,7 +295,8 @@ public class DirectoryTest {
         SQLStatementCountValidator.reset();
         List<ElementAttributes> path = getPath(elementUUID, "Doe");
 
-        //There is only recursive query and SQLStatementCountValidator ignore them
+        // There is only request with entity graph
+        // SQLStatementCountValidator ignore native queries
         assertRequestsCount(0, 0, 0, 0);
 
         //Check if all element's parents are retrieved in the right order
@@ -1772,7 +1773,7 @@ public class DirectoryTest {
     public void testCreateElementInDirectory() {
         String userId = "user";
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
-        ElementAttributes elementAttributes = ElementAttributes.toElementAttributes(UUID.randomUUID(), "elementName", TYPE_05, "user", null, now, now, userId);
+        ElementAttributes elementAttributes = ElementAttributes.toElementAttributes(UUID.randomUUID(), "elementName", TYPE_05, "user", 0L, null, now, now, userId);
         String requestBody = objectMapper.writeValueAsString(elementAttributes);
         mockMvc.perform(post("/v1/directories/paths/elements?directoryPath=" + "dir1/dir2")
                         .header("userId", userId)
@@ -2259,5 +2260,32 @@ public class DirectoryTest {
             .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").doesNotExist());
 
         verify(directoryRepositoryService, times(2)).findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2));
+    }
+
+    @Test
+    @SneakyThrows
+    public void testCreateElementReference() {
+        String userId = "user";
+
+        // create a root directory and an element
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
+        ElementAttributes elementAttributes = DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", "user1");
+        elementAttributes = directoryService.createElement(elementAttributes, rootAttributes.getElementUuid(), "user1", false);
+
+        // create a reference to the element
+        UUID referenceId = UUID.randomUUID();
+        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder().referenceId(referenceId).referenceName("reference1").referenceType("NODE").build();
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(referenceAttributes)))
+            .andExpect(status().isOk());
+
+        // check that the reference is created
+        elementAttributes.setReferences(List.of(referenceAttributes));
+        checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
+
+        // TODO test notifications
+        output.clear();
     }
 }
