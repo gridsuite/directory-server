@@ -13,10 +13,7 @@ import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
@@ -66,6 +63,11 @@ public class DirectoryElementEntity {
     @JoinColumn(name = "element_id", foreignKey = @ForeignKey(name = "element_id_fk"))
     private List<ReferenceEntity> references = new ArrayList<>();
 
+    // Return a list that cannot be modified to avoid side effects
+    public List<ReferenceEntity> getReferences() {
+        return Collections.unmodifiableList(references);
+    }
+
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
         if (isElementNameUpdated) {
@@ -114,5 +116,9 @@ public class DirectoryElementEntity {
                 .pathName(path.stream().map(DirectoryElementEntity::getName).toList())
                 .lastModificationDate(getLastModificationDate())
                 .build();
+    }
+
+    public void addReference(ReferenceEntity reference) {
+        this.references.add(reference);
     }
 }

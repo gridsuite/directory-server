@@ -331,6 +331,20 @@ public class DirectoryService {
     }
 
     @Transactional
+    public void createElementReference(UUID elementUuid, ReferenceAttributes referenceAttributes, String userId) {
+        DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
+        ReferenceEntity referenceEntity = new ReferenceEntity(
+            UUID.randomUUID(),
+            referenceAttributes.getReferenceId(),
+            referenceAttributes.getReferenceType(),
+            referenceAttributes.getReferenceName()
+        );
+        directoryElementEntity.addReference(referenceEntity);
+
+        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
+    }
+
+    @Transactional
     public void updateElementLastModifiedAttributes(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
         elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
