@@ -25,10 +25,6 @@ import java.util.UUID;
 public class ReferenceEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id")
-    private UUID id;
-
     @Column(name = "reference_id")
     private UUID referenceId;
 
@@ -40,7 +36,6 @@ public class ReferenceEntity {
 
     public ReferenceAttributes toReferenceAttributes() {
         return ReferenceAttributes.builder()
-            .id(id)
             .referenceId(referenceId)
             .referenceType(referenceType)
             .referenceName(referenceName)

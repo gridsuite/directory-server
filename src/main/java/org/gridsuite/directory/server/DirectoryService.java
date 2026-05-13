@@ -339,7 +339,6 @@ public class DirectoryService {
     public void createElementReference(UUID elementUuid, ReferenceAttributes referenceAttributes, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
         ReferenceEntity referenceEntity = new ReferenceEntity(
-            null,
             referenceAttributes.getReferenceId(),
             referenceAttributes.getReferenceType(),
             referenceAttributes.getReferenceName()

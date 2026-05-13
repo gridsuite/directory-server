@@ -22,6 +22,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
@@ -32,6 +33,7 @@ import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.gridsuite.directory.server.services.ConsumerService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.UserAdminService;
+import org.gridsuite.directory.server.utils.DirectoryTestUtils;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
@@ -2258,5 +2260,32 @@ public class DirectoryTest {
             .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").doesNotExist());
 
         verify(directoryRepositoryService, times(2)).findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2));
+    }
+
+    @Test
+    @SneakyThrows
+    public void testCreateElementReference() {
+        String userId = "user";
+
+        // create a root directory and an element
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
+        ElementAttributes elementAttributes = DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", "user1");
+        elementAttributes = directoryService.createElement(elementAttributes, rootAttributes.getElementUuid(), "user1", false);
+
+        // create a reference to the element
+        UUID referenceId = UUID.randomUUID();
+        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder().referenceId(referenceId).referenceName("reference1").referenceType("NODE").build();
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(referenceAttributes)))
+            .andExpect(status().isOk());
+
+        // check that the reference is created
+        elementAttributes.setReferences(List.of(referenceAttributes));
+        checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
+
+        // TODO test notifications
+        output.clear();
     }
 }
