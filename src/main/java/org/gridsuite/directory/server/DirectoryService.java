@@ -350,6 +350,14 @@ public class DirectoryService {
     }
 
     @Transactional
+    public void deleteElementReference(UUID elementUuid, UUID referenceUuid, String userId) {
+        DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
+        directoryElementEntity.removeReference(referenceUuid);
+
+        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
+    }
+
+    @Transactional
     public void updateElementLastModifiedAttributes(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
         elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);

@@ -268,9 +268,9 @@ public class DirectoryController {
     }
 
     @PostMapping(value = "/elements/{elementUuid}/references", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Update element/directory")
+    @Operation(summary = "Add element reference")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Element/directory was successfully updated"),
+        @ApiResponse(responseCode = "200", description = "Reference was successfully added"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
     })
@@ -278,6 +278,20 @@ public class DirectoryController {
                                                        @RequestBody ReferenceAttributes referenceAttributes,
                                                        @RequestHeader("userId") String userId) {
         service.createElementReference(elementUuid, referenceAttributes, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/elements/{elementUuid}/references")
+    @Operation(summary = "Delete element reference")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Reference was successfully deleted"),
+        @ApiResponse(responseCode = "404", description = "The element was not found"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
+    })
+    public ResponseEntity<Void> deleteElementReference(@PathVariable("elementUuid") UUID elementUuid,
+                                                       @Parameter(description = "Reference uuid") @RequestParam(value = "referenceUuid") UUID referenceUuid,
+                                                       @RequestHeader("userId") String userId) {
+        service.deleteElementReference(elementUuid, referenceUuid, userId);
         return ResponseEntity.ok().build();
     }
 

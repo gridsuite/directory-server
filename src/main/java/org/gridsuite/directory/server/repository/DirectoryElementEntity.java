@@ -118,4 +118,8 @@ public class DirectoryElementEntity {
     public void addReference(ReferenceEntity reference) {
         this.references.add(reference);
     }
+
+    public void removeReference(UUID referenceUuid) {
+        this.references.removeIf(reference -> reference.getReferenceId().equals(referenceUuid));
+    }
 }
