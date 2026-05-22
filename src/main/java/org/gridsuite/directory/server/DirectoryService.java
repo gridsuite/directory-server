@@ -335,10 +335,18 @@ public class DirectoryService {
     public void moveElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
         validateNewDirectory(newDirectoryUuid);
 
-        elementsUuids.forEach(elementUuid -> moveElementDirectory(getDirectoryElementEntity(elementUuid), newDirectoryUuid, userId));
+        Map<UUID, List<String> > elementsByDirectory = new HashMap<>();
+        elementsUuids.forEach(elementUuid -> moveElementDirectory(getDirectoryElementEntity(elementUuid), newDirectoryUuid, userId, elementsByDirectory));
+        elementsByDirectory.forEach((key, value) -> sendMoveNotification(key, newDirectoryUuid, value, userId));
     }
 
-    private void moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
+    private void sendMoveNotification(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId) {
+        // if it has a parent, we notify it.
+        // otherwise, which means it is a root, we send a notification that a root has been deleted (in this case, it moved under a new directory)
+        notifyDirectoryHasChanged(oldDirectoryUuid, newDirectoryUuid, elements, userId);
+    }
+
+    private void moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId, Map<UUID, List<String>> notificationByDirectory) {
         if (Objects.equals(element.getParentId(), newDirectoryUuid)) { // Same directory ?
             return;
         }
@@ -356,15 +364,9 @@ public class DirectoryService {
         // reindex descendents
         repositoryService.reindexElements(descendents);
 
-        // if it has a parent, we notify it.
-        // otherwise, which means it is a root, we send a notification that a root has been deleted (in this case, it moved under a new directory)
-        if (oldDirectory != null) {
-            notifyDirectoryHasChanged(oldDirectory.getId(), userId, element.getName(), isDirectory);
-        } else {
-            notifyRootDirectoryDeleted(element.getId(), userId, element.getName(), isDirectory);
-        }
-        notifyDirectoryHasChanged(newDirectoryUuid, userId, element.getName(), isDirectory);
-
+        //Add to notification map
+        List<String> names = notificationByDirectory.computeIfAbsent(oldDirectory != null ? oldDirectory.getId() : null, k -> new ArrayList<>());
+        names.add(element.getName());
     }
 
     private void validateElementForMove(DirectoryElementEntity element, UUID newDirectoryUuid, Set<UUID> descendentsUuids, String userId) {
@@ -592,6 +594,18 @@ public class DirectoryService {
         notifyDirectoryHasChanged(directoryUuid, userId, elementName, null, isDirectoryMoving);
     }
 
+    private void notifyDirectoryHasChanged(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId) {
+        Objects.requireNonNull(newDirectoryUuid);
+        notificationService.emitDirectoryChanged(
+            oldDirectoryUuid,
+            newDirectoryUuid,
+            elements,
+            userId,
+            oldDirectoryUuid == null,
+            false // we can't move to root directory for the moment
+        );
+    }
+
     private void notifyDirectoryHasChanged(UUID directoryUuid, String userId, String elementName, String error) {
         notifyDirectoryHasChanged(directoryUuid, userId, elementName, error, false);
     }
@@ -603,7 +617,6 @@ public class DirectoryService {
             elementName,
             userId,
             error,
-            repositoryService.isRootDirectory(directoryUuid),
             isDirectoryMoving,
             NotificationType.UPDATE_DIRECTORY
         );

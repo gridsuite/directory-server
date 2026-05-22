@@ -15,6 +15,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -30,11 +31,14 @@ public class NotificationService {
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String UPDATE_TYPE_DIRECTORIES = "directories";
     public static final String HEADER_DIRECTORY_UUID = "directoryUuid";
+    public static final String HEADER_OLD_DIRECTORY_UUID = "oldDirectoryUuid";
     public static final String HEADER_IS_PUBLIC_DIRECTORY = "isPublicDirectory";
     public static final String HEADER_IS_ROOT_DIRECTORY = "isRootDirectory";
+    public static final String HEADER_OLD_IS_ROOT_DIRECTORY = "oldIsRootDirectory";
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NOTIFICATION_TYPE = "notificationType";
     public static final String HEADER_ELEMENT_NAME = "elementName";
+    public static final String HEADER_ELEMENTS_LIST = "elementsList";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_IS_DIRECTORY_MOVING = "isDirectoryMoving";
     public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
@@ -66,6 +70,20 @@ public class NotificationService {
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
                 .setHeader(HEADER_IS_DIRECTORY_MOVING, isDirectoryMoving)
                 .setHeader(HEADER_ERROR, error);
+        sendUpdateMessage(messageBuilder.build());
+    }
+
+    void emitDirectoryChanged(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId, boolean oldIsRoot, boolean newIsRoot) {
+        MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_OLD_DIRECTORY_UUID, oldDirectoryUuid)
+            .setHeader(HEADER_DIRECTORY_UUID, newDirectoryUuid)
+            .setHeader(HEADER_ELEMENTS_LIST, elements)
+            .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from broken REST request
+            .setHeader(HEADER_NOTIFICATION_TYPE, NotificationType.UPDATE_DIRECTORY)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
+            .setHeader(HEADER_OLD_IS_ROOT_DIRECTORY, oldIsRoot)
+            .setHeader(HEADER_IS_ROOT_DIRECTORY, newIsRoot);
         sendUpdateMessage(messageBuilder.build());
     }
 
