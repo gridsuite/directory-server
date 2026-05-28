@@ -185,7 +185,7 @@ class DirectoryServiceTest {
         reset(directoryElementRepository);
 
         directoryService.moveElementsDirectory(List.of(elementUuid1, elementUuid2), dirUuid, "user1");
-        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, dirUuid, List.of("element1", "element2"), "user1", false, false, true);
+        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, dirUuid, List.of("element1", "element2"), "user1", false, false, false);
 
         Optional<DirectoryElementEntity> elementEntity1 = directoryElementRepository.findById(elementUuid1);
         Optional<DirectoryElementEntity> elementEntity2 = directoryElementRepository.findById(elementUuid2);
