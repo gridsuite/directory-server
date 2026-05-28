@@ -73,7 +73,7 @@ public class NotificationService {
         sendUpdateMessage(messageBuilder.build());
     }
 
-    void emitDirectoryChanged(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId, boolean oldIsRoot, boolean newIsRoot) {
+    void emitDirectoryChanged(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId, boolean oldIsRoot, boolean newIsRoot, boolean isDirectoryMoving) {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
             .setHeader(HEADER_USER_ID, userId)
             .setHeader(HEADER_OLD_DIRECTORY_UUID, oldDirectoryUuid)
@@ -83,7 +83,8 @@ public class NotificationService {
             .setHeader(HEADER_NOTIFICATION_TYPE, NotificationType.UPDATE_DIRECTORY)
             .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
             .setHeader(HEADER_OLD_IS_ROOT_DIRECTORY, oldIsRoot)
-            .setHeader(HEADER_IS_ROOT_DIRECTORY, newIsRoot);
+            .setHeader(HEADER_IS_ROOT_DIRECTORY, newIsRoot)
+            .setHeader(HEADER_IS_DIRECTORY_MOVING, isDirectoryMoving);
         sendUpdateMessage(messageBuilder.build());
     }
 

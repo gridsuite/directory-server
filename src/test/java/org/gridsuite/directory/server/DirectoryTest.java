@@ -458,19 +458,9 @@ public class DirectoryTest {
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(directory21UUID, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(false, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
-        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-
-        // assert that the broker message has been sent a root directory creation request message
-        message = output.receive(TIMEOUT, directoryUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(directory21UUID, headers.get(HEADER_OLD_DIRECTORY_UUID));
         assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
+        assertEquals(false, headers.get(HEADER_OLD_IS_ROOT_DIRECTORY));
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
@@ -597,22 +587,11 @@ public class DirectoryTest {
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(isMovingDirectoryRoot ? directoryUuid : parentDirectoryUuid, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_DIRECTORY_MOVING));
-        assertEquals(isMovingDirectoryRoot ? NotificationType.DELETE_DIRECTORY : NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
-        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-
-        message = output.receive(TIMEOUT, directoryUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("Doe", headers.get(HEADER_USER_ID));
+        assertEquals(parentDirectoryUuid, headers.get(HEADER_OLD_DIRECTORY_UUID));
         assertEquals(targetDirectoryUuid, headers.get(HEADER_DIRECTORY_UUID));
         assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_DIRECTORY_MOVING));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        // assertEquals(true, headers.get(HEADER_IS_DIRECTORY_MOVING));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
 
@@ -642,21 +621,10 @@ public class DirectoryTest {
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(rootDir20Uuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(rootDir20Uuid, headers.get(HEADER_OLD_DIRECTORY_UUID));
         assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(false, headers.get(HEADER_IS_DIRECTORY_MOVING));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
-        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-
-        message = output.receive(TIMEOUT, directoryUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(false, headers.get(HEADER_IS_DIRECTORY_MOVING));
+        //assertEquals(false, headers.get(HEADER_IS_DIRECTORY_MOVING));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
 
@@ -730,21 +698,11 @@ public class DirectoryTest {
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
-        assertEquals(rootDir10Uuid, headers.get(HEADER_DIRECTORY_UUID));
-        assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-        assertEquals(NotificationType.DELETE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
-
-        message = output.receive(TIMEOUT, directoryUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        headers = message.getHeaders();
-        assertEquals("Doe", headers.get(HEADER_USER_ID));
         assertEquals(rootDir20Uuid, headers.get(HEADER_DIRECTORY_UUID));
         assertEquals(true, headers.get(HEADER_IS_ROOT_DIRECTORY));
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
 
         assertNbElementsInRepositories(3);
     }

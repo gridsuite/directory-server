@@ -604,13 +604,16 @@ public class DirectoryService {
 
     private void notifyDirectoryHasChanged(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId) {
         Objects.requireNonNull(newDirectoryUuid);
+        boolean isOldRoot = oldDirectoryUuid != null && repositoryService.isRootDirectory(oldDirectoryUuid);
+        boolean isOldDirectory = oldDirectoryUuid != null && DIRECTORY.equals(getElement(oldDirectoryUuid).getType());
         notificationService.emitDirectoryChanged(
             oldDirectoryUuid,
             newDirectoryUuid,
             elements,
             userId,
-            oldDirectoryUuid == null,
-            false // we can't move to root directory for the moment
+            isOldRoot,
+            repositoryService.isRootDirectory(newDirectoryUuid),
+            isOldDirectory
         );
     }
 
@@ -625,6 +628,7 @@ public class DirectoryService {
             elementName,
             userId,
             error,
+            repositoryService.isRootDirectory(directoryUuid),
             isDirectoryMoving,
             NotificationType.UPDATE_DIRECTORY
         );
