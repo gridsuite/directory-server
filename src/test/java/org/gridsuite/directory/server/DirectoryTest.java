@@ -1657,7 +1657,7 @@ public class DirectoryTest {
                 .getContentAsString();
         ElementAttributes result = objectMapper.readValue(response, new TypeReference<>() {
         });
-        result.getReferences().stream().forEach(ref -> ref.setId(null));
+        result.getReferences().forEach(ref -> ref.setId(null));
         MatcherAssert.assertThat(result, new MatcherJson<>(objectMapper, elementAttributes));
     }
 
