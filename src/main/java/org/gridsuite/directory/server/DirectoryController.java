@@ -183,7 +183,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "404", description = "The element was not found"),
     })
     public ResponseEntity<ElementAttributes> getElement(@PathVariable("elementUuid") UUID elementUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElement(elementUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getElementWithReferences(elementUuid));
     }
 
     @GetMapping(value = "/elements")
@@ -268,7 +268,7 @@ public class DirectoryController {
     }
 
     @PostMapping(value = "/elements/{elementUuid}/references", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Add element reference")
+    @Operation(summary = "Add a reference to an element")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Reference was successfully added"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),
@@ -282,7 +282,7 @@ public class DirectoryController {
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}/references")
-    @Operation(summary = "Delete element reference")
+    @Operation(summary = "Delete a reference to an element")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Reference was successfully deleted"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),

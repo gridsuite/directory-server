@@ -23,12 +23,7 @@ import java.util.UUID;
 @SuperBuilder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ReferenceAttributes {
-
     private UUID id;
-
     private UUID referenceId;
-
     private String referenceType;
-
-    private String referenceName;
 }

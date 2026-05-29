@@ -9,6 +9,7 @@ package org.gridsuite.directory.server.utils;
 import lombok.NonNull;
 import okhttp3.mockwebserver.MockResponse;
 import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -42,6 +43,12 @@ public final class DirectoryTestUtils {
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, @NonNull String userId) {
         return ElementAttributes.toElementAttributes(elementUuid, elementName, elementType, userId, 0L, null, null, null, null);
+    }
+
+    public static ElementAttributes toElementAttributesWithReferences(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, List<ReferenceAttributes> referenceAttributesList, @NonNull String userId) {
+        ElementAttributes elementAttributes = ElementAttributes.toElementAttributes(elementUuid, elementName, elementType, userId, 0L, null, null, null, null);
+        elementAttributes.setReferences(referenceAttributesList);
+        return elementAttributes;
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,

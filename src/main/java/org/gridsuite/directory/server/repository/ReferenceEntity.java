@@ -25,20 +25,21 @@ import java.util.UUID;
 public class ReferenceEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
+    private UUID id;
+
     @Column(name = "reference_id")
     private UUID referenceId;
 
     @Column(name = "reference_type")
     private String referenceType;
 
-    @Column(name = "reference_name")
-    private String referenceName;
-
     public ReferenceAttributes toReferenceAttributes() {
         return ReferenceAttributes.builder()
+            .id(id)
             .referenceId(referenceId)
             .referenceType(referenceType)
-            .referenceName(referenceName)
             .build();
     }
 }

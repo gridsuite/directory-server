@@ -13,6 +13,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.ReferenceEntity;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,7 +49,11 @@ public class ElementAttributes {
 
     private String lastModifiedBy;
 
-    private List<ReferenceAttributes> references;
+    // Uses of the current element as a reference (shared element)
+    // Empty means that the element is not referenced
+    @Builder.Default
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<ReferenceAttributes> references = new ArrayList<>();
 
     public boolean isOwnedBy(@NonNull String userId) {
         return owner.equals(userId);

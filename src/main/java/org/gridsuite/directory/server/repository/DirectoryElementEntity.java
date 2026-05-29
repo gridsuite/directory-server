@@ -119,7 +119,7 @@ public class DirectoryElementEntity {
         this.references.add(reference);
     }
 
-    public void removeReference(UUID referenceUuid) {
-        this.references.removeIf(reference -> reference.getReferenceId().equals(referenceUuid));
+    public void removeReference(UUID referenceId) {
+        this.references.removeIf(reference -> reference.getReferenceId().equals(referenceId));
     }
 }

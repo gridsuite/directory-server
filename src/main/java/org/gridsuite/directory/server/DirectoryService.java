@@ -109,7 +109,7 @@ public class DirectoryService {
         // Here we know that parentDirectoryUuid can't be null
         notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementEntity.getName());
 
-        return toElementAttributes(elementEntity);
+        return toElementAttributesWithReferences(elementEntity);
     }
 
     public ElementAttributes duplicateElement(UUID elementId, UUID newElementId, UUID targetDirectoryId, String userId) {
@@ -163,7 +163,7 @@ public class DirectoryService {
             now,
             now,
             elementAttributes.getOwner(),
-            List.of());
+            elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList());
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
@@ -275,10 +275,12 @@ public class DirectoryService {
             return List.of();
         }
         if (TRUE.equals(recursive)) {
-            List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(directoryUuid).stream().toList();
+            List<UUID> descendentsUuids = repositoryService.findAllDescendantsUuids(directoryUuid).stream().toList();
+            if (descendentsUuids.isEmpty()) {
+                return List.of();
+            }
             // Need to load references for all descendents (no N+1 -> only one query)
-            List<UUID> ids = descendents.stream().map(DirectoryElementEntity::getId).toList();
-            directoryElementRepository.findAllWithReferencesByIdIn(ids);
+            List<DirectoryElementEntity> descendents = directoryElementRepository.findAllWithReferencesByIdIn(descendentsUuids);
             return descendents
                 .stream()
                 .filter(e -> (types.isEmpty() || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
@@ -338,14 +340,16 @@ public class DirectoryService {
     @Transactional
     public void createElementReference(UUID elementUuid, ReferenceAttributes referenceAttributes, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
-        ReferenceEntity referenceEntity = new ReferenceEntity(
-            referenceAttributes.getReferenceId(),
-            referenceAttributes.getReferenceType(),
-            referenceAttributes.getReferenceName()
-        );
-        directoryElementEntity.addReference(referenceEntity);
-
+        directoryElementEntity.addReference(createReferenceEntity(referenceAttributes));
         notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
+    }
+
+    private ReferenceEntity createReferenceEntity(ReferenceAttributes referenceAttributes) {
+        return new ReferenceEntity(
+            null,
+            referenceAttributes.getReferenceId(),
+            referenceAttributes.getReferenceType()
+        );
     }
 
     @Transactional
@@ -519,6 +523,11 @@ public class DirectoryService {
 
     public ElementAttributes getElement(UUID elementUuid) {
         return toElementAttributes(getDirectoryElementEntity(elementUuid));
+    }
+
+    @Transactional(readOnly = true)
+    public ElementAttributes getElementWithReferences(UUID elementUuid) {
+        return toElementAttributesWithReferences(getDirectoryElementEntity(elementUuid));
     }
 
     private DirectoryElementEntity getDirectoryElementEntity(UUID elementUuid) {

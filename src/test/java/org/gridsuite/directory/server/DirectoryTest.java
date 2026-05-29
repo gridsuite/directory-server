@@ -35,6 +35,7 @@ import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.DirectoryTestUtils;
 import org.gridsuite.directory.server.utils.MatcherJson;
+import org.hamcrest.MatcherAssert;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
@@ -73,6 +74,7 @@ import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STU
 import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDY_CREATION_FINISHED;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributesWithReferences;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.*;
@@ -1655,7 +1657,8 @@ public class DirectoryTest {
                 .getContentAsString();
         ElementAttributes result = objectMapper.readValue(response, new TypeReference<>() {
         });
-        assertTrue(new MatcherJson<>(objectMapper, elementAttributes).matchesSafely(result));
+        result.getReferences().stream().forEach(ref -> ref.setId(null));
+        MatcherAssert.assertThat(result, new MatcherJson<>(objectMapper, elementAttributes));
     }
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<ElementAttributes> expectedList) throws Exception {
@@ -1674,11 +1677,8 @@ public class DirectoryTest {
                 .getContentAsString();
         List<ElementAttributes> result = objectMapper.readValue(response, new TypeReference<>() {
         });
-        if (recursive) {
-            assertThat(expectedList).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).ignoringCollectionOrder().isEqualTo(result);
-        } else {
-            assertThat(expectedList).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(result);
-        }
+        result.forEach(elt -> elt.getReferences().forEach(ref -> ref.setId(null)));
+        assertThat(expectedList).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).ignoringCollectionOrder().isEqualTo(result);
     }
 
     private void checkElementNotFound(UUID elementUuid, String userId) throws Exception {
@@ -2129,26 +2129,36 @@ public class DirectoryTest {
 
         // create rootDir
         UUID uuidNewRootDirectory = retrieveInsertAndCheckRootDirectory("rootDir", USER_ID).getElementUuid();
+
+        List<ReferenceAttributes> referenceAttributesList = List.of(
+            ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceType("refType").build(),
+            ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceType("refType").build()
+        );
+
         // create modifRoot
-        ElementAttributes rootModifAttributes = toElementAttributes(null, "modifRoot", MODIFICATION, USER_ID);
+        ElementAttributes rootModifAttributes = toElementAttributesWithReferences(null, "modifRoot", MODIFICATION, referenceAttributesList, USER_ID);
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, rootModifAttributes);
         // create subDir
-        ElementAttributes subDirAttributes = toElementAttributes(null, "subDir", DIRECTORY, USER_ID);
+        ElementAttributes subDirAttributes = toElementAttributesWithReferences(null, "subDir", DIRECTORY, referenceAttributesList, USER_ID);
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subDirAttributes);
         // create modifSub, modifSub2
-        ElementAttributes subModifAttributes = toElementAttributes(null, "modifSub", MODIFICATION, USER_ID);
+        ElementAttributes subModifAttributes = toElementAttributesWithReferences(null, "modifSub", MODIFICATION, referenceAttributesList, USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), subModifAttributes);
-        ElementAttributes subModifAttributes2 = toElementAttributes(null, "modifSub2", MODIFICATION, USER_ID);
+        ElementAttributes subModifAttributes2 = toElementAttributesWithReferences(null, "modifSub2", MODIFICATION, referenceAttributesList, USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), subModifAttributes2);
         // create lastDir
-        ElementAttributes lastDirAttributes = toElementAttributes(null, "lastDir", DIRECTORY, USER_ID);
+        ElementAttributes lastDirAttributes = toElementAttributesWithReferences(null, "lastDir", DIRECTORY, referenceAttributesList, USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), lastDirAttributes);
         // create modifLeaf
-        ElementAttributes leafModifAttributes = toElementAttributes(null, "modifLeaf", MODIFICATION, USER_ID);
+        ElementAttributes leafModifAttributes = toElementAttributesWithReferences(null, "modifLeaf", MODIFICATION, referenceAttributesList, USER_ID);
         insertAndCheckSubElement(lastDirAttributes.getElementUuid(), leafModifAttributes);
 
         // 4 modifications expected starting recursively from rootDir (in random order)
+        SQLStatementCountValidator.reset();
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(MODIFICATION), true, List.of(leafModifAttributes, rootModifAttributes, subModifAttributes, subModifAttributes2));
+
+        // SQLStatementCountValidator ignore native queries
+        assertRequestsCount(9, 0, 0, 0);
     }
 
     @Test
@@ -2274,7 +2284,7 @@ public class DirectoryTest {
 
         // create a reference to the element
         UUID referenceId = UUID.randomUUID();
-        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder().referenceId(referenceId).referenceName("reference1").referenceType("NODE").build();
+        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder().referenceId(referenceId).referenceType("NODE").build();
         mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
