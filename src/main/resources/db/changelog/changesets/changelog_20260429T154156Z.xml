@@ -5,8 +5,7 @@
             <column name="id" type="UUID">
                 <constraints nullable="false" primaryKey="true" primaryKeyName="referencePK"/>
             </column>
-            <column name="reference_id" type="VARCHAR(255)"/>
-            <column name="reference_name" type="VARCHAR(255)"/>
+            <column name="reference_id" type="UUID"/>
             <column name="reference_type" type="VARCHAR(255)"/>
             <column name="element_id" type="UUID"/>
         </createTable>
