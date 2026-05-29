@@ -16,14 +16,12 @@ import org.gridsuite.directory.server.repository.PermissionEntity;
 import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.stream.Collectors;
-
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
@@ -201,6 +199,7 @@ public class PermissionService {
         }
     }
 
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     private boolean checkPermission(String userId, List<UUID> elementUuids, PermissionType permissionType) {
         return elementUuids.stream().allMatch(uuid -> {
             //Check global permission first

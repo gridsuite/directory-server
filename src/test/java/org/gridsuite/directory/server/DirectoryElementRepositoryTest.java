@@ -12,13 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-
 import java.util.List;
 import java.util.UUID;
-
+import static org.assertj.core.api.Assertions.*;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.*;
-import static org.assertj.core.api.Assertions.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -51,7 +49,8 @@ class DirectoryElementRepositoryTest {
             .filter(e -> parentDirectoryUuid.equals(e.getParentId()))
             .toList();
 
-        assertThat(expectedResult).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(directoryElementRepository.findAllByIdInAndParentIdAndTypeNot(insertedElement.stream().map(DirectoryElementEntity::getId).toList(), parentDirectoryUuid, DIRECTORY));
+        assertThat(expectedResult).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(directoryElementRepository.findAllByIdInAndParentIdAndTypeNot(insertedElement.stream().map(
+                DirectoryElementEntity::getId).toList(), parentDirectoryUuid, DIRECTORY));
     }
 
     @Test
