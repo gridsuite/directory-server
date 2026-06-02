@@ -2,6 +2,9 @@ package org.gridsuite.directory.server;
 
 import org.gridsuite.directory.server.error.DirectoryBusinessErrorCode;
 import org.gridsuite.directory.server.error.DirectoryException;
+import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.gridsuite.directory.server.services.PermissionService;
+import org.gridsuite.directory.server.services.RoleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -22,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Caroline Jeandat {@literal <caroline.jeandat at rte-france.com>}
  */
-@WebMvcTest(controllers = { DirectoryController.class })
+@WebMvcTest(controllers = { DirectoryController.class, PropertyServerNameProvider.class })
 class DirectoryControllerTest {
 
     private static final UUID ELEMENT_ID_1 = UUID.randomUUID();
@@ -36,6 +39,15 @@ class DirectoryControllerTest {
 
     @MockitoBean
     private DirectoryService directoryService;
+
+    @MockitoBean
+    private DirectoryRepositoryService directoryRepositoryService;
+
+    @MockitoBean
+    private RoleService roleService;
+
+    @MockitoBean
+    private PermissionService permissionService;
 
     @Test
     void getElementNames() throws Exception {
