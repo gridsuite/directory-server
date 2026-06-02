@@ -9,9 +9,11 @@ package org.gridsuite.directory.server;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
+import org.gridsuite.directory.server.error.DirectoryBusinessErrorCode;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.PermissionService;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,11 +43,20 @@ class DirectoryServiceTest {
     public static final String TYPE_01 = "TYPE_01";
     public static final String TYPE_02 = "TYPE_02";
 
+    private static final UUID ELEMENT_ID_1 = UUID.randomUUID();
+    private static final UUID ELEMENT_ID_2 = UUID.randomUUID();
+
+    private static final String ELEMENT_NAME_1 = "element1";
+    private static final String ELEMENT_NAME_2 = "element2";
+
     @MockitoSpyBean
     DirectoryService directoryService;
 
     @MockitoSpyBean
     DirectoryElementRepository directoryElementRepository;
+
+    @MockitoSpyBean
+    DirectoryRepositoryService directoryRepositoryService;
 
     @MockitoBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
@@ -274,5 +286,67 @@ class DirectoryServiceTest {
         verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, elementAttributes.getElementName() + "(1)", "user1", null, true, false, NotificationType.UPDATE_DIRECTORY);
 
         verifyNoMoreInteractions(notificationService);
+    }
+
+    @Test
+    void getElementNames() {
+        DirectoryElementEntity e1 = new DirectoryElementEntity();
+        e1.setId(ELEMENT_ID_1);
+        e1.setName(ELEMENT_NAME_1);
+
+        DirectoryElementEntity e2 = new DirectoryElementEntity();
+        e2.setId(ELEMENT_ID_2);
+        e2.setName(ELEMENT_NAME_2);
+
+        when(directoryRepositoryService.findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2)))
+            .thenReturn(List.of(e1, e2));
+
+        List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
+        Map<UUID, String> expectedElementNamesMap = Map.of(
+            ELEMENT_ID_1, ELEMENT_NAME_1,
+            ELEMENT_ID_2, ELEMENT_NAME_2
+        );
+        Map<UUID, String> elementNamesMap;
+
+        // with strictMode = true
+        elementNamesMap = directoryService.getElementNames(elementIds, true);
+        assertEquals(expectedElementNamesMap, elementNamesMap);
+
+        // with strictMode = false
+        elementNamesMap = directoryService.getElementNames(elementIds, false);
+        assertEquals(expectedElementNamesMap, elementNamesMap);
+
+        // verify repository is called
+        verify(directoryRepositoryService, times(2)).findAllByIdIn(elementIds);
+    }
+
+    @Test
+    void getElementNamesWithNotFoundElements() {
+        DirectoryElementEntity e1 = new DirectoryElementEntity();
+        e1.setId(ELEMENT_ID_1);
+        e1.setName(ELEMENT_NAME_1);
+
+        when(directoryRepositoryService.findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2)))
+            .thenReturn(List.of(e1));
+
+        List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
+        Map<UUID, String> expectedElementNamesMap = Map.of(ELEMENT_ID_1, ELEMENT_NAME_1);
+        Map<UUID, String> elementNamesMap;
+
+        // with strictMode = true, throws exception
+        DirectoryException exception = assertThrows(
+            DirectoryException.class,
+            () -> directoryService.getElementNames(elementIds, true));
+        assertEquals(
+            DirectoryBusinessErrorCode.DIRECTORY_SOME_ELEMENTS_ARE_MISSING,
+            exception.getBusinessErrorCode()
+        );
+
+        // with strictMode = false, returns only found elements
+        elementNamesMap = directoryService.getElementNames(elementIds, false);
+        assertEquals(expectedElementNamesMap, elementNamesMap);
+
+        // verify repository is called
+        verify(directoryRepositoryService, times(2)).findAllByIdIn(elementIds);
     }
 }
