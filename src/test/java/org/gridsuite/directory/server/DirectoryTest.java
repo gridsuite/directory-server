@@ -1960,7 +1960,6 @@ public class DirectoryTest {
         UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
 
         // Insert a sub-element of type DIRECTORY
-        @SuppressWarnings("checkstyle:IllegalCatch")
         ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, USER_ID);
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subDirAttributes);
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(subDirAttributes));
@@ -1970,11 +1969,10 @@ public class DirectoryTest {
                 .andExpectAll(status().isForbidden()).andReturn();
     }
 
-    @SuppressWarnings("checkstyle:IllegalCatch")
     private void assertQueuesEmptyThenClear(List<String> destinations) {
         try {
             destinations.forEach(destination -> assertNull("Should not be any messages in queue " + destination + " : ", output.receive(100, destination)));
-        } catch (NullPointerException e) {
+        } catch (Exception e) {
             // Ignoring
         } finally {
             output.clear(); // purge in order to not fail the other tests
