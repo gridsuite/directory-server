@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +27,8 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     List<DirectoryElementEntity> findAllByParentId(UUID parentId);
 
     List<DirectoryElementEntity> findAllByType(String type);
+
+    List<DirectoryElementEntity> findAllByTypeAndLastModificationDateBefore(String type, Instant lastModificationDate);
 
     List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids);
 
