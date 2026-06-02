@@ -28,7 +28,7 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findAllByType(String type);
 
-    List<DirectoryElementEntity> findAllByTypeAndLastModificationDateBefore(String type, Instant lastModificationDate);
+    List<DirectoryElementEntity> findAllByTypeAndLastModificationDateBeforeOrderByLastModificationDateDesc(String type, Instant lastModificationDate);
 
     List<DirectoryElementEntity> findAllByIdIn(List<UUID> uuids);
 

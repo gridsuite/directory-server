@@ -48,7 +48,7 @@ public class SupervisionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "duration must be strictly positive");
         }
         Instant threshold = Instant.now().minus(duration);
-        return directoryElementRepository.findAllByTypeAndLastModificationDateBefore(type, threshold).stream().map(ElementAttributes::toElementAttributes).toList();
+        return directoryElementRepository.findAllByTypeAndLastModificationDateBeforeOrderByLastModificationDateDesc(type, threshold).stream().map(ElementAttributes::toElementAttributes).toList();
     }
 
     // delete all directory elements without checking owner
