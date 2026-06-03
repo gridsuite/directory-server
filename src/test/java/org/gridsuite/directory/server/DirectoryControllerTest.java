@@ -6,6 +6,8 @@ import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.PermissionService;
 import org.gridsuite.directory.server.services.RoleService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -49,47 +51,31 @@ class DirectoryControllerTest {
     @MockitoBean
     private PermissionService permissionService;
 
-    @Test
-    void getElementNames() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void getElementNames(Boolean strictMode) throws Exception {
         List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
         Map<UUID, String> returnedElementNamesMap = Map.of(
             ELEMENT_ID_1, ELEMENT_NAME_1,
             ELEMENT_ID_2, ELEMENT_NAME_2
         );
 
-        // with strictMode = true
-        when(directoryService.getElementNames(elementIds, true))
+        when(directoryService.getElementNames(elementIds, strictMode))
             .thenReturn(returnedElementNamesMap);
 
         mockMvc.perform(get("/v1/elements/names")
                 .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
-                .param("strictMode", "true"))
+                .param("strictMode", strictMode.toString()))
             .andExpectAll(status().isOk())
             .andExpect(jsonPath("$.['" + ELEMENT_ID_1 + "']").value(ELEMENT_NAME_1))
             .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").value(ELEMENT_NAME_2));
 
-        verify(directoryService, times(1)).getElementNames(elementIds, true);
-
-        // with strictMode = false
-        when(directoryService.getElementNames(elementIds, false))
-            .thenReturn(returnedElementNamesMap);
-
-        mockMvc.perform(get("/v1/elements/names")
-                .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
-                .param("strictMode", "false"))
-            .andExpectAll(status().isOk())
-            .andExpect(jsonPath("$.['" + ELEMENT_ID_1 + "']").value(ELEMENT_NAME_1))
-            .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").value(ELEMENT_NAME_2));
-
-        verify(directoryService, times(1)).getElementNames(elementIds, false);
+        verify(directoryService, times(1)).getElementNames(elementIds, strictMode);
     }
 
     @Test
-    void getElementNamesWithNotFoundElements() throws Exception {
+    void getElementNamesWithNotFoundElementsWithStrictMode() throws Exception {
         List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
-        Map<UUID, String> returnedElementNamesMap = Map.of(
-            ELEMENT_ID_1, ELEMENT_NAME_1
-        );
 
         // with strictMode = true, throws notFound exception
         when(directoryService.getElementNames(elementIds, true))
@@ -105,6 +91,14 @@ class DirectoryControllerTest {
             .andExpectAll(status().isNotFound());
 
         verify(directoryService, times(1)).getElementNames(elementIds, true);
+    }
+
+    @Test
+    void getElementNamesWithNotFoundElementsWithoutStrictMode() throws Exception {
+        List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
+        Map<UUID, String> returnedElementNamesMap = Map.of(
+            ELEMENT_ID_1, ELEMENT_NAME_1
+        );
 
         // with strictMode = false, returns only found elements
         when(directoryService.getElementNames(elementIds, false))
