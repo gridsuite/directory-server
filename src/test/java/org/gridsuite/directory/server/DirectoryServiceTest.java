@@ -18,6 +18,8 @@ import org.gridsuite.directory.server.services.PermissionService;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -91,7 +93,7 @@ class DirectoryServiceTest {
                 elementFromOtherDir
         );
 
-        List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(e -> e.getId()).toList();
+        List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(DirectoryElementEntity::getId).toList();
         // following elements should not be deleted with this call
         // - elements with type DIRECTORY
         // - elements having a parent directory different from the one passed as parameter
@@ -101,7 +103,7 @@ class DirectoryServiceTest {
                 .filter(e -> e.getParentId().equals(parentDirectoryUuid))
                 .toList();
 
-        List<UUID> elementExpectedToDeleteUuids = elementsExpectedToDelete.stream().map(e -> e.getId()).toList();
+        List<UUID> elementExpectedToDeleteUuids = elementsExpectedToDelete.stream().map(DirectoryElementEntity::getId).toList();
 
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
         when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(elementsToDelete);
@@ -288,8 +290,9 @@ class DirectoryServiceTest {
         verifyNoMoreInteractions(notificationService);
     }
 
-    @Test
-    void getElementNames() {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void getElementNames(Boolean strictMode) {
         DirectoryElementEntity e1 = new DirectoryElementEntity();
         e1.setId(ELEMENT_ID_1);
         e1.setName(ELEMENT_NAME_1);
@@ -308,20 +311,39 @@ class DirectoryServiceTest {
         );
         Map<UUID, String> elementNamesMap;
 
-        // with strictMode = true
-        elementNamesMap = directoryService.getElementNames(elementIds, true);
-        assertEquals(expectedElementNamesMap, elementNamesMap);
-
-        // with strictMode = false
-        elementNamesMap = directoryService.getElementNames(elementIds, false);
+        elementNamesMap = directoryService.getElementNames(elementIds, strictMode);
         assertEquals(expectedElementNamesMap, elementNamesMap);
 
         // verify repository is called
-        verify(directoryRepositoryService, times(2)).findAllByIdIn(elementIds);
+        verify(directoryRepositoryService, times(1)).findAllByIdIn(elementIds);
     }
 
     @Test
-    void getElementNamesWithNotFoundElements() {
+    void getElementNamesWithNotFoundElementsWithStrictMode() {
+        DirectoryElementEntity e1 = new DirectoryElementEntity();
+        e1.setId(ELEMENT_ID_1);
+        e1.setName(ELEMENT_NAME_1);
+
+        when(directoryRepositoryService.findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2)))
+            .thenReturn(List.of(e1));
+
+        List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
+
+        // with strictMode = true, throws exception
+        DirectoryException exception = assertThrows(
+            DirectoryException.class,
+            () -> directoryService.getElementNames(elementIds, true));
+        assertEquals(
+            DirectoryBusinessErrorCode.DIRECTORY_SOME_ELEMENTS_ARE_MISSING,
+            exception.getBusinessErrorCode()
+        );
+
+        // verify repository is called
+        verify(directoryRepositoryService, times(1)).findAllByIdIn(elementIds);
+    }
+
+    @Test
+    void getElementNamesWithNotFoundElementsWithoutStrictMode() {
         DirectoryElementEntity e1 = new DirectoryElementEntity();
         e1.setId(ELEMENT_ID_1);
         e1.setName(ELEMENT_NAME_1);
@@ -333,20 +355,11 @@ class DirectoryServiceTest {
         Map<UUID, String> expectedElementNamesMap = Map.of(ELEMENT_ID_1, ELEMENT_NAME_1);
         Map<UUID, String> elementNamesMap;
 
-        // with strictMode = true, throws exception
-        DirectoryException exception = assertThrows(
-            DirectoryException.class,
-            () -> directoryService.getElementNames(elementIds, true));
-        assertEquals(
-            DirectoryBusinessErrorCode.DIRECTORY_SOME_ELEMENTS_ARE_MISSING,
-            exception.getBusinessErrorCode()
-        );
-
         // with strictMode = false, returns only found elements
         elementNamesMap = directoryService.getElementNames(elementIds, false);
         assertEquals(expectedElementNamesMap, elementNamesMap);
 
         // verify repository is called
-        verify(directoryRepositoryService, times(2)).findAllByIdIn(elementIds);
+        verify(directoryRepositoryService, times(1)).findAllByIdIn(elementIds);
     }
 }

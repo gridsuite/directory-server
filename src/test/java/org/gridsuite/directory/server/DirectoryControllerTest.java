@@ -1,5 +1,7 @@
 package org.gridsuite.directory.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.directory.server.error.DirectoryBusinessErrorCode;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
@@ -12,16 +14,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -38,6 +41,9 @@ class DirectoryControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private DirectoryService directoryService;
@@ -63,12 +69,22 @@ class DirectoryControllerTest {
         when(directoryService.getElementNames(elementIds, strictMode))
             .thenReturn(returnedElementNamesMap);
 
-        mockMvc.perform(get("/v1/elements/names")
+        MvcResult result = mockMvc.perform(get("/v1/elements/names")
                 .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
                 .param("strictMode", strictMode.toString()))
             .andExpectAll(status().isOk())
-            .andExpect(jsonPath("$.['" + ELEMENT_ID_1 + "']").value(ELEMENT_NAME_1))
-            .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").value(ELEMENT_NAME_2));
+            .andReturn();
+
+        Map<UUID, String> response =
+            objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                new TypeReference<>() {}
+            );
+
+        assertThat(response)
+            .hasSize(2)
+            .containsEntry(ELEMENT_ID_1, ELEMENT_NAME_1)
+            .containsEntry(ELEMENT_ID_2, ELEMENT_NAME_2);
 
         verify(directoryService, times(1)).getElementNames(elementIds, strictMode);
     }
@@ -104,12 +120,22 @@ class DirectoryControllerTest {
         when(directoryService.getElementNames(elementIds, false))
             .thenReturn(returnedElementNamesMap);
 
-        mockMvc.perform(get("/v1/elements/names")
+        MvcResult result =  mockMvc.perform(get("/v1/elements/names")
                 .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
                 .param("strictMode", "false"))
             .andExpectAll(status().isOk())
-            .andExpect(jsonPath("$.['" + ELEMENT_ID_1 + "']").value(ELEMENT_NAME_1))
-            .andExpect(jsonPath("$.['" + ELEMENT_ID_2 + "']").doesNotExist());
+            .andReturn();
+
+        Map<UUID, String> response =
+            objectMapper.readValue(
+                result.getResponse().getContentAsString(),
+                new TypeReference<>() {}
+            );
+
+        assertThat(response)
+            .hasSize(1)
+            .containsEntry(ELEMENT_ID_1, ELEMENT_NAME_1)
+            .doesNotContainKey(ELEMENT_ID_2);
 
         verify(directoryService, times(1)).getElementNames(elementIds, false);
     }
