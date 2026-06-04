@@ -309,9 +309,7 @@ class DirectoryServiceTest {
             ELEMENT_ID_1, ELEMENT_NAME_1,
             ELEMENT_ID_2, ELEMENT_NAME_2
         );
-        Map<UUID, String> elementNamesMap;
-
-        elementNamesMap = directoryService.getElementNames(elementIds, strictMode);
+        Map<UUID, String> elementNamesMap = directoryService.getElementNames(elementIds, strictMode);
         assertEquals(expectedElementNamesMap, elementNamesMap);
 
         // verify repository is called
@@ -353,10 +351,9 @@ class DirectoryServiceTest {
 
         List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
         Map<UUID, String> expectedElementNamesMap = Map.of(ELEMENT_ID_1, ELEMENT_NAME_1);
-        Map<UUID, String> elementNamesMap;
 
         // with strictMode = false, returns only found elements
-        elementNamesMap = directoryService.getElementNames(elementIds, false);
+        Map<UUID, String> elementNamesMap = directoryService.getElementNames(elementIds, false);
         assertEquals(expectedElementNamesMap, elementNamesMap);
 
         // verify repository is called
