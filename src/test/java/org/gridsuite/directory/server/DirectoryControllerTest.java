@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -81,10 +81,7 @@ class DirectoryControllerTest {
                 new TypeReference<>() { }
             );
 
-        assertThat(response)
-            .hasSize(2)
-            .containsEntry(ELEMENT_ID_1, ELEMENT_NAME_1)
-            .containsEntry(ELEMENT_ID_2, ELEMENT_NAME_2);
+        assertEquals(returnedElementNamesMap, response);
 
         verify(directoryService, times(1)).getElementNames(elementIds, strictMode);
     }
@@ -132,10 +129,7 @@ class DirectoryControllerTest {
                 new TypeReference<>() { }
             );
 
-        assertThat(response)
-            .hasSize(1)
-            .containsEntry(ELEMENT_ID_1, ELEMENT_NAME_1)
-            .doesNotContainKey(ELEMENT_ID_2);
+        assertEquals(returnedElementNamesMap, response);
 
         verify(directoryService, times(1)).getElementNames(elementIds, false);
     }
