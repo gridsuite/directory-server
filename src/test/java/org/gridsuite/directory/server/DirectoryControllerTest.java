@@ -78,7 +78,7 @@ class DirectoryControllerTest {
         Map<UUID, String> response =
             objectMapper.readValue(
                 result.getResponse().getContentAsString(),
-                new TypeReference<>() {}
+                new TypeReference<>() { }
             );
 
         assertThat(response)
@@ -120,7 +120,7 @@ class DirectoryControllerTest {
         when(directoryService.getElementNames(elementIds, false))
             .thenReturn(returnedElementNamesMap);
 
-        MvcResult result =  mockMvc.perform(get("/v1/elements/names")
+        MvcResult result = mockMvc.perform(get("/v1/elements/names")
                 .param("ids", ELEMENT_ID_1.toString(), ELEMENT_ID_2.toString())
                 .param("strictMode", "false"))
             .andExpectAll(status().isOk())
@@ -129,7 +129,7 @@ class DirectoryControllerTest {
         Map<UUID, String> response =
             objectMapper.readValue(
                 result.getResponse().getContentAsString(),
-                new TypeReference<>() {}
+                new TypeReference<>() { }
             );
 
         assertThat(response)
