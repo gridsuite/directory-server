@@ -133,8 +133,8 @@ public class PermissionService {
         permissionRepository.save(PermissionEntity.manage(elementUuid, ownerId, ""));
     }
 
-    public void grantReadPermissionToAllUsers(UUID elementUuid) {
-        permissionRepository.save(PermissionEntity.read(elementUuid, ALL_USERS, ""));
+    public void grantWritePermissionToAllUsers(UUID elementUuid) {
+        permissionRepository.save(PermissionEntity.write(elementUuid, ALL_USERS, ""));
     }
 
     private void checkReadPermission(String userId, List<UUID> elementUuids) {
