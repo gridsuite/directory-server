@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,6 +57,14 @@ public class SupervisionController {
     public ResponseEntity<List<ElementAttributes>> getAllElements(
             @RequestParam(value = "elementType") String elementType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getAllElementsByType(elementType));
+    }
+
+    @GetMapping(value = "/elements/unmodified")
+    @Operation(summary = "Get all elements of a given type where the last modification date exceed the given duration")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of elements matching the given type exceeding the given duration")})
+    public ResponseEntity<List<ElementAttributes>> getUnmodifiedElements(
+            @RequestParam(value = "elementType") String elementType, @RequestParam Duration duration) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getUnmodifiedElementsByType(elementType, duration));
     }
 
     @GetMapping(value = "/elasticsearch-host")
