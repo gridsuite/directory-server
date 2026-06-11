@@ -24,18 +24,16 @@ import org.mockito.InOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.MAX_RETRY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createElement;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.createRootElement;
-import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 

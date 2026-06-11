@@ -65,7 +65,6 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     List<DirectoryElementEntity> findByNameAndParentIdAndType(String name, UUID parentId, String type);
 
-
     //When using UNION, there is no guarantee order in which the rows are actually returned
     //https://www.postgresql.org/docs/current/queries-union.html
     @Query(nativeQuery = true, value =

@@ -72,7 +72,8 @@ public class ElementAttributesTest {
         assertFalse(elementEntity2.isAttributesUpdatable(ElementAttributes.builder().build(), "userId"));
 
         elementEntity.update(ElementAttributes.builder().elementName("newName").build());
-        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, "userId", "description", elementEntity.getCreationDate(), elementEntity.getLastModificationDate(), "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
+        org.hamcrest.MatcherAssert.assertThat(toElementAttributes(ELEMENT_UUID, "newName", DIRECTORY, "userId", "description", elementEntity.getCreationDate(), elementEntity.getLastModificationDate(),
+                "userId"), new MatcherJson<>(mapper, toElementAttributes(elementEntity)));
     }
 
     @Test
@@ -87,8 +88,10 @@ public class ElementAttributesTest {
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", "description"));
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId"));
 
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId")));
-        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate, "userId"), 1L));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate,
+                "userId")));
+        verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate,
+                "userId"), 1L));
         verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", "userId", "description", creationDate, creationDate, "userId")));
 
         assertThrows(NullPointerException.class, () -> toElementAttributes((DirectoryElementEntity) null));
@@ -115,7 +118,8 @@ public class ElementAttributesTest {
         String formattedCreationDate = formatter.format(creationDate);
 
         assertEquals(
-            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"owner\":\"userId\",\"subdirectoriesCount\":1,\"description\":\"description\",\"creationDate\":\"" + formattedCreationDate + "\",\"lastModificationDate\":\"" + formattedCreationDate + "\",\"lastModifiedBy\":\"userId\"}",
+            "{\"elementUuid\":\"21297976-7445-44f1-9ccf-910cbb2f84f8\",\"elementName\":\"name\",\"type\":\"DIRECTORY\",\"owner\":\"userId\",\"subdirectoriesCount\":1,"
+                    + "\"description\":\"description\",\"creationDate\":\"" + formattedCreationDate + "\",\"lastModificationDate\":\"" + formattedCreationDate + "\",\"lastModifiedBy\":\"userId\"}",
             toJsonString(toElementAttributes(UUID.fromString("21297976-7445-44f1-9ccf-910cbb2f84f8"), "name", DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"))
         );
     }
