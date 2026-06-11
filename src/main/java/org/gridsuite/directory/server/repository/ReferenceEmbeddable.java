@@ -6,9 +6,11 @@
  */
 package org.gridsuite.directory.server.repository;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
 import lombok.*;
 import org.gridsuite.directory.server.dto.ReferenceAttributes;
+import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 
 import java.util.UUID;
 
@@ -31,7 +33,7 @@ public class ReferenceEmbeddable {
     public ReferenceAttributes toReferenceAttributes() {
         return ReferenceAttributes.builder()
             .referenceId(referenceId)
-            .referenceType(referenceType)
+            .referenceType(ReferenceType.valueOf(referenceType))
             .build();
     }
 }

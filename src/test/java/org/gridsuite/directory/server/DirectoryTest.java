@@ -23,6 +23,8 @@ import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes;
+import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
+
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
@@ -2118,8 +2120,8 @@ public class DirectoryTest {
         UUID uuidNewRootDirectory = retrieveInsertAndCheckRootDirectory("rootDir", USER_ID).getElementUuid();
 
         List<ReferenceAttributes> referenceAttributesList = List.of(
-            ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceType("refType").build(),
-            ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceType("refType").build()
+            ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceType(ReferenceType.STUDY_NODE).build(),
+            ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceType(ReferenceType.STUDY_NODE).build()
         );
 
         // create modifRoot
@@ -2245,7 +2247,7 @@ public class DirectoryTest {
 
         // create a reference to the element
         UUID referenceId = UUID.randomUUID();
-        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder().referenceId(referenceId).referenceType("NODE").build();
+        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder().referenceId(referenceId).referenceType(ReferenceType.STUDY_NODE).build();
         mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)

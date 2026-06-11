@@ -347,7 +347,7 @@ public class DirectoryService {
     private ReferenceEmbeddable createReferenceEntity(ReferenceAttributes referenceAttributes) {
         return new ReferenceEmbeddable(
             referenceAttributes.getReferenceId(),
-            referenceAttributes.getReferenceType()
+            referenceAttributes.getReferenceType().name()
         );
     }
 

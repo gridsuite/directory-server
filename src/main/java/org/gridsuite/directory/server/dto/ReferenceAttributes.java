@@ -23,7 +23,12 @@ import java.util.UUID;
 @SuperBuilder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ReferenceAttributes {
-    private UUID id;
+    public enum ReferenceType {
+        STUDY_NODE,
+        NETWORK_MODIFICATION,
+        DIRECTORY_ELEMENT
+    }
+
     private UUID referenceId;
-    private String referenceType;
+    private ReferenceType referenceType;
 }
