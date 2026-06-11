@@ -19,16 +19,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @Getter
 @Setter
-@Entity
 @Builder
-@Table(name = "reference", indexes = @Index(name = "element_idx", columnList = "element_id"))
-public class ReferenceEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(name = "id")
-    private UUID id;
-
+@Embeddable
+public class ReferenceEmbeddable {
     @Column(name = "reference_id")
     private UUID referenceId;
 
@@ -37,7 +30,6 @@ public class ReferenceEntity {
 
     public ReferenceAttributes toReferenceAttributes() {
         return ReferenceAttributes.builder()
-            .id(id)
             .referenceId(referenceId)
             .referenceType(referenceType)
             .build();

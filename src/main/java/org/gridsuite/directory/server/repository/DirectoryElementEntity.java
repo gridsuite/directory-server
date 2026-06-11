@@ -59,12 +59,15 @@ public class DirectoryElementEntity {
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "element_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "element_id_fk"))
-    private List<ReferenceEntity> references = new ArrayList<>();
+    @ElementCollection
+    @CollectionTable(name = "reference",
+        joinColumns = @JoinColumn(name = "element_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "element_id_fk")),
+        indexes = @Index(name = "element_idx", columnList = "element_id")
+    )
+    private List<ReferenceEmbeddable> references = new ArrayList<>();
 
     // Return a list that cannot be modified to avoid side effects
-    public List<ReferenceEntity> getReferences() {
+    public List<ReferenceEmbeddable> getReferences() {
         return Collections.unmodifiableList(references);
     }
 
@@ -115,7 +118,7 @@ public class DirectoryElementEntity {
                 .build();
     }
 
-    public void addReference(ReferenceEntity reference) {
+    public void addReference(ReferenceEmbeddable reference) {
         this.references.add(reference);
     }
 

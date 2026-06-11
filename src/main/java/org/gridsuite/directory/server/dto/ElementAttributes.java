@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.repository.ReferenceEntity;
+import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -63,7 +63,7 @@ public class ElementAttributes {
         return java.util.Optional.ofNullable(entity.getReferences())
             .orElseGet(List::of)
             .stream()
-            .map(ReferenceEntity::toReferenceAttributes)
+            .map(ReferenceEmbeddable::toReferenceAttributes)
             .toList();
     }
 

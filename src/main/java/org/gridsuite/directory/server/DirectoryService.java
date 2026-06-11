@@ -15,7 +15,7 @@ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.gridsuite.directory.server.repository.ReferenceEntity;
+import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -344,9 +344,8 @@ public class DirectoryService {
         notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 
-    private ReferenceEntity createReferenceEntity(ReferenceAttributes referenceAttributes) {
-        return new ReferenceEntity(
-            null,
+    private ReferenceEmbeddable createReferenceEntity(ReferenceAttributes referenceAttributes) {
+        return new ReferenceEmbeddable(
             referenceAttributes.getReferenceId(),
             referenceAttributes.getReferenceType()
         );

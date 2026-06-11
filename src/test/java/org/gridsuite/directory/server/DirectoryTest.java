@@ -1646,7 +1646,6 @@ public class DirectoryTest {
                 .getContentAsString();
         ElementAttributes result = objectMapper.readValue(response, new TypeReference<>() {
         });
-        result.getReferences().forEach(ref -> ref.setId(null));
         MatcherAssert.assertThat(result, new MatcherJson<>(objectMapper, elementAttributes));
     }
 
@@ -1666,7 +1665,6 @@ public class DirectoryTest {
                 .getContentAsString();
         List<ElementAttributes> result = objectMapper.readValue(response, new TypeReference<>() {
         });
-        result.forEach(elt -> elt.getReferences().forEach(ref -> ref.setId(null)));
         assertThat(expectedList).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).ignoringCollectionOrder().isEqualTo(result);
     }
 
