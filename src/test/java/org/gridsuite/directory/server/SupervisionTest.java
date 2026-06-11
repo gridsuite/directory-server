@@ -137,7 +137,7 @@ class SupervisionTest {
 
     @Test
     void testGetElementsNotModifiedSince() {
-        DirectoryElementEntity elementEntity = new DirectoryElementEntity(UUID.randomUUID(), null, "name", "STUDY", "userId", "description", Instant.now().minus(400, ChronoUnit.DAYS), Instant.now().minus(400, ChronoUnit.DAYS), "userId");
+        DirectoryElementEntity elementEntity = new DirectoryElementEntity(UUID.randomUUID(), null, "name", "STUDY", "userId", "description", Instant.now().minus(400, ChronoUnit.DAYS), Instant.now().minus(400, ChronoUnit.DAYS), "userId", List.of());
 
         when(directoryElementRepository.findAllByTypeAndLastModificationDateBeforeOrderByLastModificationDateDesc(eq("STUDY"), any(Instant.class)))
                 .thenReturn(List.of(elementEntity));
