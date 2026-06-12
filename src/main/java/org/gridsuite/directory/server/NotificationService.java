@@ -31,7 +31,7 @@ public class NotificationService {
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String UPDATE_TYPE_DIRECTORIES = "directories";
-    public static final String HEADER_ELEMENTS_INFOS = "elementsInfos";
+    public static final String HEADER_FOLDERS_INFOS = "foldersInfos";
     public static final String HEADER_IS_PUBLIC_DIRECTORY = "isPublicDirectory";
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NOTIFICATION_TYPE = "notificationType";
@@ -60,7 +60,7 @@ public class NotificationService {
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_ELEMENT_NAMES, elementNames)
-                .setHeader(HEADER_ELEMENTS_INFOS, elementsInfos)
+                .setHeader(HEADER_FOLDERS_INFOS, elementsInfos)
                 .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from borked REST request
                 .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
