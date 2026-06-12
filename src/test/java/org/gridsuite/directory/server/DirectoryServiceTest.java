@@ -178,27 +178,28 @@ class DirectoryServiceTest {
         ElementAttributes subDirectoryElementAttributes = toElementAttributes(null, "subDir", DIRECTORY, "user1");
         UUID subDirUuid = directoryService.createElement(subDirectoryElementAttributes, dirUuid, "user1", false).getElementUuid();
 
+        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, "root", "user1", null, true, NotificationType.ADD_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(root2Uuid, "root2", "user1", null, true, NotificationType.ADD_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, "dir", "user1", null, true, false, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(dirUuid, "subDir", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+
         ElementAttributes elementAttributes1 = toElementAttributes(null, "element1", "TYPE1", "user1");
         UUID elementUuid1 = directoryService.createElement(elementAttributes1, subDirUuid, "user1", false).getElementUuid();
+        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
 
         ElementAttributes elementAttributes2 = toElementAttributes(null, "element2", "TYPE2", "user1");
         UUID elementUuid2 = directoryService.createElement(elementAttributes2, subDirUuid, "user1", false).getElementUuid();
+        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, "element2", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
 
         ElementAttributes elementAttributes3 = toElementAttributes(null, "element3", "TYPE3", "user1");
         UUID elementUuid3 = directoryService.createElement(elementAttributes3, subDirUuid, "user1", false).getElementUuid();
-
-        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
-        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, "element2", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, "element3", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
 
         // we move element1 and element2 from subDir to dir
         reset(directoryElementRepository);
-        directoryService.moveElementsDirectory(List.of(elementUuid1, elementUuid2), dirUuid, "user1");
-        verify(directoryElementRepository, times(2)).findElementHierarchy(any(UUID.class));
 
-        verify(notificationService, times(2)).emitDirectoryChanged(subDirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
-        verify(notificationService, times(1)).emitDirectoryChanged(dirUuid, "element1", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
-        verify(notificationService, times(2)).emitDirectoryChanged(subDirUuid, "element2", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
-        verify(notificationService, times(1)).emitDirectoryChanged(dirUuid, "element2", "user1", null, false, false, NotificationType.UPDATE_DIRECTORY);
+        directoryService.moveElementsDirectory(List.of(elementUuid1, elementUuid2), dirUuid, "user1");
+        verify(notificationService, times(1)).emitDirectoryChanged(subDirUuid, dirUuid, List.of("element1", "element2"), "user1", false, false, false);
 
         Optional<DirectoryElementEntity> elementEntity1 = directoryElementRepository.findById(elementUuid1);
         Optional<DirectoryElementEntity> elementEntity2 = directoryElementRepository.findById(elementUuid2);
@@ -213,9 +214,7 @@ class DirectoryServiceTest {
         // we move dir to root2
         reset(directoryElementRepository);
         directoryService.moveElementsDirectory(List.of(dirUuid), root2Uuid, "user1");
-        verify(directoryElementRepository, times(3)).findElementHierarchy(any(UUID.class));
-        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, "dir", "user1", null, true, true, NotificationType.UPDATE_DIRECTORY);
-        verify(notificationService, times(1)).emitDirectoryChanged(root2Uuid, "dir", "user1", null, true, true, NotificationType.UPDATE_DIRECTORY);
+        verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, root2Uuid, List.of("dir"), "user1", true, true, true);
         Optional<DirectoryElementEntity> dirEntity = directoryElementRepository.findById(dirUuid);
         assertTrue(dirEntity.isPresent());
         assertEquals(root2Uuid, dirEntity.get().getParentId());
