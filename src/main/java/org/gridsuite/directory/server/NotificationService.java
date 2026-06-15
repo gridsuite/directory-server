@@ -6,7 +6,9 @@
  */
 package org.gridsuite.directory.server;
 
-import org.gridsuite.directory.server.dto.FolderInfos;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.directory.server.dto.DirectoryrInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +33,7 @@ public class NotificationService {
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String UPDATE_TYPE_DIRECTORIES = "directories";
-    public static final String HEADER_FOLDERS_INFOS = "foldersInfos";
+    public static final String HEADER_DIRECTORIES_INFOS = "directoriesInfos";
     public static final String HEADER_IS_PUBLIC_DIRECTORY = "isPublicDirectory";
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NOTIFICATION_TYPE = "notificationType";
@@ -47,20 +49,32 @@ public class NotificationService {
     @Autowired
     private StreamBridge directoryUpdatePublisher;
 
+    @Autowired
+    protected ObjectMapper mapper;
+
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         directoryUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
-        emitDirectoryChanged(List.of(new FolderInfos(directoryUuid, isRoot)), List.of(elementName), userId, error, false, notificationType);
+        emitDirectoryChanged(List.of(new DirectoryrInfos(directoryUuid, isRoot)), List.of(elementName), userId, error, false, notificationType);
     }
 
-    public void emitDirectoryChanged(List<FolderInfos> elementsInfos, List<String> elementNames, String userId, String error, boolean isDirectoryMoving, NotificationType notificationType) {
+    public void emitDirectoryChanged(List<DirectoryrInfos> directoryrInfos, List<String> elementNames, String userId, String error, boolean isDirectoryMoving, NotificationType notificationType) {
+
+        //TODO basseche : see what to do in case of error
+        String directoriesInfosJson = null;
+        try {
+            directoriesInfosJson = mapper.writeValueAsString(directoryrInfos);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_ELEMENT_NAMES, elementNames)
-                .setHeader(HEADER_FOLDERS_INFOS, elementsInfos)
+                .setHeader(HEADER_DIRECTORIES_INFOS, directoriesInfosJson)
                 .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from borked REST request
                 .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
