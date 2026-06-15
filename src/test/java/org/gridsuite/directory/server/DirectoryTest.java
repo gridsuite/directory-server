@@ -1942,7 +1942,10 @@ public class DirectoryTest {
         ElementAttributes subDirAttributes = toElementAttributes(null, "newSubDir", DIRECTORY, USER_ID);
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subDirAttributes);
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(subDirAttributes));
-        //The subDirAttributes is created by the userId,so the userId1 is not allowed to delete it.
+        // Explicitly remove the default ALL_USERS write permission on both directories,
+        // then verify USERID_1 is denied write access
+        permissionRepository.deleteById(new PermissionId(uuidNewRootDirectory, ALL_USERS, ""));
+        permissionRepository.deleteById(new PermissionId(subDirAttributes.getElementUuid(), ALL_USERS, ""));
         mockMvc
                 .perform(get("/v1/elements/authorized?accessType=WRITE&ids={ids}&targetDirectoryUuid", subDirAttributes.getElementUuid()).header(USER_ID, USERID_1))
                 .andExpectAll(status().isForbidden()).andReturn();
@@ -2146,12 +2149,12 @@ public class DirectoryTest {
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
         UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
 
-        // Insert a  sub-element of type TYPE_01
+        // Insert a sub-element of type TYPE_01
         ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_01, "userId", "descr element");
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, elementAttributes);
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(elementAttributes));
 
-        // The elementAttributes is created by the userId,so it is updated
+        // The elementAttributes is created by userId so it is writable by userId
         mockMvc
                 .perform(head("/v1/elements?accessType=WRITE&ids={ids}&targetDirectoryUuid", elementAttributes.getElementUuid()).header(USER_ID, USER_ID))
                 .andExpectAll(status().isOk()).andReturn();
@@ -2164,12 +2167,15 @@ public class DirectoryTest {
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
         UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
 
-        // Insert a  sub-element of type TYPE_01
+        // Insert a sub-element of type TYPE_01
         ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_01, "userId", "descr element");
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, elementAttributes);
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(elementAttributes));
 
-        // The elementAttributes is created by the userId,so it is not updated by USERID_1
+        // Explicitly remove the default ALL_USERS write permission on the parent directory
+        // so USERID_1 (a different user) is denied write access
+        permissionRepository.deleteById(new PermissionId(uuidNewRootDirectory, ALL_USERS, ""));
+
         mockMvc
                 .perform(get("/v1/elements/authorized?accessType=WRITE&ids={ids}&targetDirectoryUuid", elementAttributes.getElementUuid()).header(USER_ID, USERID_1))
                 .andExpectAll(status().isForbidden()).andReturn();
