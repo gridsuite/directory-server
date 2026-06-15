@@ -8,7 +8,7 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.gridsuite.directory.server.dto.DirectoryrInfos;
+import org.gridsuite.directory.server.dto.DirectoryInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,10 +58,10 @@ public class NotificationService {
     }
 
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
-        emitDirectoryChanged(List.of(new DirectoryrInfos(directoryUuid, isRoot)), List.of(elementName), userId, error, false, notificationType);
+        emitDirectoryChanged(List.of(new DirectoryInfos(directoryUuid, isRoot)), List.of(elementName), userId, error, false, notificationType);
     }
 
-    public void emitDirectoryChanged(List<DirectoryrInfos> directoryrInfos, List<String> elementNames, String userId, String error, boolean isDirectoryMoving, NotificationType notificationType) {
+    public void emitDirectoryChanged(List<DirectoryInfos> directoryrInfos, List<String> elementNames, String userId, String error, boolean isDirectoryMoving, NotificationType notificationType) {
 
         //TODO basseche : see what to do in case of error
         String directoriesInfosJson = null;

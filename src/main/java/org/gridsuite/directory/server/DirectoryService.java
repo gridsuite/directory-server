@@ -604,8 +604,8 @@ public class DirectoryService {
     private void notifyDirectoryHasChanged(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId, boolean isDirectoryMoving) {
         Objects.requireNonNull(newDirectoryUuid);
         boolean isOldRoot = oldDirectoryUuid != null && repositoryService.isRootDirectory(oldDirectoryUuid);
-        notificationService.emitDirectoryChanged(List.of(new DirectoryrInfos(oldDirectoryUuid, isOldRoot),
-                new DirectoryrInfos(newDirectoryUuid, repositoryService.isRootDirectory(newDirectoryUuid))),
+        notificationService.emitDirectoryChanged(List.of(new DirectoryInfos(oldDirectoryUuid, isOldRoot),
+                new DirectoryInfos(newDirectoryUuid, repositoryService.isRootDirectory(newDirectoryUuid))),
             elements,
             userId,
             null,
@@ -621,7 +621,7 @@ public class DirectoryService {
     private void notifyDirectoryHasChanged(UUID directoryUuid, String userId, String elementName, String error, boolean isDirectoryMoving) {
         Objects.requireNonNull(directoryUuid);
         notificationService.emitDirectoryChanged(
-            List.of(new DirectoryrInfos(directoryUuid, repositoryService.isRootDirectory(directoryUuid))),
+            List.of(new DirectoryInfos(directoryUuid, repositoryService.isRootDirectory(directoryUuid))),
             List.of(elementName),
             userId,
             error,
@@ -644,7 +644,7 @@ public class DirectoryService {
     private void notifyRootDirectoryDeleted(UUID rootDirectoryUuid, String userId, String elementName, String error, boolean isDirectoryMoving) {
         Objects.requireNonNull(rootDirectoryUuid);
         notificationService.emitDirectoryChanged(
-            List.of(new DirectoryrInfos(rootDirectoryUuid, true)),
+            List.of(new DirectoryInfos(rootDirectoryUuid, true)),
             List.of(elementName),
             userId,
             error,
