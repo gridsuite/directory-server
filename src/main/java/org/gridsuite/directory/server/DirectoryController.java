@@ -281,7 +281,7 @@ public class DirectoryController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/elements/{elementUuid}/references")
+    @DeleteMapping(value = "/elements/{elementUuid}/references/{referenceUuid}")
     @Operation(summary = "Delete a reference to an element")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Reference was successfully deleted"),
@@ -289,7 +289,7 @@ public class DirectoryController {
         @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
     })
     public ResponseEntity<Void> deleteElementReference(@PathVariable("elementUuid") UUID elementUuid,
-                                                       @Parameter(description = "Reference uuid") @RequestParam(value = "referenceUuid") UUID referenceUuid,
+                                                       @PathVariable("referenceUuid") UUID referenceUuid,
                                                        @RequestHeader("userId") String userId) {
         service.deleteElementReference(elementUuid, referenceUuid, userId);
         return ResponseEntity.ok().build();

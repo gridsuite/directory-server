@@ -2237,13 +2237,17 @@ public class DirectoryTest {
 
     @Test
     @SneakyThrows
-    public void testCreateElementReference() {
+    public void testElementReferences() {
         String userId = "user";
 
         // create a root directory and an element
-        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", "user1", null, null, null, null), "user1");
-        ElementAttributes elementAttributes = DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", "user1");
-        elementAttributes = directoryService.createElement(elementAttributes, rootAttributes.getElementUuid(), "user1", false);
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", userId, null, null, null, null), userId);
+        ElementAttributes elementAttributes = DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", userId);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.ADD_DIRECTORY, userId);
+
+        // create an element in root directory
+        elementAttributes = directoryService.createElement(elementAttributes, rootAttributes.getElementUuid(), userId, false);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
         // create a reference to the element
         UUID referenceId = UUID.randomUUID();
@@ -2257,8 +2261,26 @@ public class DirectoryTest {
         // check that the reference is created
         elementAttributes.setReferences(List.of(referenceAttributes));
         checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
-        // TODO test notifications
-        output.clear();
+        // delete the reference to the element
+        mockMvc.perform(delete(String.format("/v1/elements/%s/references/%s", elementAttributes.getElementUuid(), referenceId))
+                .header("userId", userId))
+            .andExpect(status().isOk());
+
+        // check that the reference is created
+        elementAttributes.setReferences(List.of());
+        checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+    }
+
+    private void testNotificationDirectory(UUID directoryUuid, NotificationType notificationType, String userId) {
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        assertEquals(directoryUuid, headers.get(HEADER_DIRECTORY_UUID));
+        assertEquals(notificationType, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
 }
