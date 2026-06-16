@@ -335,6 +335,9 @@ public class DirectoryService {
     public void moveElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
         validateNewDirectory(newDirectoryUuid);
 
+        // Map that contains moved elements
+        // first map : regroups by their parent directory UUID,
+        // second map : elements that have same directory are regrouped by type (Map<Boolean, List<String>> boolean indicate if the element is a directory)
         Map<UUID, Map<Boolean, List<String>>> elementsByDirectory = new HashMap<>();
         elementsUuids.forEach(elementUuid -> moveElementDirectory(getDirectoryElementEntity(elementUuid), newDirectoryUuid, userId, elementsByDirectory));
         elementsByDirectory.forEach((key, value) ->
@@ -622,7 +625,7 @@ public class DirectoryService {
         Objects.requireNonNull(directoryUuid);
         notificationService.emitDirectoryChanged(
             List.of(new DirectoryInfos(directoryUuid, repositoryService.isRootDirectory(directoryUuid))),
-            List.of(elementName),
+            elementName != null ? List.of(elementName) : null,
             userId,
             error,
             isDirectoryMoving,
