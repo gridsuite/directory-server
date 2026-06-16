@@ -102,8 +102,8 @@ public class DirectoryService {
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, generateNewName);
         if (DIRECTORY.equals(elementAttributes.getType())) {
             permissionService.grantOwnerManagePermission(elementEntity.getId(), userId);
-            //Grants read permission for all users on created element
-            permissionService.grantReadPermissionToAllUsers(elementEntity.getId());
+            //Grants write permission for all users on created element
+            permissionService.grantWritePermissionToAllUsers(elementEntity.getId());
         }
 
         // Here we know that parentDirectoryUuid can't be null
@@ -203,7 +203,7 @@ public class DirectoryService {
         ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
         UUID elementUuid = elementAttributes.getElementUuid();
         permissionService.grantOwnerManagePermission(elementUuid, userId);
-        permissionService.grantReadPermissionToAllUsers(elementUuid);
+        permissionService.grantWritePermissionToAllUsers(elementUuid);
         // here we know a root directory has no parent
         notificationService.emitDirectoryChanged(
             elementUuid,
