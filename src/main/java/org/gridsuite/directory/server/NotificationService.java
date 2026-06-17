@@ -8,6 +8,7 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.DirectoryInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,20 +62,13 @@ public class NotificationService {
         emitDirectoryChanged(List.of(new DirectoryInfos(directoryUuid, isRoot)), List.of(elementName), userId, error, false, notificationType);
     }
 
+    @SneakyThrows
     public void emitDirectoryChanged(List<DirectoryInfos> directoryrInfos, List<String> elementNames, String userId, String error, boolean isDirectoryMoving, NotificationType notificationType) {
-
-        //TODO basseche : see what to do in case of error
-        String directoriesInfosJson = null;
-        try {
-            directoriesInfosJson = mapper.writeValueAsString(directoryrInfos);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
 
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_ELEMENT_NAMES, elementNames)
-                .setHeader(HEADER_DIRECTORIES_INFOS, directoriesInfosJson)
+                .setHeader(HEADER_DIRECTORIES_INFOS, mapper.writeValueAsString(directoryrInfos)) // exception could be thrown here
                 .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from borked REST request
                 .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
