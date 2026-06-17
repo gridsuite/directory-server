@@ -636,7 +636,6 @@ public class DirectoryTest {
         assertTrue(srcDirectoryInfos.isRoot());
         assertTrue(destDirectoryInfos.isRoot());
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
-        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(false, headers.get(HEADER_IS_DIRECTORY_MOVING));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
