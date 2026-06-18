@@ -7,11 +7,16 @@
 package org.gridsuite.directory.server;
 
 import lombok.NonNull;
-import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.PermissionDTO;
+import org.gridsuite.directory.server.dto.ReferenceAttributes;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.dto.DirectoryInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
-import org.gridsuite.directory.server.repository.*;
+import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -26,9 +31,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
+import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -97,14 +103,14 @@ public class DirectoryService {
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, generateNewName);
         if (DIRECTORY.equals(elementAttributes.getType())) {
             permissionService.grantOwnerManagePermission(elementEntity.getId(), userId);
-            //Grants read permission for all users on created element
-            permissionService.grantReadPermissionToAllUsers(elementEntity.getId());
+            //Grants write permission for all users on created element
+            permissionService.grantWritePermissionToAllUsers(elementEntity.getId());
         }
 
         // Here we know that parentDirectoryUuid can't be null
         notifyDirectoryHasChanged(parentDirectoryUuid, userId, elementEntity.getName());
 
-        return toElementAttributes(elementEntity);
+        return toElementAttributesWithReferences(elementEntity);
     }
 
     public ElementAttributes duplicateElement(UUID elementId, UUID newElementId, UUID targetDirectoryId, String userId) {
@@ -157,7 +163,8 @@ public class DirectoryService {
             elementAttributes.getDescription(),
             now,
             now,
-            elementAttributes.getOwner());
+            elementAttributes.getOwner(),
+            elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList());
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
@@ -197,7 +204,7 @@ public class DirectoryService {
         ElementAttributes elementAttributes = toElementAttributes(insertElement(toElementAttributes(rootDirectoryAttributes), null));
         UUID elementUuid = elementAttributes.getElementUuid();
         permissionService.grantOwnerManagePermission(elementUuid, userId);
-        permissionService.grantReadPermissionToAllUsers(elementUuid);
+        permissionService.grantWritePermissionToAllUsers(elementUuid);
         // here we know a root directory has no parent
         notificationService.emitDirectoryChanged(
             elementUuid,
@@ -235,7 +242,7 @@ public class DirectoryService {
                 } else {
                     //and then we create the rest of the path
                     parentDirectoryUuid = createElementWithNotif(
-                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, null, now, now, userId),
+                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId),
                         parentDirectoryUuid,
                         userId, false).getElementUuid();
                 }
@@ -256,6 +263,7 @@ public class DirectoryService {
             ));
     }
 
+    @Transactional(readOnly = true)
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
         if (!permissionService.hasReadPermissions(userId, List.of(directoryUuid))) {
             return List.of();
@@ -268,11 +276,16 @@ public class DirectoryService {
             return List.of();
         }
         if (TRUE.equals(recursive)) {
-            List<DirectoryElementEntity> descendents = repositoryService.findAllDescendants(directoryUuid).stream().toList();
+            List<UUID> descendentsUuids = repositoryService.findAllDescendantsUuids(directoryUuid).stream().toList();
+            if (descendentsUuids.isEmpty()) {
+                return List.of();
+            }
+            // Need to load references for all descendents (no N+1 -> only one query)
+            List<DirectoryElementEntity> descendents = directoryElementRepository.findAllWithReferencesByIdIn(descendentsUuids);
             return descendents
                 .stream()
                 .filter(e -> (types.isEmpty() || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
-                .map(ElementAttributes::toElementAttributes)
+                .map(ElementAttributes::toElementAttributesWithReferences)
                 .toList();
         } else {
             return getAllDirectoryElementsStream(directoryUuid, types, userId).toList();
@@ -290,7 +303,7 @@ public class DirectoryService {
         return directoryElements
             .stream()
             .filter(e -> (e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
-            .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
+            .map(e -> toElementAttributesWithReferences(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
     }
 
     public List<ElementAttributes> getRootDirectories(List<String> types, String userId) {
@@ -323,6 +336,28 @@ public class DirectoryService {
         DirectoryElementEntity elementEntity = repositoryService.saveElement(directoryElement.update(newElementAttributes));
 
         notifyDirectoryHasChanged(elementEntity.getParentId() == null ? elementUuid : elementEntity.getParentId(), userId, elementEntity.getName());
+    }
+
+    @Transactional
+    public void createElementReference(UUID elementUuid, ReferenceAttributes referenceAttributes, String userId) {
+        DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
+        directoryElementEntity.addReference(createReferenceEntity(referenceAttributes));
+        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
+    }
+
+    private ReferenceEmbeddable createReferenceEntity(ReferenceAttributes referenceAttributes) {
+        return new ReferenceEmbeddable(
+            referenceAttributes.getReferenceId(),
+            referenceAttributes.getReferenceType().name()
+        );
+    }
+
+    @Transactional
+    public void deleteElementReference(UUID elementUuid, UUID referenceUuid, String userId) {
+        DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
+        directoryElementEntity.removeReference(referenceUuid);
+
+        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 
     @Transactional
@@ -443,8 +478,9 @@ public class DirectoryService {
         notificationService.emitDeletedElement(elementAttributes.getElementUuid(), userId);
     }
 
-    private void deleteSubElements(UUID elementUuid, String userId) {
-        getAllDirectoryElementsStream(elementUuid, List.of(), userId).forEach(elementAttributes -> deleteElement(elementAttributes, userId));
+    private void deleteSubElements(UUID directoryUuid, String userId) {
+        repositoryService.findAllByParentId(directoryUuid)
+            .forEach(entity -> deleteElement(toElementAttributes(entity), userId));
     }
 
     /**
@@ -501,6 +537,11 @@ public class DirectoryService {
 
     public ElementAttributes getElement(UUID elementUuid) {
         return toElementAttributes(getDirectoryElementEntity(elementUuid));
+    }
+
+    @Transactional(readOnly = true)
+    public ElementAttributes getElementWithReferences(UUID elementUuid) {
+        return toElementAttributesWithReferences(getDirectoryElementEntity(elementUuid));
     }
 
     private DirectoryElementEntity getDirectoryElementEntity(UUID elementUuid) {
