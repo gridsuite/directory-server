@@ -6,7 +6,6 @@
  */
 package org.gridsuite.directory.server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.DirectoryInfos;
