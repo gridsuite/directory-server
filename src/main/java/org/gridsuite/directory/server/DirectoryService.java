@@ -9,6 +9,7 @@ package org.gridsuite.directory.server;
 import lombok.NonNull;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+import org.gridsuite.directory.server.dto.DirectoryInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.*;
 import org.gridsuite.directory.server.services.*;
