@@ -364,7 +364,6 @@ public class DirectoryService {
         }
 
         UUID oldParentDirectoryUuid = element.getParentId();
-        DirectoryElementEntity oldDirectory = oldParentDirectoryUuid == null ? null : repositoryService.getElementEntity(oldParentDirectoryUuid).orElseThrow();
         boolean isDirectory = DIRECTORY.equals(element.getType());
         List<DirectoryElementEntity> descendents = isDirectory ? repositoryService.findAllDescendants(element.getId()).stream().toList() : List.of();
 
