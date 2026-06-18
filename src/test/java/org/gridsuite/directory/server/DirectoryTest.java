@@ -112,6 +112,7 @@ public class DirectoryTest {
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    public static final String HEADER_DIRECTORY_UUID = "directoryUuid";
     private static final String HEADER_USER_ROLES = "roles";
     public static final String USER_ID = "userId";
     public static final String USERID_1 = "userId1";
