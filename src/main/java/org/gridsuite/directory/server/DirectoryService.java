@@ -376,11 +376,11 @@ public class DirectoryService {
         // Map that contains moved elements
         // first map : regroups by their parent directory UUID,
         // second map : elements that have same directory are regrouped by type (Map<Boolean, List<String>> boolean indicate if the element is a directory)
-        Map<UUID, Map<Boolean, List<String>>> elementsByDirectory = elementsUuids.stream()
+        Map<Optional<UUID>, Map<Boolean, List<String>>> elementsByDirectory = elementsUuids.stream()
             .map(elementUuid -> moveElementDirectory(getDirectoryElementEntity(elementUuid), newDirectoryUuid, userId))
             .filter(Objects::nonNull)
             .collect(Collectors.groupingBy(
-                ElementInfos::parentDirectoryUuid,
+                elementInfos -> Optional.ofNullable(elementInfos.parentDirectoryUuid()),
                 Collectors.groupingBy(
                     ElementInfos::isDirectory,
                     Collectors.mapping(ElementInfos::elementName, Collectors.toList())
@@ -389,7 +389,7 @@ public class DirectoryService {
 
         elementsByDirectory.forEach((key, value) ->
             // we regroup elements by type (directory or file) for each directory
-            value.forEach((isDirectory, elements) -> notifyDirectoryHasChanged(key, newDirectoryUuid, elements, userId, isDirectory))
+            value.forEach((isDirectory, elements) -> notifyDirectoryHasChanged(key.orElse(null), newDirectoryUuid, elements, userId, isDirectory))
         );
     }
 

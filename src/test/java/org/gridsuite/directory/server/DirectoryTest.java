@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -112,7 +113,6 @@ public class DirectoryTest {
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
-    public static final String HEADER_DIRECTORY_UUID = "directoryUuid";
     private static final String HEADER_USER_ROLES = "roles";
     public static final String USER_ID = "userId";
     public static final String USERID_1 = "userId1";
@@ -2298,12 +2298,14 @@ public class DirectoryTest {
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
     }
 
-    private void testNotificationDirectory(UUID directoryUuid, NotificationType notificationType, String userId) {
+    private void testNotificationDirectory(UUID directoryUuid, NotificationType notificationType, String userId) throws JsonProcessingException {
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(directoryUuid, headers.get(HEADER_DIRECTORY_UUID));
+        List<DirectoryInfos> directoriesInfos = objectMapper.readValue(headers.get(HEADER_DIRECTORIES_INFOS, String.class), new TypeReference<>() { });
+        DirectoryInfos directoryInfos = directoriesInfos.stream().filter(directory -> directoryUuid.equals(directory.uuid())).findFirst().orElse(null);
+        assertNotNull(directoryInfos);
         assertEquals(notificationType, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
