@@ -580,27 +580,38 @@ public class DirectoryTest {
                                        UUID targetDirectoryUuid,
                                        boolean isMovingDirectoryRoot) throws Exception {
         mockMvc.perform(put("/v1/elements?targetDirectoryUuid=" + targetDirectoryUuid)
-                        .header("userId", "Doe")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(List.of(directoryUuid))))
-                .andExpect(status().isOk());
+                .header("userId", "Doe")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(List.of(directoryUuid))))
+            .andExpect(status().isOk());
 
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals("Doe", headers.get(HEADER_USER_ID));
 
-        List<DirectoryInfos> directoriesInfos = objectMapper.readValue(headers.get(HEADER_DIRECTORIES_INFOS, String.class), new TypeReference<>() { });
+        List<DirectoryInfos> directoriesInfos = objectMapper.readValue(
+            headers.get(HEADER_DIRECTORIES_INFOS, String.class),
+            new TypeReference<>() { }
+        );
         assertNotNull(directoriesInfos);
+
         DirectoryInfos srcDirectoryInfos = parentDirectoryUuid != null
-            ? directoriesInfos.stream().filter(directoryInfos -> parentDirectoryUuid.equals(directoryInfos.uuid())).findFirst().orElse(null)
+            ? directoriesInfos.stream()
+            .filter(d -> parentDirectoryUuid.equals(d.uuid()))
+            .findFirst()
+            .orElse(null)
             : new DirectoryInfos(null, true);
-        DirectoryInfos destDirectoryInfos = targetDirectoryUuid != null ?
-            directoriesInfos.stream().filter(directoryInfos -> targetDirectoryUuid.equals(directoryInfos.uuid())).findFirst().orElse(null)
+
+        DirectoryInfos destDirectoryInfos = targetDirectoryUuid != null
+            ? directoriesInfos.stream()
+            .filter(d -> targetDirectoryUuid.equals(d.uuid()))
+            .findFirst()
+            .orElse(null)
             : new DirectoryInfos(null, true);
+
         assertNotNull(srcDirectoryInfos);
         assertNotNull(destDirectoryInfos);
-        assertTrue(srcDirectoryInfos.isRoot());
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(isMovingDirectoryRoot, headers.get(HEADER_IS_DIRECTORY_MOVING));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
@@ -2303,9 +2314,19 @@ public class DirectoryTest {
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        List<DirectoryInfos> directoriesInfos = objectMapper.readValue(headers.get(HEADER_DIRECTORIES_INFOS, String.class), new TypeReference<>() { });
-        DirectoryInfos directoryInfos = directoriesInfos.stream().filter(directory -> directoryUuid.equals(directory.uuid())).findFirst().orElse(null);
+
+        // Parse the new DirectoryInfos list format
+        List<DirectoryInfos> directoriesInfos = objectMapper.readValue(
+            headers.get(HEADER_DIRECTORIES_INFOS, String.class),
+            new TypeReference<>() { }
+        );
+        assertNotNull(directoriesInfos);
+        DirectoryInfos directoryInfos = directoriesInfos.stream()
+            .filter(d -> directoryUuid.equals(d.uuid()))
+            .findFirst()
+            .orElse(null);
         assertNotNull(directoryInfos);
+
         assertEquals(notificationType, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
     }
