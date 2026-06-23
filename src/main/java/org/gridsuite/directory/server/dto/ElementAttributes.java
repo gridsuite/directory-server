@@ -74,7 +74,8 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        ElementAttributes attributes = toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
+        ElementAttributes attributes = toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount,
+                entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
         attributes.setReferences(toReferencesAttributes(entity));
         return attributes;
     }
@@ -84,18 +85,20 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
-        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount, entity.getDescription(), entity.getCreationDate(),
+        return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(),
+                subDirectoriesCount, entity.getDescription(), entity.getCreationDate(),
                 entity.getLastModificationDate(), entity.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
-        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY, rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(),
+        return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
+                rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(),
                 rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
-                                                        @NonNull String userId,
-                                                        long subdirectoriesCount, String elementDescription, Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
+                                                        @NonNull String userId, long subdirectoriesCount, String elementDescription,
+                                                        Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
         return ElementAttributes.builder()
             .elementUuid(elementUuid)
             .elementName(elementName)

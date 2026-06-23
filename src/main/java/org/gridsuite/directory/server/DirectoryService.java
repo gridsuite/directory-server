@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
