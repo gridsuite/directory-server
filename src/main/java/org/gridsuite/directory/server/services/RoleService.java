@@ -48,7 +48,7 @@ public class RoleService {
         return Set.of(rolesHeader.split(ROLE_DELIMITER));
     }
 
-   /**
+    /**
      * Checks if the user has the required roles for admin access.
      *
      * @return True if the user has admin access, false otherwise

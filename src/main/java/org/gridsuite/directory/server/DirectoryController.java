@@ -67,7 +67,8 @@ public class DirectoryController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The created element"),
         @ApiResponse(responseCode = "409", description = "An element with the same name already exists in the directory")})
     public ResponseEntity<ElementAttributes> createElement(@PathVariable("directoryUuid") UUID directoryUuid,
-                                             @Parameter(description = "if element already exists a new incremental name is provided") @RequestParam(value = "allowNewName", required = false, defaultValue = "false") Boolean allowNewName,
+                                             @Parameter(description = "if element already exists a new incremental name is provided") @RequestParam(value = "allowNewName", required = false,
+                                                     defaultValue = "false") Boolean allowNewName,
                                              @RequestBody ElementAttributes elementAttributes,
                                              @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.createElement(elementAttributes, directoryUuid, userId, allowNewName));
@@ -80,7 +81,8 @@ public class DirectoryController {
     public ResponseEntity<ElementAttributes> duplicateElement(
                                                            @RequestParam("duplicateFrom") UUID elementUuid,
                                                            @Parameter(description = "ID of the new element") @RequestParam("newElementUuid") UUID newElementUuid,
-                                                           @Parameter(description = "Optional UUID of the target directory where the new element will be placed. Defaults to the same directory as the original element if not specified.")
+                                                           @Parameter(description = "Optional UUID of the target directory where the new element will be placed. Defaults to the same directory as "
+                                                                   + "the original element if not specified.")
                                                            @RequestParam(name = "targetDirectoryId", required = false) UUID targetDirectoryId,
                                                            @RequestHeader("userId") String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.duplicateElement(elementUuid, newElementUuid, targetDirectoryId, userId));

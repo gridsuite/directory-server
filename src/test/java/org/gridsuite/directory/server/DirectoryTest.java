@@ -24,7 +24,6 @@ import org.elasticsearch.client.RestClient;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
-
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
@@ -61,15 +60,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.util.CollectionUtils;
-
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.NotificationService.*;
+import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
 import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDY_CREATION_FINISHED;
@@ -303,7 +301,7 @@ public class DirectoryTest {
 
     @Test
     public void testGetPathOfElementType03() throws Exception {
-       // Insert a root directory
+        // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
         // Insert a subDirectory1 in the root directory
@@ -785,7 +783,8 @@ public class DirectoryTest {
         checkRootDirectoriesList("user1", List.of(toElementAttributes(rootDir1Uuid, "rootDir1", DIRECTORY, "user1", null, rootDir1CreationDate, rootDir1CreationDate, "user1"),
                 toElementAttributes(rootDir2Uuid, "rootDir2", DIRECTORY, "user2", null, rootDir2CreationDate, rootDir2CreationDate, "user2")));
 
-        checkRootDirectoriesList("user2", List.of(toElementAttributes(rootDir1Uuid, "rootDir1", DIRECTORY, "user1", null, rootDir1CreationDate, rootDir1CreationDate, "user1"), toElementAttributes(rootDir2Uuid, "rootDir2", DIRECTORY, "user2", null, rootDir2CreationDate, rootDir2CreationDate, "user2")));
+        checkRootDirectoriesList("user2", List.of(toElementAttributes(rootDir1Uuid, "rootDir1", DIRECTORY, "user1", null, rootDir1CreationDate, rootDir1CreationDate, "user1"), toElementAttributes(
+                rootDir2Uuid, "rootDir2", DIRECTORY, "user2", null, rootDir2CreationDate, rootDir2CreationDate, "user2")));
 
         //Cleaning Test
         deleteElement(rootDir1Uuid, rootDir1Uuid, "user1", true, true, 0);
@@ -936,7 +935,8 @@ public class DirectoryTest {
         assertNbElementsInRepositories(2);
 
         renameElement(element1Attributes.getElementUuid(), rootDirUuid, "user1", "newElementName1", true);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_01, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(), "user1")));
+        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_01, "user1", null, element1Attributes.getCreationDate(),
+                element1Attributes.getLastModificationDate(), "user1")));
 
         assertNbElementsInRepositories(2);
     }
@@ -954,7 +954,8 @@ public class DirectoryTest {
 
         // Updating to same name should not send error
         renameElement(element1Attributes.getElementUuid(), rootDirUuid, "user1", "elementName1", true);
-        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(element1Attributes.getElementUuid(), "elementName1", TYPE_01, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(), "user1")));
+        checkDirectoryContent(rootDirUuid, "userId", List.of(toElementAttributes(element1Attributes.getElementUuid(), "elementName1", TYPE_01, "user1", null, element1Attributes.getCreationDate(),
+                element1Attributes.getLastModificationDate(), "user1")));
     }
 
     @Test
@@ -984,7 +985,8 @@ public class DirectoryTest {
         // Insert an element of type TYPE_01 in the root directory by the user1
         ElementAttributes elementAttributes = toElementAttributes(TYPE_01_UPDATE_ACCESS_RIGHT_UUID, "elementName1", TYPE_01, "user1");
         insertAndCheckSubElementInRootDir(rootDirUuid, elementAttributes);
-        checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(elementAttributes.getElementUuid(), "elementName1", TYPE_01, "user1", null, elementAttributes.getCreationDate(), elementAttributes.getLastModificationDate(), "user1")));
+        checkDirectoryContent(rootDirUuid, "user1", List.of(toElementAttributes(elementAttributes.getElementUuid(), "elementName1", TYPE_01, "user1", null, elementAttributes.getCreationDate(),
+                elementAttributes.getLastModificationDate(), "user1")));
     }
 
     @Test
@@ -1095,9 +1097,12 @@ public class DirectoryTest {
         assertEquals(3, res.size());
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
-        ElementAttributes newElement1Attributes = toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_02, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(), "user1");
-        ElementAttributes newElement2Attributes = toElementAttributes(element2Attributes.getElementUuid(), "newElementName2", TYPE_03, "user1", null, element2Attributes.getCreationDate(), element2Attributes.getLastModificationDate(), "user1");
-        ElementAttributes newElement3Attributes = toElementAttributes(element3Attributes.getElementUuid(), "newElementName3", TYPE_03, "user1", null, element3Attributes.getCreationDate(), element3Attributes.getLastModificationDate(), "user1");
+        ElementAttributes newElement1Attributes = toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_02, "user1", null, element1Attributes.getCreationDate(),
+                element1Attributes.getLastModificationDate(), "user1");
+        ElementAttributes newElement2Attributes = toElementAttributes(element2Attributes.getElementUuid(), "newElementName2", TYPE_03, "user1", null, element2Attributes.getCreationDate(),
+                element2Attributes.getLastModificationDate(), "user1");
+        ElementAttributes newElement3Attributes = toElementAttributes(element3Attributes.getElementUuid(), "newElementName3", TYPE_03, "user1", null, element3Attributes.getCreationDate(),
+                element3Attributes.getLastModificationDate(), "user1");
 
         assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(newElement1Attributes, newElement2Attributes, newElement3Attributes));
 
@@ -1201,9 +1206,12 @@ public class DirectoryTest {
 
         res.sort(Comparator.comparing(ElementAttributes::getElementName));
         assertThat(res).usingRecursiveComparison().ignoringFieldsOfTypes(Instant.class).isEqualTo(List.of(
-                toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_02, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(), "user1"),
-                toElementAttributes(element2Attributes.getElementUuid(), "newElementName2", TYPE_03, "user1", null, element2Attributes.getCreationDate(), element2Attributes.getLastModificationDate(), "user1"),
-                toElementAttributes(element3Attributes.getElementUuid(), "newElementName3", TYPE_03, "user1", null, element3Attributes.getCreationDate(), element3Attributes.getLastModificationDate(), "user1")
+                toElementAttributes(element1Attributes.getElementUuid(), "newElementName1", TYPE_02, "user1", null, element1Attributes.getCreationDate(), element1Attributes.getLastModificationDate(),
+                        "user1"),
+                toElementAttributes(element2Attributes.getElementUuid(), "newElementName2", TYPE_03, "user1", null, element2Attributes.getCreationDate(), element2Attributes.getLastModificationDate(),
+                        "user1"),
+                toElementAttributes(element3Attributes.getElementUuid(), "newElementName3", TYPE_03, "user1", null, element3Attributes.getCreationDate(), element3Attributes.getLastModificationDate(),
+                        "user1")
         ));
     }
 
@@ -1251,7 +1259,7 @@ public class DirectoryTest {
         ElementAttributes element1WithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", TYPE_01, "user1");
         insertExpectFail(rootDirUuid, element1WithoutNameAttributes, status().isForbidden());
 
-       // Insert an element of type TYPE_03 with empty name in the root directory and expect a 403
+        // Insert an element of type TYPE_03 with empty name in the root directory and expect a 403
         ElementAttributes element2WithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", TYPE_03, "user1");
         insertExpectFail(rootDirUuid, element2WithoutNameAttributes, status().isForbidden());
 
@@ -1455,7 +1463,8 @@ public class DirectoryTest {
         Instant creationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getCreationDate();
         Instant modificationDateNewDirectory = objectMapper.readValue(Objects.requireNonNull(response), ElementAttributes.class).getLastModificationDate();
 
-        ElementAttributes newDirectoryAttributes = toElementAttributes(uuidNewRootDirectory, rootDirectoryName, DIRECTORY, userId, null, creationDateNewDirectory, modificationDateNewDirectory, userId);
+        ElementAttributes newDirectoryAttributes = toElementAttributes(uuidNewRootDirectory, rootDirectoryName, DIRECTORY, userId, null, creationDateNewDirectory, modificationDateNewDirectory,
+                userId);
         assertElementIsProperlyInserted(newDirectoryAttributes);
 
         // assert that the broker message has been sent a root directory creation request message
@@ -1812,7 +1821,8 @@ public class DirectoryTest {
         List<DirectoryElementEntity> directoryElementList = directoryElementRepository.findAll();
         //there should be 3 elements, the 2 directories created and the one element inside
         assertEquals(3, directoryElementList.size());
-        DirectoryElementEntity sourceDirectoryElementEntity = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getId().equals(elementUUID)).findFirst().orElseThrow();
+        DirectoryElementEntity sourceDirectoryElementEntity = directoryElementList.stream().filter(directoryElementEntity -> directoryElementEntity.getId().equals(elementUUID)).findFirst(
+                ).orElseThrow();
 
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
@@ -1955,7 +1965,7 @@ public class DirectoryTest {
     private void assertQueuesEmptyThenClear(List<String> destinations) {
         try {
             destinations.forEach(destination -> assertNull("Should not be any messages in queue " + destination + " : ", output.receive(100, destination)));
-        } catch (NullPointerException e) {
+        } catch (Exception e) {
             // Ignoring
         } finally {
             output.clear(); // purge in order to not fail the other tests

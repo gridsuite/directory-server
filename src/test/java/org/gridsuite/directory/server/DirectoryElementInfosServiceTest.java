@@ -56,10 +56,14 @@ class DirectoryElementInfosServiceTest {
 
     @Test
     void testAddDeleteElementInfos() {
-        var element1Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName1").type(TYPE_01).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var element2Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName2").type(TYPE_02).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var element3Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName3").type(TYPE_03).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element1Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName1").type(TYPE_01).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(
+                Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element2Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName2").type(TYPE_02).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(
+                Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(
+                Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element3Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName3").type(TYPE_03).parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(
+                Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
 
         // Add
         List<DirectoryElementInfos> infos = List.of(element1Infos, element2Infos, directoryInfos, element3Infos);
@@ -80,11 +84,16 @@ class DirectoryElementInfosServiceTest {
 
     @Test
     void searchElementInfos() {
-        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var element1Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName1").type(TYPE_01).owner("admin1").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var element4Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName4").type(TYPE_04).owner("admin1").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var element2Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName2").type(TYPE_02).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
-        var element3Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName3").type(TYPE_03).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var directoryInfos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("aDirectory").type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(
+                0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element1Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName1").type(TYPE_01).owner("admin1").parentId(UUID.randomUUID()).subdirectoriesCount(
+                0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element4Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName4").type(TYPE_04).owner("admin1").parentId(UUID.randomUUID()).subdirectoriesCount(
+                0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element2Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName2").type(TYPE_02).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(
+                0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        var element3Infos = DirectoryElementInfos.builder().id(UUID.randomUUID()).name("elementName3").type(TYPE_03).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(
+                0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
 
         List<DirectoryElementInfos> infos = List.of(directoryInfos, element2Infos, element1Infos, element4Infos, element3Infos);
         directoryElementInfosRepository.saveAll(infos);
@@ -149,15 +158,18 @@ class DirectoryElementInfosServiceTest {
     }
 
     private DirectoryElementInfos createElements(String name) {
-        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type("TYPE_01").owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type("TYPE_01").owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(
+                Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
 
     private DirectoryElementInfos makeElementDir(String name) {
-        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(DIRECTORY).owner("admin").parentId(UUID.randomUUID()).subdirectoriesCount(0L).lastModificationDate(
+                Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
 
     private DirectoryElementInfos makeElementFile(String name, UUID parentId) {
-        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(TYPE_01).owner("admin").parentId(parentId).subdirectoriesCount(0L).lastModificationDate(Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
+        return DirectoryElementInfos.builder().id(UUID.randomUUID()).name(name).type(TYPE_01).owner("admin").parentId(parentId).subdirectoriesCount(0L).lastModificationDate(
+                Instant.now().truncatedTo(ChronoUnit.SECONDS)).build();
     }
     /*
         Directory Structure:
