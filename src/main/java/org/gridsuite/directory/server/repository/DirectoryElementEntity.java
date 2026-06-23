@@ -12,9 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
@@ -58,6 +56,18 @@ public class DirectoryElementEntity {
 
     @Column(name = "lastModifiedBy")
     private String lastModifiedBy;
+
+    @ElementCollection
+    @CollectionTable(name = "reference",
+        joinColumns = @JoinColumn(name = "element_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "element_id_fk")),
+        indexes = @Index(name = "element_idx", columnList = "element_id")
+    )
+    private List<ReferenceEmbeddable> references = new ArrayList<>();
+
+    // Return a list that cannot be modified to avoid side effects
+    public List<ReferenceEmbeddable> getReferences() {
+        return Collections.unmodifiableList(references);
+    }
 
     public DirectoryElementEntity update(@NonNull ElementAttributes newElementAttributes) {
         boolean isElementNameUpdated = StringUtils.isNotBlank(newElementAttributes.getElementName());
@@ -104,5 +114,13 @@ public class DirectoryElementEntity {
                 .pathName(path.stream().map(DirectoryElementEntity::getName).toList())
                 .lastModificationDate(getLastModificationDate())
                 .build();
+    }
+
+    public void addReference(ReferenceEmbeddable reference) {
+        this.references.add(reference);
+    }
+
+    public void removeReference(UUID referenceId) {
+        this.references.removeIf(reference -> reference.getReferenceId().equals(referenceId));
     }
 }

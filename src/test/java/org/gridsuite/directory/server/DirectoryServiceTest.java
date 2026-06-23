@@ -9,18 +9,24 @@ package org.gridsuite.directory.server;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
+import org.gridsuite.directory.server.error.DirectoryBusinessErrorCode;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.PermissionService;
+import org.gridsuite.directory.server.utils.DirectoryTestUtils;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
@@ -38,11 +44,20 @@ class DirectoryServiceTest {
     public static final String TYPE_01 = "TYPE_01";
     public static final String TYPE_02 = "TYPE_02";
 
+    private static final UUID ELEMENT_ID_1 = UUID.randomUUID();
+    private static final UUID ELEMENT_ID_2 = UUID.randomUUID();
+
+    private static final String ELEMENT_NAME_1 = "element1";
+    private static final String ELEMENT_NAME_2 = "element2";
+
     @MockitoSpyBean
     DirectoryService directoryService;
 
     @MockitoSpyBean
     DirectoryElementRepository directoryElementRepository;
+
+    @MockitoSpyBean
+    DirectoryRepositoryService directoryRepositoryService;
 
     @MockitoBean
     DirectoryElementInfosRepository directoryElementInfosRepository;
@@ -77,7 +92,7 @@ class DirectoryServiceTest {
                 elementFromOtherDir
         );
 
-        List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(e -> e.getId()).toList();
+        List<UUID> elementToDeleteUuids = elementsToDelete.stream().map(DirectoryElementEntity::getId).toList();
         // following elements should not be deleted with this call
         // - elements with type DIRECTORY
         // - elements having a parent directory different from the one passed as parameter
@@ -87,7 +102,7 @@ class DirectoryServiceTest {
                 .filter(e -> e.getParentId().equals(parentDirectoryUuid))
                 .toList();
 
-        List<UUID> elementExpectedToDeleteUuids = elementsExpectedToDelete.stream().map(e -> e.getId()).toList();
+        List<UUID> elementExpectedToDeleteUuids = elementsExpectedToDelete.stream().map(DirectoryElementEntity::getId).toList();
 
         when(directoryElementRepository.findById(parentDirectoryUuid)).thenReturn(Optional.of(parentDirectory));
         when(directoryElementRepository.findAllByIdIn(elementToDeleteUuids)).thenReturn(elementsToDelete);
@@ -117,7 +132,7 @@ class DirectoryServiceTest {
         UUID rootUuid = rootAttributes.getElementUuid();
 
         // Insert a new element
-        ElementAttributes elementAttributes = toElementAttributes(null, "element1", "TYPE", "user1");
+        ElementAttributes elementAttributes = DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", "user1");
         UUID elementUuid = directoryService.createElement(elementAttributes, rootUuid, "User1", false).getElementUuid();
 
         // Insert the same element in the same directory throws an exception
@@ -272,5 +287,75 @@ class DirectoryServiceTest {
         verify(notificationService, times(1)).emitDirectoryChanged(rootUuid, elementAttributes.getElementName() + "(1)", "user1", null, true, false, NotificationType.UPDATE_DIRECTORY);
 
         verifyNoMoreInteractions(notificationService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void getElementNames(Boolean strictMode) {
+        DirectoryElementEntity e1 = new DirectoryElementEntity();
+        e1.setId(ELEMENT_ID_1);
+        e1.setName(ELEMENT_NAME_1);
+
+        DirectoryElementEntity e2 = new DirectoryElementEntity();
+        e2.setId(ELEMENT_ID_2);
+        e2.setName(ELEMENT_NAME_2);
+
+        when(directoryRepositoryService.findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2)))
+            .thenReturn(List.of(e1, e2));
+
+        List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
+        Map<UUID, String> expectedElementNamesMap = Map.of(
+            ELEMENT_ID_1, ELEMENT_NAME_1,
+            ELEMENT_ID_2, ELEMENT_NAME_2
+        );
+        Map<UUID, String> elementNamesMap = directoryService.getElementNames(elementIds, strictMode);
+        assertEquals(expectedElementNamesMap, elementNamesMap);
+
+        // verify repository is called
+        verify(directoryRepositoryService, times(1)).findAllByIdIn(elementIds);
+    }
+
+    @Test
+    void getElementNamesWithNotFoundElementsWithStrictMode() {
+        DirectoryElementEntity e1 = new DirectoryElementEntity();
+        e1.setId(ELEMENT_ID_1);
+        e1.setName(ELEMENT_NAME_1);
+
+        when(directoryRepositoryService.findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2)))
+            .thenReturn(List.of(e1));
+
+        List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
+
+        // with strictMode = true, throws exception
+        DirectoryException exception = assertThrows(
+            DirectoryException.class,
+            () -> directoryService.getElementNames(elementIds, true));
+        assertEquals(
+            DirectoryBusinessErrorCode.DIRECTORY_SOME_ELEMENTS_ARE_MISSING,
+            exception.getBusinessErrorCode()
+        );
+
+        // verify repository is called
+        verify(directoryRepositoryService, times(1)).findAllByIdIn(elementIds);
+    }
+
+    @Test
+    void getElementNamesWithNotFoundElementsWithoutStrictMode() {
+        DirectoryElementEntity e1 = new DirectoryElementEntity();
+        e1.setId(ELEMENT_ID_1);
+        e1.setName(ELEMENT_NAME_1);
+
+        when(directoryRepositoryService.findAllByIdIn(List.of(ELEMENT_ID_1, ELEMENT_ID_2)))
+            .thenReturn(List.of(e1));
+
+        List<UUID> elementIds = List.of(ELEMENT_ID_1, ELEMENT_ID_2);
+        Map<UUID, String> expectedElementNamesMap = Map.of(ELEMENT_ID_1, ELEMENT_NAME_1);
+
+        // with strictMode = false, returns only found elements
+        Map<UUID, String> elementNamesMap = directoryService.getElementNames(elementIds, false);
+        assertEquals(expectedElementNamesMap, elementNamesMap);
+
+        // verify repository is called
+        verify(directoryRepositoryService, times(1)).findAllByIdIn(elementIds);
     }
 }

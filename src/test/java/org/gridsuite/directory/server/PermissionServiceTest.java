@@ -15,7 +15,10 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.gridsuite.directory.server.dto.*;
+import org.gridsuite.directory.server.dto.ElementAttributes;
+import org.gridsuite.directory.server.dto.PermissionDTO;
+import org.gridsuite.directory.server.dto.PermissionType;
+import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.error.DirectoryBusinessErrorCode;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.repository.PermissionEntity;
@@ -47,14 +50,12 @@ import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.stream.Collectors;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
-import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 import static org.gridsuite.directory.server.services.PermissionService.ALL_USERS;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
+import static org.junit.Assert.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -198,14 +199,14 @@ public class PermissionServiceTest {
         UUID rootUuid3 = insertRootDirectory(user3, "root3");
 
         // For each element creation we should have 2 entries in DB, 1 for the creator and one for all users "ALL_USERS"
-        // Check that permission are set to read only for all users and manage for the creator
+        // Check that permissions are set to read/write for all users and manage for the creator
         ArrayList<PermissionEntity> expectedPermissions = new ArrayList<>();
         expectedPermissions.add(new PermissionEntity(rootUuid1, user1, "", true, true, true));
-        expectedPermissions.add(new PermissionEntity(rootUuid1, ALL_USERS, "", true, false, false));
+        expectedPermissions.add(new PermissionEntity(rootUuid1, ALL_USERS, "", true, true, false));
         expectedPermissions.add(new PermissionEntity(rootUuid2, user2, "", true, true, true));
-        expectedPermissions.add(new PermissionEntity(rootUuid2, ALL_USERS, "", true, false, false));
+        expectedPermissions.add(new PermissionEntity(rootUuid2, ALL_USERS, "", true, true, false));
         expectedPermissions.add(new PermissionEntity(rootUuid3, user3, "", true, true, true));
-        expectedPermissions.add(new PermissionEntity(rootUuid3, ALL_USERS, "", true, false, false));
+        expectedPermissions.add(new PermissionEntity(rootUuid3, ALL_USERS, "", true, true, false));
         List<PermissionEntity> permissions = permissionRepository.findAll();
         assertEquals(6, permissions.size());
         assertTrue(permissions.containsAll(expectedPermissions));
@@ -213,32 +214,33 @@ public class PermissionServiceTest {
         // Test with empty list
         controlElementsAccess("user", List.of(), null, READ, HttpStatus.OK);
 
-        // All users should have read permission for all root directories
-        // But they should only have the others permission (move, update, write...) for the root directory they created
-        // Check read access
+        // All users have read and write permission for all root directories by default.
+        // Only manage permission is restricted to the creator.
+
+        // Check READ access OK for all users on all root directories
         controlElementsAccess("user", List.of(rootUuid1, rootUuid2, rootUuid3), null, READ, HttpStatus.OK);
         controlElementsAccess(user1, List.of(rootUuid1, rootUuid2, rootUuid3), null, READ, HttpStatus.OK);
         controlElementsAccess(user2, List.of(rootUuid1, rootUuid2, rootUuid3), null, READ, HttpStatus.OK);
         controlElementsAccess(user3, List.of(rootUuid1, rootUuid2, rootUuid3), null, READ, HttpStatus.OK);
 
-        // Check WRITE access OK
+        // Check WRITE access OK for each user on their own root directory
         controlElementsAccess(user1, List.of(rootUuid1), null, WRITE, HttpStatus.OK);
         controlElementsAccess(user2, List.of(rootUuid2), null, WRITE, HttpStatus.OK);
         controlElementsAccess(user3, List.of(rootUuid3), null, WRITE, HttpStatus.OK);
 
-        // Check WRITE access not OK
-        controlElementsAccess(user1, List.of(rootUuid2), null, WRITE, HttpStatus.FORBIDDEN);
-        controlElementsAccess(user2, List.of(rootUuid1), null, WRITE, HttpStatus.FORBIDDEN);
-        controlElementsAccess(user3, List.of(rootUuid2), null, WRITE, HttpStatus.FORBIDDEN);
+        // Check WRITE access also OK for other users' root directories (all users have write by default)
+        controlElementsAccess(user1, List.of(rootUuid2), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(user2, List.of(rootUuid1), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(user3, List.of(rootUuid2), null, WRITE, HttpStatus.OK);
 
-        // Check WRITE access OK because admin user
+        // Check WRITE and READ access OK for admin user
         controlElementsAccess(ADMIN_USER, List.of(rootUuid2, rootUuid1, rootUuid3), null, WRITE, HttpStatus.OK);
         controlElementsAccess(ADMIN_USER, List.of(rootUuid2, rootUuid1, rootUuid3), null, READ, HttpStatus.OK);
 
-        // Check WRITE access on multiple element not OK
-        controlElementsAccess(user1, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.FORBIDDEN);
-        controlElementsAccess(user2, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.FORBIDDEN);
-        controlElementsAccess(user3, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.FORBIDDEN);
+        // Check WRITE access OK on multiple elements for all users (all users have write by default)
+        controlElementsAccess(user1, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(user2, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.OK);
+        controlElementsAccess(user3, List.of(rootUuid1, rootUuid2, rootUuid3), null, WRITE, HttpStatus.OK);
     }
 
     @Test
@@ -263,10 +265,6 @@ public class PermissionServiceTest {
         UUID dirUuid4 = insertSubElement(rootUuid4, toElementAttributes(null, "dir4", DIRECTORY, "user2"));
         UUID eltUuid4 = insertSubElement(dirUuid4, toElementAttributes(null, "elementName4", TYPE_01, "user2"));
 
-        // Dir2 is created by user2 and is accessible by user1 and user2 to read
-        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), null, READ, HttpStatus.OK);
-        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), null, READ, HttpStatus.OK);
-
         // - ROOT1 (USER1)
         //      - DIR1
         //          - ELEMENT1
@@ -279,32 +277,37 @@ public class PermissionServiceTest {
         // - ROOT4 (USER2)
         //      - DIR4
         //          - ELEMENT4
-        // Write access should be OK for each user on its own elements
+
+        // All elements are readable by all users (all users have read by default)
+        controlElementsAccess("user1", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), null, READ, HttpStatus.OK);
+        controlElementsAccess("user2", List.of(rootUuid1, rootUuid2, dirUuid1, dirUuid2, eltUuid1, eltUuid2), null, READ, HttpStatus.OK);
+
+        // Write access OK for each user on their own elements
         controlElementsAccess("user1", List.of(rootUuid1, dirUuid1, eltUuid1), null, WRITE, HttpStatus.OK);
         controlElementsAccess("user2", List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.OK);
 
-        // Write access should NOT be OK for other user elements
-        controlElementsAccess("user1", List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.FORBIDDEN);
-        controlElementsAccess("user2", List.of(rootUuid1, dirUuid1, eltUuid1), null, WRITE, HttpStatus.FORBIDDEN);
-        controlElementsAccess("user1", List.of(eltUuid2), null, WRITE, HttpStatus.FORBIDDEN);
-        controlElementsAccess("user2", List.of(eltUuid1), null, WRITE, HttpStatus.FORBIDDEN);
+        // Write access also OK for other users' elements (all users have write by default)
+        controlElementsAccess("user1", List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.OK);
+        controlElementsAccess("user2", List.of(rootUuid1, dirUuid1, eltUuid1), null, WRITE, HttpStatus.OK);
+        controlElementsAccess("user1", List.of(eltUuid2), null, WRITE, HttpStatus.OK);
+        controlElementsAccess("user2", List.of(eltUuid1), null, WRITE, HttpStatus.OK);
 
-        // Write access should be OK for admin user
+        // Write access OK for admin user
         controlElementsAccess(ADMIN_USER, List.of(rootUuid2, dirUuid2, eltUuid2), null, WRITE, HttpStatus.OK);
         controlElementsAccess(ADMIN_USER, List.of(eltUuid2), null, WRITE, HttpStatus.OK);
 
-        // Write access should be OK for something like move within folder the user has permissions
-        // this is what should be called if user1 moves element3 to directory1 (should be OK)
+        // Write access OK for move within any folder (all users have write by default)
+        // user1 moves element3 to directory1 (OK)
         controlElementsAccess("user1", List.of(eltUuid3), dirUuid1, WRITE, HttpStatus.OK);
-        // this is what should be called if user2 moves element4 to directory2 (should be OK)
+        // user2 moves element4 to directory2 (OK)
         controlElementsAccess("user2", List.of(eltUuid4), dirUuid2, WRITE, HttpStatus.OK);
 
-        // Write access should NOT be OK for something like move within folder the user doesn't have permissions
-        // this is what should be called if user1 moves element3 to directory2 (should NOT be OK)
-        controlElementsAccess("user1", List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.FORBIDDEN);
-        // this is what should be called if user2 moves element4 to directory3 (should NOT be OK)
-        controlElementsAccess("user2", List.of(eltUuid4), dirUuid3, WRITE, HttpStatus.FORBIDDEN);
-        // this is what should be called if admin user moves element3 to directory2 (should be OK)
+        // Write access also OK for cross-user moves (all users have write by default)
+        // user1 moves element3 to directory2 (OK)
+        controlElementsAccess("user1", List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.OK);
+        // user2 moves element4 to directory3 (OK)
+        controlElementsAccess("user2", List.of(eltUuid4), dirUuid3, WRITE, HttpStatus.OK);
+        // admin user moves element3 to directory2 (OK)
         controlElementsAccess(ADMIN_USER, List.of(eltUuid3), dirUuid2, WRITE, HttpStatus.OK);
     }
 
@@ -435,9 +438,10 @@ public class PermissionServiceTest {
                 .andExpect(status().isOk())
                 .andReturn();
         List<PermissionDTO> adminPermissions = parsePermissions(result);
+        // By default: all users have read and write; only creator has manage
         List<PermissionDTO> expectedPermissions = List.of(
                 new PermissionDTO(true, List.of(), PermissionType.READ),
-                new PermissionDTO(false, List.of(), PermissionType.WRITE),
+                new PermissionDTO(true, List.of(), PermissionType.WRITE),
                 new PermissionDTO(false, List.of(), PermissionType.MANAGE)
         );
         assertTrue(new MatcherJson<>(objectMapper, expectedPermissions).matchesSafely(adminPermissions));
@@ -528,17 +532,17 @@ public class PermissionServiceTest {
 
         // =========== TEST SCENARIOS ============
 
-        // 1. PARENT_PERMISSION_DENIED: User2 tries to modify user1's directory
+        // 1. User2 tries to modify user1's directory (OK: all users have write by default)
         MvcResult result = performPermissionCheck(user2, List.of(dir1User1), null, WRITE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_PARENT_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.OK, null);
 
-        // 2. TARGET_PERMISSION_DENIED: User1 tries to move their directory to user2's root directory
+        // 2. User1 tries to move their directory to user2's root directory (OK: all users have write by default)
         result = performPermissionCheck(user1, List.of(dir1User1), rootDir1User2, WRITE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_TARGET_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.OK, null);
 
-        // 3. CHILD_PERMISSION_DENIED: User1 tries to move a directory containing admin-owned subdirectory
+        // 3. CHILD_PERMISSION OK : User1 tries to move a directory containing admin-owned subdirectory
         result = performPermissionCheck(user1, List.of(dir1User1), dir2User1, WRITE, true);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_CHILD_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.OK, null);
 
         // 4. ALLOWED: Admin can move any directory (even with recursive check)
         result = performPermissionCheck(ADMIN_USER, List.of(dir1User1), rootDirAdmin, WRITE, true);
@@ -556,13 +560,13 @@ public class PermissionServiceTest {
         result = performPermissionCheck(user2, List.of(rootDir1User1), null, PermissionType.MANAGE, false);
         assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_PARENT_PERMISSION_DENIED);
 
-        // 8. Multiple directories with mixed permissions
+        // 8. Multiple directories: write OK for all (all users have write by default)
         result = performPermissionCheck(user1, List.of(rootDir1User1, rootDir1User2), null, WRITE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_PARENT_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.OK, null);
 
-        // 9. Test moving multiple elements with different parents (should fail)
+        // 9. Test moving multiple elements with different parents: write OK for all (all users have write by default)
         result = performPermissionCheck(user1, List.of(dir1User1, elementUser2), rootDirAdmin, WRITE, false);
-        assertPermissionResult(result, HttpStatus.FORBIDDEN, DirectoryBusinessErrorCode.DIRECTORY_PARENT_PERMISSION_DENIED);
+        assertPermissionResult(result, HttpStatus.OK, null);
     }
 
     /**
