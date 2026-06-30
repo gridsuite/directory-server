@@ -6,6 +6,9 @@
  */
 package org.gridsuite.directory.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
+import org.gridsuite.directory.server.dto.DirectoryInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -29,12 +33,11 @@ public class NotificationService {
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String UPDATE_TYPE_DIRECTORIES = "directories";
-    public static final String HEADER_DIRECTORY_UUID = "directoryUuid";
+    public static final String HEADER_DIRECTORIES_INFOS = "directoriesInfos";
     public static final String HEADER_IS_PUBLIC_DIRECTORY = "isPublicDirectory";
-    public static final String HEADER_IS_ROOT_DIRECTORY = "isRootDirectory";
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NOTIFICATION_TYPE = "notificationType";
-    public static final String HEADER_ELEMENT_NAME = "elementName";
+    public static final String HEADER_ELEMENT_NAMES = "elementNames";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_IS_DIRECTORY_MOVING = "isDirectoryMoving";
     public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
@@ -46,21 +49,25 @@ public class NotificationService {
     @Autowired
     private StreamBridge directoryUpdatePublisher;
 
+    @Autowired
+    protected ObjectMapper mapper;
+
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         directoryUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
-        emitDirectoryChanged(directoryUuid, elementName, userId, error, isRoot, false, notificationType);
+        emitDirectoryChanged(List.of(new DirectoryInfos(directoryUuid, isRoot)), List.of(elementName), userId, error, false, notificationType);
     }
 
-    public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, boolean isDirectoryMoving, NotificationType notificationType) {
+    @SneakyThrows
+    public void emitDirectoryChanged(List<DirectoryInfos> directoryrInfos, List<String> elementNames, String userId, String error, boolean isDirectoryMoving, NotificationType notificationType) {
+
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_DIRECTORY_UUID, directoryUuid)
-                .setHeader(HEADER_ELEMENT_NAME, elementName)
-                .setHeader(HEADER_IS_ROOT_DIRECTORY, isRoot)
+                .setHeader(HEADER_ELEMENT_NAMES, elementNames)
+                .setHeader(HEADER_DIRECTORIES_INFOS, mapper.writeValueAsString(directoryrInfos)) // exception could be thrown here
                 .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from borked REST request
                 .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
