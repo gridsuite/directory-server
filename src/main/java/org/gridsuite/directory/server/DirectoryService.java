@@ -367,33 +367,35 @@ public class DirectoryService {
 
     }
 
-    private record ElementInfos(UUID parentDirectoryUuid, String elementName, boolean isDirectory) { }
+    private record MovedElement(UUID parentDirectoryUuid, String elementName, boolean isDirectory) { }
+
+    private record ImpactedDirectory(List<String> movedElements, boolean isDirectory) { }
 
     @Transactional
     public void moveElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
         validateNewDirectory(newDirectoryUuid);
 
-        // Map that contains moved elements
-        // first map : regroups by their parent directory UUID,
-        // second map : elements that have same directory are regrouped by type (Map<Boolean, List<String>> boolean indicate if the element is a directory)
-        Map<Optional<UUID>, Map<Boolean, List<String>>> elementsByDirectory = elementsUuids.stream()
-            .map(elementUuid -> moveElementDirectory(getDirectoryElementEntity(elementUuid), newDirectoryUuid, userId))
-            .filter(Objects::nonNull)
-            .collect(Collectors.groupingBy(
-                elementInfos -> Optional.ofNullable(elementInfos.parentDirectoryUuid()),
-                Collectors.groupingBy(
-                    ElementInfos::isDirectory,
-                    Collectors.mapping(ElementInfos::elementName, Collectors.toList())
-                )
-            ));
+        List<MovedElement> movedElements = elementsUuids.stream()
+                .map(uuid -> moveElementDirectory(getDirectoryElementEntity(uuid), newDirectoryUuid, userId))
+                .filter(Objects::nonNull)
+                .toList();
 
-        elementsByDirectory.forEach((key, value) ->
-            // we regroup elements by type (directory or file) for each directory
-            value.forEach((isDirectory, elements) -> notifyDirectoryHasChanged(key.orElse(null), newDirectoryUuid, elements, userId, isDirectory))
+        Map<UUID, List<String>> movedElementsByDirectoryUuid = new HashMap<>();
+        movedElements.forEach(e ->
+                movedElementsByDirectoryUuid
+                        .computeIfAbsent(e.parentDirectoryUuid, k -> new ArrayList<>())
+                        .add(e.elementName())
+        );
+
+        movedElementsByDirectoryUuid.forEach((key, names) -> {
+//            ImpactedDirectory impactedDirectory = movedElementsByDirectoryUuid.get(key);
+            boolean isDirectory = movedElements.stream().anyMatch(e -> e.isDirectory());
+            notifyDirectoryHasChanged(key, newDirectoryUuid, movedElementsByDirectoryUuid.get(key), userId, isDirectory);
+        }
         );
     }
 
-    private ElementInfos moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
+    private MovedElement moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
 
         if (Objects.equals(element.getParentId(), newDirectoryUuid)) { // Same directory ?
             return null;
@@ -413,7 +415,7 @@ public class DirectoryService {
         repositoryService.reindexElements(descendents);
 
         //Add to notification map
-        return new ElementInfos(oldParentDirectoryUuid, element.getName(), isDirectory);
+        return new MovedElement(oldParentDirectoryUuid, element.getName(), isDirectory);
 
     }
 

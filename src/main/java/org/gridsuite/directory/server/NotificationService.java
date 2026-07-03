@@ -9,6 +9,7 @@ package org.gridsuite.directory.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.DirectoryInfos;
+import org.gridsuite.directory.server.services.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,10 @@ public class NotificationService {
 
     @Autowired
     protected ObjectMapper mapper;
+
+    public NotificationService(ObjectMapper mapper) {
+        this.mapper = mapper;
+    }
 
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
