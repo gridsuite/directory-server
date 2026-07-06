@@ -388,7 +388,6 @@ public class DirectoryService {
         );
 
         movedElementsByDirectoryUuid.forEach((key, names) -> {
-//            ImpactedDirectory impactedDirectory = movedElementsByDirectoryUuid.get(key);
             boolean isDirectory = movedElements.stream().anyMatch(e -> e.isDirectory());
             notifyDirectoryHasChanged(key, newDirectoryUuid, movedElementsByDirectoryUuid.get(key), userId, isDirectory);
         }
