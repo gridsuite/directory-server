@@ -45,7 +45,8 @@ public final class DirectoryTestUtils {
         return ElementAttributes.toElementAttributes(elementUuid, elementName, elementType, userId, 0L, null, null, null, null);
     }
 
-    public static ElementAttributes toElementAttributesWithReferences(UUID elementUuid, @NonNull String elementName, @NonNull String elementType, List<ReferenceAttributes> referenceAttributesList, @NonNull String userId) {
+    public static ElementAttributes toElementAttributesWithReferences(UUID elementUuid, @NonNull String elementName,
+                                                                      @NonNull String elementType, List<ReferenceAttributes> referenceAttributesList, @NonNull String userId) {
         ElementAttributes elementAttributes = ElementAttributes.toElementAttributes(elementUuid, elementName, elementType, userId, 0L, null, null, null, null);
         elementAttributes.setReferences(referenceAttributesList);
         return elementAttributes;

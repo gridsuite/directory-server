@@ -99,9 +99,3 @@ public class NotificationService {
         sendUpdateMessage(messageBuilder.build());
     }
 }
-
-enum NotificationType {
-    DELETE_DIRECTORY,
-    ADD_DIRECTORY,
-    UPDATE_DIRECTORY
-}

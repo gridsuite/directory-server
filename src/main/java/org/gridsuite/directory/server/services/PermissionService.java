@@ -16,14 +16,12 @@ import org.gridsuite.directory.server.repository.PermissionEntity;
 import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.stream.Collectors;
-
+import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
-import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
@@ -202,27 +200,29 @@ public class PermissionService {
     }
 
     private boolean checkPermission(String userId, List<UUID> elementUuids, PermissionType permissionType) {
-        return elementUuids.stream().allMatch(uuid -> {
-            //Check global permission first
-            boolean globalPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, ALL_USERS, "")), permissionType);
-            if (globalPermission) {
-                return true;
-            }
+        return elementUuids.stream().allMatch(uuid -> hasElementPermission(userId, uuid, permissionType));
+    }
 
-            //Then check user specific permission
-            boolean userPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, userId, "")), permissionType);
-            if (userPermission) {
-                return true;
-            }
+    private boolean hasElementPermission(String userId, UUID uuid, PermissionType permissionType) {
+        //Check global permission first
+        boolean globalPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, ALL_USERS, "")), permissionType);
+        if (globalPermission) {
+            return true;
+        }
 
-            //Finally check group permission
-            return userAdminService.getUserGroups(userId)
+        //Then check user specific permission
+        boolean userPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, userId, "")), permissionType);
+        if (userPermission) {
+            return true;
+        }
+
+        //Finally check group permission
+        return userAdminService.getUserGroups(userId)
                 .stream()
                 .map(UserGroupDTO::id)
                 .anyMatch(groupId ->
-                    checkPermission(permissionRepository.findById(new PermissionId(uuid, "", groupId.toString())), permissionType)
+                        checkPermission(permissionRepository.findById(new PermissionId(uuid, "", groupId.toString())), permissionType)
                 );
-        });
     }
 
     private boolean checkPermission(Optional<PermissionEntity> permissionEntity, PermissionType permissionType) {

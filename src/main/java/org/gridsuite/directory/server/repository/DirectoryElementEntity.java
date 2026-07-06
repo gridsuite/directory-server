@@ -11,10 +11,8 @@ import lombok.*;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
-
 import java.time.Instant;
 import java.util.*;
-
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
 /**
