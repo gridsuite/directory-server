@@ -7,12 +7,8 @@
 package org.gridsuite.directory.server;
 
 import lombok.NonNull;
-import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.PermissionDTO;
-import org.gridsuite.directory.server.dto.ReferenceAttributes;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
+import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
-import org.gridsuite.directory.server.dto.DirectoryInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
