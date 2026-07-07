@@ -361,7 +361,7 @@ public class DirectoryService {
 
     }
 
-    private record MovedElement(UUID parentDirectoryUuid, String elementName, boolean isDirectory) { }
+    private record MovedElement(UUID parentDirectoryUuid, String elementName, boolean isDirectory, boolean isRoot) { }
 
     private record ImpactedDirectory(List<String> movedElements, boolean isDirectory) { }
 
@@ -381,10 +381,15 @@ public class DirectoryService {
                         .add(e.elementName())
         );
 
-        movedElementsByDirectoryUuid.forEach((key, names) -> {
-            boolean isDirectory = movedElements.stream().anyMatch(e -> e.isDirectory());
-            notifyDirectoryHasChanged(key, newDirectoryUuid, movedElementsByDirectoryUuid.get(key), userId, isDirectory);
-        }
+        movedElementsByDirectoryUuid.forEach((key, names) ->
+            movedElements.stream()
+                .filter(e -> e.parentDirectoryUuid == key && key == null
+                    || e.parentDirectoryUuid != null && e.parentDirectoryUuid().equals(key))
+                .findAny()
+                .ifPresent(element ->
+                    notifyDirectoryHasChanged(key, newDirectoryUuid, names, userId,
+                        element.isDirectory(), element.isRoot())
+                )
         );
     }
 
@@ -395,7 +400,9 @@ public class DirectoryService {
         }
 
         UUID oldParentDirectoryUuid = element.getParentId();
+        Optional<DirectoryElementEntity> oldDirectoryEntity = oldParentDirectoryUuid != null ? repositoryService.getElementEntity(oldParentDirectoryUuid) : Optional.empty();
         boolean isDirectory = DIRECTORY.equals(element.getType());
+        boolean isRoot = isDirectory ? oldParentDirectoryUuid == null : oldDirectoryEntity.isEmpty() || oldDirectoryEntity.get().getParentId() == null;
         List<DirectoryElementEntity> descendents = isDirectory ? repositoryService.findAllDescendants(element.getId()).stream().toList() : List.of();
 
         // validate move elements
@@ -408,7 +415,7 @@ public class DirectoryService {
         repositoryService.reindexElements(descendents);
 
         //Add to notification map
-        return new MovedElement(oldParentDirectoryUuid, element.getName(), isDirectory);
+        return new MovedElement(oldParentDirectoryUuid, element.getName(), isDirectory, isRoot);
 
     }
 
@@ -651,9 +658,9 @@ public class DirectoryService {
         notifyDirectoryHasChanged(directoryUuid, userId, elementName, null, isDirectoryMoving);
     }
 
-    private void notifyDirectoryHasChanged(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId, boolean isDirectoryMoving) {
+    private void notifyDirectoryHasChanged(UUID oldDirectoryUuid, UUID newDirectoryUuid, List<String> elements, String userId,
+                                           boolean isDirectoryMoving, boolean isOldRoot) {
         Objects.requireNonNull(newDirectoryUuid);
-        boolean isOldRoot = oldDirectoryUuid != null && repositoryService.isRootDirectory(oldDirectoryUuid);
         notificationService.emitDirectoryChanged(List.of(new DirectoryInfos(oldDirectoryUuid, isOldRoot),
                 new DirectoryInfos(newDirectoryUuid, repositoryService.isRootDirectory(newDirectoryUuid))),
             elements,

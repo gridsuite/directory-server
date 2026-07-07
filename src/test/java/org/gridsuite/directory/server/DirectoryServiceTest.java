@@ -212,7 +212,7 @@ class DirectoryServiceTest {
         // we move dir to root2
         reset(directoryElementRepository);
         directoryService.moveElementsDirectory(List.of(dirUuid), root2Uuid, "user1");
-        verify(notificationService, times(1)).emitDirectoryChanged(List.of(new DirectoryInfos(rootUuid, true), new DirectoryInfos(root2Uuid, true)),
+        verify(notificationService, times(1)).emitDirectoryChanged(List.of(new DirectoryInfos(rootUuid, false), new DirectoryInfos(root2Uuid, true)),
             List.of("dir"), "user1", null, true, NotificationType.UPDATE_DIRECTORY);
         Optional<DirectoryElementEntity> dirEntity = directoryElementRepository.findById(dirUuid);
         assertTrue(dirEntity.isPresent());

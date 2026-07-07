@@ -644,8 +644,8 @@ public class DirectoryTest {
 
         List<DirectoryInfos> directoriesInfos = objectMapper.readValue(headers.get(HEADER_DIRECTORIES_INFOS, String.class), new TypeReference<>() { });
         assertNotNull(directoriesInfos);
-        DirectoryInfos srcDirectoryInfos = directoriesInfos.stream().filter(directoryInfos -> rootDir10Uuid.equals(directoryInfos.uuid())).findFirst().orElse(null);
-        DirectoryInfos destDirectoryInfos = directoriesInfos.stream().filter(directoryInfos -> rootDir20Uuid.equals(directoryInfos.uuid())).findFirst().orElse(null);
+        DirectoryInfos srcDirectoryInfos = directoriesInfos.stream().filter(directoryInfos -> rootDir20Uuid.equals(directoryInfos.uuid())).findFirst().orElse(null);
+        DirectoryInfos destDirectoryInfos = directoriesInfos.stream().filter(directoryInfos -> rootDir10Uuid.equals(directoryInfos.uuid())).findFirst().orElse(null);
         assertNotNull(srcDirectoryInfos);
         assertNotNull(destDirectoryInfos);
         assertTrue(srcDirectoryInfos.isRoot());
