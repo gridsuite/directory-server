@@ -363,8 +363,6 @@ public class DirectoryService {
 
     private record MovedElement(UUID parentDirectoryUuid, String elementName, boolean isDirectory, boolean isRoot) { }
 
-    private record ImpactedDirectory(List<String> movedElements, boolean isDirectory) { }
-
     @Transactional
     public void moveElementsDirectory(List<UUID> elementsUuids, UUID newDirectoryUuid, String userId) {
         validateNewDirectory(newDirectoryUuid);
@@ -374,23 +372,18 @@ public class DirectoryService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        Map<UUID, List<String>> movedElementsByDirectoryUuid = new HashMap<>();
+        Map<UUID, List<String>> movedElementsByParentDirectoryUuid = new HashMap<>();
         movedElements.forEach(e ->
-                movedElementsByDirectoryUuid
+                movedElementsByParentDirectoryUuid
                         .computeIfAbsent(e.parentDirectoryUuid, k -> new ArrayList<>())
                         .add(e.elementName())
         );
 
-        movedElementsByDirectoryUuid.forEach((key, names) ->
-            movedElements.stream()
-                .filter(e -> e.parentDirectoryUuid == key && key == null
-                    || e.parentDirectoryUuid != null && e.parentDirectoryUuid().equals(key))
-                .findAny()
-                .ifPresent(element ->
-                    notifyDirectoryHasChanged(key, newDirectoryUuid, names, userId,
-                        element.isDirectory(), element.isRoot())
-                )
-        );
+        movedElementsByParentDirectoryUuid.forEach((key, names) -> {
+            boolean isDirectory = movedElements.stream().anyMatch(e -> e.isDirectory());
+            boolean isRoot = movedElements.stream().anyMatch(e -> e.isRoot());
+            notifyDirectoryHasChanged(key, newDirectoryUuid, movedElementsByParentDirectoryUuid.get(key), userId, isDirectory, isRoot);
+        });
     }
 
     private MovedElement moveElementDirectory(DirectoryElementEntity element, UUID newDirectoryUuid, String userId) {
