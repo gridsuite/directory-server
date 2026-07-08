@@ -380,8 +380,15 @@ public class DirectoryService {
         );
 
         movedElementsByParentDirectoryUuid.forEach((key, names) -> {
-            boolean isDirectory = movedElements.stream().anyMatch(e -> e.isDirectory());
-            boolean isRoot = movedElements.stream().anyMatch(e -> e.isRoot());
+            boolean isDirectory = false;
+            boolean isRoot = false;
+            for (MovedElement e : movedElements) {
+                isDirectory |= e.isDirectory();
+                isRoot |= e.isRoot();
+                if (isDirectory && isRoot) {
+                    break;
+                }
+            }
             notifyDirectoryHasChanged(key, newDirectoryUuid, movedElementsByParentDirectoryUuid.get(key), userId, isDirectory, isRoot);
         });
     }
