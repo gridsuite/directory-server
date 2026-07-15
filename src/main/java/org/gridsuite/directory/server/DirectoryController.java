@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
+import org.gridsuite.directory.server.repository.DirectoryElementStatus;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.PermissionService;
 import org.gridsuite.directory.server.services.RoleService;
@@ -364,5 +365,19 @@ public class DirectoryController {
     public ResponseEntity<UUID> getDirectoryUuidFromPath(@RequestParam("directoryPath") List<String> directoryPath) {
         List<String> decodedDirectoryPath = directoryPath.stream().map(s -> URLDecoder.decode(s, StandardCharsets.UTF_8)).toList();
         return ResponseEntity.ok().body(service.getDirectoryUuidFromPath(decodedDirectoryPath));
+    }
+
+    @PutMapping(value = "/elements", params = "status")
+    @Operation(summary = "Update status of elements")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Status was successfully updated"),
+        @ApiResponse(responseCode = "404", description = "At least one element was not found"),
+    })
+    public ResponseEntity<Void> updateElementsStatus(
+            @Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuids,
+            @Parameter(description = "new status") @RequestParam("status") DirectoryElementStatus status,
+            @RequestHeader("userId") String userId) {
+        service.updateElementsStatus(elementsUuids, status, userId);
+        return ResponseEntity.ok().build();
     }
 }

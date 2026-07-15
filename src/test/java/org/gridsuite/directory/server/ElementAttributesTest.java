@@ -13,6 +13,7 @@ import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.DirectoryElementStatus;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
@@ -61,9 +62,9 @@ public class ElementAttributesTest {
         Instant localCreationDate = Instant.now();
 
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY,
-                "userId", "description", localCreationDate, localCreationDate, "userId", List.of());
+                "userId", "description", localCreationDate, localCreationDate, "userId", List.of(), DirectoryElementStatus.ACTIVE);
         DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", TYPE_01,
-                "userId", "description", localCreationDate, localCreationDate, "userId", List.of());
+                "userId", "description", localCreationDate, localCreationDate, "userId", List.of(), DirectoryElementStatus.ACTIVE);
 
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), "userId"));
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().build(), "userId"));
@@ -96,10 +97,10 @@ public class ElementAttributesTest {
 
         verifyElementAttributes(toElementAttributesWithReferences(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description",
                 lastModificationDate, lastModificationDate, "userId",
-                List.of(new ReferenceEmbeddable(UUID.randomUUID(), ReferenceType.STUDY_NODE.name()))), 1L));
+                List.of(new ReferenceEmbeddable(UUID.randomUUID(), ReferenceType.STUDY_NODE.name())), DirectoryElementStatus.ACTIVE), 1L));
 
         verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate,
-                "userId", List.of()), 1L));
+                "userId", List.of(), DirectoryElementStatus.ACTIVE), 1L));
         verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", "userId", "description", creationDate, creationDate, "userId")));
 
         assertThrows(NullPointerException.class, () -> toElementAttributes((DirectoryElementEntity) null));

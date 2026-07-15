@@ -121,4 +121,8 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     @Query("SELECT d.id AS id, d.parentId AS parentId FROM DirectoryElementEntity d WHERE d.parentId IN :parentIds AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes)")
     List<ElementParentage> findAllByParentIdsAndElementTypes(List<UUID> parentIds, List<String> elementTypes);
+
+    @Modifying
+    @Query("UPDATE DirectoryElementEntity e SET e.status = :status WHERE e.id IN :ids")
+    void updateStatus(@Param("ids") List<UUID> ids, @Param("status") DirectoryElementStatus status);
 }

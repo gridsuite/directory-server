@@ -11,6 +11,7 @@ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.DirectoryElementStatus;
 import org.gridsuite.directory.server.services.SupervisionService;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -73,13 +74,13 @@ class SupervisionTest {
 
     @Test
     void testReindexElements() {
-        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId", List.of());
+        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId", List.of(), DirectoryElementStatus.ACTIVE);
         DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", DIRECTORY,
-                "userId", "description", Instant.now(), Instant.now(), "userId", List.of());
+                "userId", "description", Instant.now(), Instant.now(), "userId", List.of(), DirectoryElementStatus.ACTIVE);
         DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", DIRECTORY,
-                "userId", "description", Instant.now(), Instant.now(), "userId", List.of());
+                "userId", "description", Instant.now(), Instant.now(), "userId", List.of(), DirectoryElementStatus.ACTIVE);
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", "ANOTHER_TYPE",
-                "userId", "description", Instant.now(), Instant.now(), "userId", List.of());
+                "userId", "description", Instant.now(), Instant.now(), "userId", List.of(), DirectoryElementStatus.ACTIVE);
 
         List<DirectoryElementEntity> allElements = List.of(rootDir, dirEntity, subdirEntity, elementEntity);
         when(directoryElementRepository.findAll()).thenReturn(allElements);
@@ -141,7 +142,7 @@ class SupervisionTest {
     @Test
     void testGetElementsNotModifiedSince() {
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(UUID.randomUUID(), null, "name", "STUDY", "userId", "description",
-                Instant.now().minus(400, ChronoUnit.DAYS), Instant.now().minus(400, ChronoUnit.DAYS), "userId", List.of());
+                Instant.now().minus(400, ChronoUnit.DAYS), Instant.now().minus(400, ChronoUnit.DAYS), "userId", List.of(), DirectoryElementStatus.ACTIVE);
 
         when(directoryElementRepository.findAllByTypeAndLastModificationDateBeforeOrderByLastModificationDateDesc(eq("STUDY"), any(Instant.class)))
                 .thenReturn(List.of(elementEntity));
