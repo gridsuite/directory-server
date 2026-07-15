@@ -74,7 +74,8 @@ class SupervisionTest {
 
     @Test
     void testReindexElements() {
-        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId", List.of(), DirectoryElementStatus.ACTIVE);
+        DirectoryElementEntity rootDir = new DirectoryElementEntity(UUID.randomUUID(), null, "name", DIRECTORY, "userId", "description", Instant.now(), Instant.now(), "userId", List.of(),
+                DirectoryElementStatus.ACTIVE);
         DirectoryElementEntity dirEntity = new DirectoryElementEntity(UUID.randomUUID(), rootDir.getId(), "name", DIRECTORY,
                 "userId", "description", Instant.now(), Instant.now(), "userId", List.of(), DirectoryElementStatus.ACTIVE);
         DirectoryElementEntity subdirEntity = new DirectoryElementEntity(UUID.randomUUID(), dirEntity.getId(), "name", DIRECTORY,
