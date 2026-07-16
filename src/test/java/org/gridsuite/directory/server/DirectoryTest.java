@@ -2376,7 +2376,7 @@ public class DirectoryTest {
         Set<UUID> notifiedDirectoryUuids = new HashSet<>();
         for (int i = 0; i < expectedMessageCount; i++) {
             Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
-            assertNotNull("Expected " + expectedMessageCount + " notifications but received only " + i, message.toString());
+            assertNotNull(message, "Expected " + expectedMessageCount + " notifications but received only " + i);
             MessageHeaders headers = message.getHeaders();
             assertEquals(userId, headers.get(HEADER_USER_ID));
             assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));

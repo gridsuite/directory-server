@@ -744,10 +744,16 @@ public class DirectoryService {
 
     @Transactional
     public void updateElementsStatus(List<UUID> elementsUuids, DirectoryElementStatus status, String userId) {
+        if (elementsUuids == null || elementsUuids.isEmpty()) {
+            return;
+        }
         List<DirectoryElementEntity> requestedElements = repositoryService.findAllByIdIn(elementsUuids);
-        List<UUID> descendantIds = requestedElements.stream()
+        List<UUID> directoryIds = requestedElements.stream()
                 .filter(element -> DIRECTORY.equals(element.getType()))
-                .flatMap(directory -> repositoryService.findAllDescendants(directory.getId()).stream())
+                .map(DirectoryElementEntity::getId)
+                .toList();
+
+        List<UUID> descendantIds = repositoryService.findAllDescendants(directoryIds).stream()
                 .map(DirectoryElementEntity::getId)
                 .toList();
         List<UUID> allAffectedIds = Stream.concat(elementsUuids.stream(), descendantIds.stream())
