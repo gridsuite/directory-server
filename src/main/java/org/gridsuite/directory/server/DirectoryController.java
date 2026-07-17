@@ -110,7 +110,7 @@ public class DirectoryController {
 
     @GetMapping(value = "/elements/paths", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the path of several elements")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The path of each element, unknown elements are omitted")})
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The path of each element")})
     public ResponseEntity<Map<UUID, List<ElementAttributes>>> getPaths(@RequestParam("ids") List<UUID> elementUuids) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPaths(elementUuids));
     }
