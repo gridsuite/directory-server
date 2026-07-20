@@ -409,8 +409,9 @@ public class DirectoryTest {
         insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(element3UUID, "element3", TYPE_03, "Doe"));
         UUID unknownElementUuid = UUID.randomUUID();
 
+        // ids are sent as repeated query params, as UriComponentsBuilder does on the caller side
         String result = mockMvc.perform(get("/v1/elements/paths")
-                        .param("ids", element1UUID + "," + element2UUID + "," + element3UUID + "," + unknownElementUuid)
+                        .param("ids", element1UUID.toString(), element2UUID.toString(), element3UUID.toString(), unknownElementUuid.toString())
                         .header("userId", "Doe"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
