@@ -398,7 +398,7 @@ public class DirectoryTest {
 
         // Insert a subDirectory1 in the root directory
         UUID directoryUUID = UUID.randomUUID();
-        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(directoryUUID, "directory1", DIRECTORY, "Doe"));
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(directoryUUID, "subDirectory1", DIRECTORY, "Doe"));
 
         // Insert two elements in the subDirectory1, and one directly in the root directory
         UUID element1UUID = UUID.randomUUID();
