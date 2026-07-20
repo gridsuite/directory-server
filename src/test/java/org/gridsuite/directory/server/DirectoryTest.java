@@ -397,18 +397,18 @@ public class DirectoryTest {
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
         // Insert a subDirectory1 in the root directory
-        UUID directory1UUID = UUID.randomUUID();
-        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(directory1UUID, "directory1", DIRECTORY, "Doe"));
+        UUID directoryUUID = UUID.randomUUID();
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(directoryUUID, "directory1", DIRECTORY, "Doe"));
 
         // Insert two elements in the subDirectory1, and one directly in the root directory
         UUID element1UUID = UUID.randomUUID();
-        insertAndCheckSubElement(directory1UUID, toElementAttributes(element1UUID, "element1", TYPE_03, "Doe"));
+        insertAndCheckSubElement(directoryUUID, toElementAttributes(element1UUID, "element1", TYPE_03, "Doe"));
         UUID element2UUID = UUID.randomUUID();
-        insertAndCheckSubElement(directory1UUID, toElementAttributes(element2UUID, "element2", TYPE_03, "Doe"));
+        insertAndCheckSubElement(directoryUUID, toElementAttributes(element2UUID, "element2", TYPE_03, "Doe"));
         UUID element3UUID = UUID.randomUUID();
         insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(element3UUID, "element3", TYPE_03, "Doe"));
-
         UUID unknownElementUuid = UUID.randomUUID();
+
         String result = mockMvc.perform(get("/v1/elements/paths")
                         .param("ids", element1UUID + "," + element2UUID + "," + element3UUID + "," + unknownElementUuid)
                         .header("userId", "Doe"))
@@ -419,11 +419,11 @@ public class DirectoryTest {
         // the unknown element is omitted rather than failing the whole call
         assertEquals(3, paths.size());
         assertEquals(
-                Arrays.asList(rootDirUuid, directory1UUID, element1UUID),
+                Arrays.asList(rootDirUuid, directoryUUID, element1UUID),
                 paths.get(element1UUID).stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList())
         );
         assertEquals(
-                Arrays.asList(rootDirUuid, directory1UUID, element2UUID),
+                Arrays.asList(rootDirUuid, directoryUUID, element2UUID),
                 paths.get(element2UUID).stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList())
         );
         assertEquals(
