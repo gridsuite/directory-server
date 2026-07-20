@@ -16,11 +16,9 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -33,18 +31,17 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest
 @DisableElasticsearch
-public class ElementAttributesTest {
+class ElementAttributesTest {
 
     private static final UUID ELEMENT_UUID = UUID.randomUUID();
-    public static final String TYPE_01 = "TYPE_01";
+    static final String TYPE_01 = "TYPE_01";
 
     @Autowired
     ObjectMapper mapper;
@@ -57,7 +54,7 @@ public class ElementAttributesTest {
     }
 
     @Test
-    public void testElementEntityUpdate() {
+    void testElementEntityUpdate() {
         Instant localCreationDate = Instant.now();
 
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY,
@@ -83,7 +80,7 @@ public class ElementAttributesTest {
     }
 
     @Test
-    public void testElementAttributesCreation() {
+    void testElementAttributesCreation() {
         Instant creationDate = Instant.now();
         Instant lastModificationDate = Instant.now();
 
@@ -114,13 +111,13 @@ public class ElementAttributesTest {
 
     @SneakyThrows
     @Test
-    public void testNullValues() {
+    void testNullValues() {
         ElementAttributes elementAttributes = mapper.readValue("{}", ElementAttributes.class);
         assertEquals("{}", mapper.writeValueAsString(elementAttributes));
     }
 
     @Test
-    public void testJsonString() {
+    void testJsonString() {
         Instant creationDate = Instant.now();
         DateTimeFormatter formatter = DateTimeFormatter.ISO_INSTANT;
         String formattedCreationDate = formatter.format(creationDate);
