@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.DirectoryElementStatus;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 
 import java.time.Instant;
@@ -49,6 +50,8 @@ public class ElementAttributes {
 
     private String lastModifiedBy;
 
+    private DirectoryElementStatus status;
+
     // Uses of the current element as a reference (shared element)
     // Empty means that the element is not referenced
     @Builder.Default
@@ -75,7 +78,7 @@ public class ElementAttributes {
 
     public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
         ElementAttributes attributes = toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount,
-                entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy());
+                entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus());
         attributes.setReferences(toReferencesAttributes(entity));
         return attributes;
     }
@@ -87,18 +90,25 @@ public class ElementAttributes {
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
         return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(),
                 subDirectoriesCount, entity.getDescription(), entity.getCreationDate(),
-                entity.getLastModificationDate(), entity.getLastModifiedBy());
+                entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus());
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
         return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
                 rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(),
-                rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy());
+                rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy(), DirectoryElementStatus.ACTIVE);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull String userId, long subdirectoriesCount, String elementDescription,
                                                         Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
+        return toElementAttributes(elementUuid, elementName, elementType, userId, subdirectoriesCount, elementDescription,
+                creationDate, lastModificationDate, lastModifiedBy, DirectoryElementStatus.ACTIVE);
+    }
+
+    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+                                                        @NonNull String userId, long subdirectoriesCount, String elementDescription,
+                                                        Instant creationDate, Instant lastModificationDate, String lastModifiedBy, DirectoryElementStatus status) {
         return ElementAttributes.builder()
             .elementUuid(elementUuid)
             .elementName(elementName)
@@ -109,6 +119,7 @@ public class ElementAttributes {
             .description(elementDescription)
             .lastModificationDate(lastModificationDate)
             .lastModifiedBy(lastModifiedBy)
+            .status(status)
             .references(List.of())
             .build();
     }

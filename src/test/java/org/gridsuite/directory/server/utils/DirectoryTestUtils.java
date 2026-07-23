@@ -11,6 +11,7 @@ import okhttp3.mockwebserver.MockResponse;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.DirectoryElementStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
@@ -27,11 +28,11 @@ public final class DirectoryTestUtils {
     }
 
     public static DirectoryElementEntity createRootElement(String elementName, String type, String userId) {
-        return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, userId, null, Instant.now(), Instant.now(), userId, List.of());
+        return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, userId, null, Instant.now(), Instant.now(), userId, List.of(), DirectoryElementStatus.ACTIVE);
     }
 
     public static DirectoryElementEntity createElement(UUID parentDirectoryUuid, String elementName, String type, String userId) {
-        return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, userId, null, Instant.now(), Instant.now(), userId, List.of());
+        return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, userId, null, Instant.now(), Instant.now(), userId, List.of(), DirectoryElementStatus.ACTIVE);
     }
 
     public static MockResponse jsonResponse(HttpStatus status, String body) {

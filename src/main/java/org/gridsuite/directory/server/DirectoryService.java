@@ -12,6 +12,7 @@ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.DirectoryElementStatus;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -158,7 +159,8 @@ public class DirectoryService {
             now,
             now,
             elementAttributes.getOwner(),
-            elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList());
+            elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList(),
+            DirectoryElementStatus.ACTIVE);
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
@@ -236,7 +238,7 @@ public class DirectoryService {
                 } else {
                     //and then we create the rest of the path
                     parentDirectoryUuid = createElementWithNotif(
-                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId),
+                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, DirectoryElementStatus.ACTIVE),
                         parentDirectoryUuid,
                         userId, false).getElementUuid();
                 }
@@ -738,5 +740,33 @@ public class DirectoryService {
         permissionService.updateDirectoryPermissions(directoryUuid, permissions, owner);
 
         notifyDirectoryHasChanged(directoryUuid, userId);
+    }
+
+    @Transactional
+    public void updateElementsStatus(List<UUID> elementsUuids, DirectoryElementStatus status, String userId) {
+        if (elementsUuids == null || elementsUuids.isEmpty()) {
+            return;
+        }
+        List<DirectoryElementEntity> requestedElements = repositoryService.findAllByIdIn(elementsUuids);
+        List<UUID> directoryIds = requestedElements.stream()
+                .filter(element -> DIRECTORY.equals(element.getType()))
+                .map(DirectoryElementEntity::getId)
+                .toList();
+
+        List<UUID> descendantIds = repositoryService.findAllDescendants(directoryIds).stream()
+                .map(DirectoryElementEntity::getId)
+                .toList();
+        List<UUID> allAffectedIds = Stream.concat(elementsUuids.stream(), descendantIds.stream())
+                .distinct()
+                .toList();
+
+        directoryElementRepository.updateStatus(allAffectedIds, status);
+        requestedElements.forEach(element -> {
+            if (DIRECTORY.equals(element.getType())) {
+                notifyDirectoryHasChanged(element.getId(), userId);
+            } else if (element.getParentId() != null) {
+                notifyDirectoryHasChanged(element.getParentId(), userId);
+            }
+        });
     }
 }

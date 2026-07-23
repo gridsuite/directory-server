@@ -64,6 +64,10 @@ public class DirectoryElementEntity {
     )
     private List<ReferenceEmbeddable> references = new ArrayList<>();
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private DirectoryElementStatus status;
+
     // Return a list that cannot be modified to avoid side effects
     public List<ReferenceEmbeddable> getReferences() {
         return Collections.unmodifiableList(references);

@@ -29,10 +29,7 @@ import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
-import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.gridsuite.directory.server.repository.PermissionId;
-import org.gridsuite.directory.server.repository.PermissionRepository;
+import org.gridsuite.directory.server.repository.*;
 import org.gridsuite.directory.server.services.ConsumerService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.DirectoryTestUtils;
@@ -2253,7 +2250,7 @@ class DirectoryTest {
                 UUID.randomUUID(), uuidNewRootDirectory, "oldElement", TYPE_01, USER_ID, "descr old",
                 Instant.now().minus(400, ChronoUnit.DAYS),
                 Instant.now().minus(400, ChronoUnit.DAYS),
-                USER_ID, List.of()
+                USER_ID, List.of(), DirectoryElementStatus.ACTIVE
         );
         directoryElementRepository.save(oldElement);
 
@@ -2312,6 +2309,77 @@ class DirectoryTest {
         elementAttributes.setReferences(List.of());
         checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+    }
+
+    @Test
+    public void testUpdateElementsStatus() throws Exception {
+        // Build the following tree:
+        // rootDir
+        //  ├── subDir
+        //  │    └── nestedElement (TYPE_01)
+        //  └── siblingElement (TYPE_01)
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir", USER_ID);
+
+        ElementAttributes subDirAttributes = toElementAttributes(null, "subDir", DIRECTORY, USER_ID);
+        insertAndCheckSubElementInRootDir(rootDirUuid, subDirAttributes);
+        UUID subDirUuid = subDirAttributes.getElementUuid();
+
+        ElementAttributes nestedElementAttributes = toElementAttributes(UUID.randomUUID(), "nestedElement", TYPE_01, USER_ID);
+        insertAndCheckSubElement(subDirUuid, nestedElementAttributes);
+        UUID nestedElementUuid = nestedElementAttributes.getElementUuid();
+
+        ElementAttributes siblingElementAttributes = toElementAttributes(UUID.randomUUID(), "siblingElement", TYPE_01, USER_ID);
+        insertAndCheckSubElementInRootDir(rootDirUuid, siblingElementAttributes);
+        UUID siblingElementUuid = siblingElementAttributes.getElementUuid();
+
+        // All elements are created ACTIVE
+        assertElementsStatusInRepository(DirectoryElementStatus.ACTIVE, rootDirUuid, subDirUuid, nestedElementUuid, siblingElementUuid);
+
+        // Mark subDir (a directory) and siblingElement (a plain element) as DELETING
+        updateElementsStatus(List.of(subDirUuid, siblingElementUuid), DirectoryElementStatus.DELETING, USER_ID);
+
+        // The directory, its descendant and the sibling element are DELETING; the root is untouched
+        assertElementsStatusInRepository(DirectoryElementStatus.DELETING, subDirUuid, nestedElementUuid, siblingElementUuid);
+        assertElementsStatusInRepository(DirectoryElementStatus.ACTIVE, rootDirUuid);
+
+        // One notification per requested element: subDir itself (directory), rootDir (parent of siblingElement)
+        assertDirectoriesNotified(Set.of(subDirUuid, rootDirUuid), 2, USER_ID);
+
+        // The status is propagated to the DTOs returned by the API
+        Map<UUID, DirectoryElementStatus> statusById = getElements(List.of(subDirUuid, nestedElementUuid, siblingElementUuid), USER_ID, true, 200).stream()
+                .collect(Collectors.toMap(ElementAttributes::getElementUuid, ElementAttributes::getStatus));
+        assertEquals(DirectoryElementStatus.DELETING, statusById.get(subDirUuid));
+        assertEquals(DirectoryElementStatus.DELETING, statusById.get(nestedElementUuid));
+        assertEquals(DirectoryElementStatus.DELETING, statusById.get(siblingElementUuid));
+    }
+
+    private void updateElementsStatus(List<UUID> elementsUuids, DirectoryElementStatus status, String userId) throws Exception {
+        String ids = elementsUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+        mockMvc.perform(put("/v1/elements?status=" + status + "&ids=" + ids)
+                        .header("userId", userId))
+                .andExpect(status().isOk());
+    }
+
+    private void assertElementsStatusInRepository(DirectoryElementStatus expectedStatus, UUID... elementUuids) {
+        for (UUID elementUuid : elementUuids) {
+            DirectoryElementEntity entity = directoryElementRepository.findById(elementUuid).orElseThrow();
+            assertEquals(expectedStatus, entity.getStatus(), "Unexpected status for element " + entity.getName());
+        }
+    }
+
+    private void assertDirectoriesNotified(Set<UUID> expectedDirectoryUuids, int expectedMessageCount, String userId) throws Exception {
+        Set<UUID> notifiedDirectoryUuids = new HashSet<>();
+        for (int i = 0; i < expectedMessageCount; i++) {
+            Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+            assertNotNull(message, "Expected " + expectedMessageCount + " notifications but received only " + i);
+            MessageHeaders headers = message.getHeaders();
+            assertEquals(userId, headers.get(HEADER_USER_ID));
+            assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+            List<DirectoryInfos> directoriesInfos = objectMapper.readValue(headers.get(HEADER_DIRECTORIES_INFOS, String.class), new TypeReference<>() { });
+            assertNotNull(directoriesInfos);
+            directoriesInfos.forEach(directoryInfos -> notifiedDirectoryUuids.add(directoryInfos.uuid()));
+        }
+        assertEquals(expectedDirectoryUuids, notifiedDirectoryUuids);
     }
 
     private void testNotificationDirectory(UUID directoryUuid, NotificationType notificationType, String userId) throws JsonProcessingException {

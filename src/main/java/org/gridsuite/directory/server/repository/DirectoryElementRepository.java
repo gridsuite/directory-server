@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -113,6 +114,19 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
     )
     List<UUID> findAllDescendantsUuids(@Param("elementId") UUID elementId);
 
+    @Query(nativeQuery = true, value =
+            "WITH RECURSIVE DescendantHierarchy (element_id, parent_element_id, depth) AS (" +
+                    "  SELECT id AS element_id, parent_id AS parent_element_id, 0 AS depth" +
+                    "  FROM element WHERE id IN (:elementIds)" +
+                    "  UNION ALL" +
+                    "  SELECT e.id AS element_id, e.parent_id AS parent_element_id, dh.depth + 1" +
+                    "  FROM element e" +
+                    "  INNER JOIN DescendantHierarchy dh ON dh.element_id = e.parent_id)" +
+                    "SELECT * FROM element e " +
+                    "WHERE e.id IN (SELECT dh.element_id FROM DescendantHierarchy dh) AND e.id NOT IN (:elementIds)"
+    )
+    List<DirectoryElementEntity> findAllDescendants(@Param("elementIds") Collection<UUID> elementIds);
+
     interface ElementParentage {
         UUID getId();
 
@@ -121,4 +135,8 @@ public interface DirectoryElementRepository extends JpaRepository<DirectoryEleme
 
     @Query("SELECT d.id AS id, d.parentId AS parentId FROM DirectoryElementEntity d WHERE d.parentId IN :parentIds AND (d.type = 'DIRECTORY' OR d.type IN :elementTypes)")
     List<ElementParentage> findAllByParentIdsAndElementTypes(List<UUID> parentIds, List<String> elementTypes);
+
+    @Modifying
+    @Query("UPDATE DirectoryElementEntity e SET e.status = :status WHERE e.id IN :ids")
+    void updateStatus(@Param("ids") List<UUID> ids, @Param("status") DirectoryElementStatus status);
 }
