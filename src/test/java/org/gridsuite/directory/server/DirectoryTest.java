@@ -387,6 +387,48 @@ class DirectoryTest {
     }
 
     @Test
+    public void testGetPaths() throws Exception {
+        // Insert a root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
+
+        // Insert a subDirectory1 in the root directory
+        UUID directoryUUID = UUID.randomUUID();
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(directoryUUID, "subDirectory1", DIRECTORY, "Doe"));
+
+        // Insert two elements in the subDirectory1, and one directly in the root directory
+        UUID element1UUID = UUID.randomUUID();
+        insertAndCheckSubElement(directoryUUID, toElementAttributes(element1UUID, "element1", TYPE_03, "Doe"));
+        UUID element2UUID = UUID.randomUUID();
+        insertAndCheckSubElement(directoryUUID, toElementAttributes(element2UUID, "element2", TYPE_03, "Doe"));
+        UUID element3UUID = UUID.randomUUID();
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(element3UUID, "element3", TYPE_03, "Doe"));
+        UUID unknownElementUuid = UUID.randomUUID();
+
+        // ids are sent as repeated query params, as UriComponentsBuilder does on the caller side
+        String result = mockMvc.perform(get("/v1/elements/paths")
+                        .param("ids", element1UUID.toString(), element2UUID.toString(), element3UUID.toString(), unknownElementUuid.toString())
+                        .header("userId", "Doe"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Map<UUID, List<ElementAttributes>> paths = objectMapper.readValue(result, new TypeReference<>() { });
+
+        // the unknown element is omitted rather than failing the whole call
+        assertEquals(3, paths.size());
+        assertEquals(
+                Arrays.asList(rootDirUuid, directoryUUID, element1UUID),
+                paths.get(element1UUID).stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList())
+        );
+        assertEquals(
+                Arrays.asList(rootDirUuid, directoryUUID, element2UUID),
+                paths.get(element2UUID).stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList())
+        );
+        assertEquals(
+                Arrays.asList(rootDirUuid, element3UUID),
+                paths.get(element3UUID).stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList())
+        );
+    }
+
+    @Test
     void testTwoUsersTwoPublicDirectories() throws Exception {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());

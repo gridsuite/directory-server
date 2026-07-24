@@ -523,6 +523,25 @@ public class DirectoryService {
         return path;
     }
 
+    /***
+     * Retrieve the path of several elements at once
+     * @param elementUuids elements uuids
+     * @return the path of each element, indexed by element uuid.
+     */
+    public Map<UUID, List<ElementAttributes>> getPaths(List<UUID> elementUuids) {
+        Map<UUID, List<DirectoryElementEntity>> pathsCache = new HashMap<>();
+        Map<UUID, List<ElementAttributes>> paths = new HashMap<>();
+        elementUuids.stream().distinct().forEach(elementUuid -> {
+            List<ElementAttributes> path = repositoryService.getPath(elementUuid, pathsCache).stream()
+                .map(ElementAttributes::toElementAttributes)
+                .toList();
+            if (!path.isEmpty()) {
+                paths.put(elementUuid, path);
+            }
+        });
+        return paths;
+    }
+
     public String getElementName(UUID elementUuid) {
         DirectoryElementEntity element = repositoryService.getElementEntity(elementUuid)
             .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
