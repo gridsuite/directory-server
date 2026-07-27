@@ -12,7 +12,7 @@ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.gridsuite.directory.server.repository.DirectoryElementStatus;
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -748,6 +748,10 @@ public class DirectoryService {
             return;
         }
         List<DirectoryElementEntity> requestedElements = repositoryService.findAllByIdIn(elementsUuids);
+        if (requestedElements.isEmpty()) {
+            throw DirectoryException.of(DIRECTORY_ELEMENT_NOT_FOUND, "Elements '%s' not found", elementsUuids);
+        }
+
         List<UUID> directoryIds = requestedElements.stream()
                 .filter(element -> DIRECTORY.equals(element.getType()))
                 .map(DirectoryElementEntity::getId)
@@ -761,7 +765,7 @@ public class DirectoryService {
                 .toList();
 
         directoryElementRepository.updateStatus(allAffectedIds, status);
-        requestedElements.forEach(element -> {
+        requestedElements.stream().distinct().forEach(element -> {
             if (DIRECTORY.equals(element.getType())) {
                 notifyDirectoryHasChanged(element.getId(), userId);
             } else if (element.getParentId() != null) {

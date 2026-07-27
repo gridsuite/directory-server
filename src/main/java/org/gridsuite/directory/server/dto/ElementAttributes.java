@@ -10,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.repository.DirectoryElementStatus;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 
 import java.time.Instant;

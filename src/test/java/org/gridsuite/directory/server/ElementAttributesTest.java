@@ -13,7 +13,7 @@ import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.repository.DirectoryElementStatus;
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;

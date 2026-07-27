@@ -6,6 +6,7 @@
  */
 package org.gridsuite.directory.server.repository;
 
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

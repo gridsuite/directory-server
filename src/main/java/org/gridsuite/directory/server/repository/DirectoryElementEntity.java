@@ -9,6 +9,7 @@ package org.gridsuite.directory.server.repository;
 import jakarta.persistence.*;
 import lombok.*;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import java.time.Instant;

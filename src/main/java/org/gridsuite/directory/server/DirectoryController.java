@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
-import org.gridsuite.directory.server.repository.DirectoryElementStatus;
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
 import org.gridsuite.directory.server.services.PermissionService;
 import org.gridsuite.directory.server.services.RoleService;
