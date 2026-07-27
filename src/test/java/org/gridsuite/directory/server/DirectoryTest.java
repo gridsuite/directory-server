@@ -36,10 +36,9 @@ import org.gridsuite.directory.server.utils.DirectoryTestUtils;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.hamcrest.MatcherAssert;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -54,7 +53,6 @@ import org.springframework.messaging.support.GenericMessage;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
@@ -73,8 +71,6 @@ import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYP
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributesWithReferences;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -85,19 +81,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 
-@RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
-public class DirectoryTest {
-    public static final String TYPE_01 = "TYPE_01";
-    public static final String TYPE_02 = "TYPE_02";
-    public static final String TYPE_03 = "TYPE_03";
-    public static final String TYPE_04 = "TYPE_04";
-    public static final String TYPE_05 = "TYPE_05";
-    public static final String DIRECTORY = "DIRECTORY";
-    public static final String CASE = "CASE";
-    public static final String MODIFICATION = "MODIFICATION";
+class DirectoryTest {
+    static final String TYPE_01 = "TYPE_01";
+    static final String TYPE_02 = "TYPE_02";
+    static final String TYPE_03 = "TYPE_03";
+    static final String TYPE_04 = "TYPE_04";
+    static final String TYPE_05 = "TYPE_05";
+    static final String DIRECTORY = "DIRECTORY";
+    static final String CASE = "CASE";
+    static final String MODIFICATION = "MODIFICATION";
 
     private static final long TIMEOUT = 1000;
     private static final UUID TYPE_01_RENAME_UUID = UUID.randomUUID();
@@ -105,20 +100,20 @@ public class DirectoryTest {
     private static final UUID TYPE_03_UUID = UUID.randomUUID();
     private static final UUID TYPE_02_UUID = UUID.randomUUID();
 
-    public static final String HEADER_MODIFIED_BY = "modifiedBy";
-    public static final String HEADER_MODIFICATION_DATE = "modificationDate";
-    public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    static final String HEADER_MODIFIED_BY = "modifiedBy";
+    static final String HEADER_MODIFICATION_DATE = "modificationDate";
+    static final String HEADER_ELEMENT_UUID = "elementUuid";
     private static final String HEADER_USER_ROLES = "roles";
-    public static final String USER_ID = "userId";
-    public static final String USERID_1 = "userId1";
-    public static final String USERID_2 = "userId2";
-    public static final String USERID_3 = "userId3";
-    public static final String RECOLLEMENT = "recollement";
-    public static final String ALL_USERS = "ALL_USERS";
+    static final String USER_ID = "userId";
+    static final String USERID_1 = "userId1";
+    static final String USERID_2 = "userId2";
+    static final String USERID_3 = "userId3";
+    static final String RECOLLEMENT = "recollement";
+    static final String ALL_USERS = "ALL_USERS";
     private static final String NOT_ADMIN_USER = "notAdmin";
     private static final String ADMIN_USER = "adminUser";
-    public static final String NO_ADMIN_ROLE = "NO_ADMIN_ROLE";
-    public static final String ADMIN_ROLE = "ADMIN_EXPLORE";
+    static final String NO_ADMIN_ROLE = "NO_ADMIN_ROLE";
+    static final String ADMIN_ROLE = "ADMIN_EXPLORE";
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
     private final String studyUpdateDestination = "study.update";
@@ -161,8 +156,8 @@ public class DirectoryTest {
     @MockitoSpyBean
     ConsumerService consumeService;
 
-    @Before
-    public void setup() {
+    @BeforeEach
+    void setup() {
         setupMockWebServer();
 
         cleanDB();
@@ -200,14 +195,14 @@ public class DirectoryTest {
         SQLStatementCountValidator.reset();
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    void tearDown() {
         List<String> destinations = List.of(elementUpdateDestination, directoryUpdateDestination);
         assertQueuesEmptyThenClear(destinations);
     }
 
     @Test
-    public void test() throws Exception {
+    void test() throws Exception {
         checkRootDirectoriesList("userId", List.of());
 
         // Insert a root directory
@@ -264,7 +259,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfElementType01() throws Exception {
+    void testGetPathOfElementType01() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
@@ -299,7 +294,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfElementType03() throws Exception {
+    void testGetPathOfElementType03() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
@@ -333,7 +328,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfOtherUserElements() throws Exception {
+    void testGetPathOfOtherUserElements() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
@@ -363,7 +358,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfRootDir() throws Exception {
+    void testGetPathOfRootDir() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
         SQLStatementCountValidator.reset();
@@ -381,7 +376,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetPathOfNotFound() throws Exception {
+    void testGetPathOfNotFound() throws Exception {
         UUID unknownElementUuid = UUID.randomUUID();
 
         mockMvc.perform(get("/v1/elements/" + unknownElementUuid + "/path")
@@ -389,7 +384,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoPublicDirectories() throws Exception {
+    void testTwoUsersTwoPublicDirectories() throws Exception {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
 
@@ -418,7 +413,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveElement() throws Exception {
+    void testMoveElement() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", "Doe");
 
         // Insert another root20 directory
@@ -466,7 +461,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveElementNotFound() throws Exception {
+    void testMoveElementNotFound() throws Exception {
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
 
         UUID elementUuid = UUID.randomUUID();
@@ -493,7 +488,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveElementWithAlreadyExistingNameAndTypeInDestination() throws Exception {
+    void testMoveElementWithAlreadyExistingNameAndTypeInDestination() throws Exception {
         // Insert root20 directory
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
 
@@ -524,7 +519,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveElementToNotDirectory() throws Exception {
+    void testMoveElementToNotDirectory() throws Exception {
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
 
         UUID element1Uuid = UUID.randomUUID();
@@ -548,7 +543,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveDirectory() throws Exception {
+    void testMoveDirectory() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", "Doe");
 
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
@@ -613,7 +608,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testElementMove() throws Exception {
+    void testElementMove() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", "Doe");
 
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
@@ -662,7 +657,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testDirectoryMoveError() throws Exception {
+    void testDirectoryMoveError() throws Exception {
         UUID rootDir1Uuid = insertAndCheckRootDirectory("rootDir1", USER_ID);
 
         UUID elementUuid1 = UUID.randomUUID();
@@ -701,7 +696,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testMoveRootDirectory() throws Exception {
+    void testMoveRootDirectory() throws Exception {
         UUID rootDir10Uuid = insertAndCheckRootDirectory("rootDir10", "Doe");
 
         UUID rootDir20Uuid = insertAndCheckRootDirectory("rootDir20", "Doe");
@@ -736,7 +731,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersOnePublicOnePrivateDirectories() throws Exception {
+    void testTwoUsersOnePublicOnePrivateDirectories() throws Exception {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
         // Insert a root directory user1
@@ -762,7 +757,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoDirectories() throws Exception {
+    void testTwoUsersTwoDirectories() throws Exception {
         checkRootDirectoriesList("user1", List.of());
         checkRootDirectoriesList("user2", List.of());
         // Insert a root directory user1
@@ -786,7 +781,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoElementsInPublicDirectory() throws Exception {
+    void testTwoUsersTwoElementsInPublicDirectory() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory user1
@@ -816,7 +811,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersElementsWithSameName() throws Exception {
+    void testTwoUsersElementsWithSameName() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory user1
@@ -848,7 +843,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testTwoUsersTwoElements() throws Exception {
+    void testTwoUsersTwoElements() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory by Doe
@@ -879,7 +874,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRecursiveDelete() throws Exception {
+    void testRecursiveDelete() throws Exception {
         checkRootDirectoriesList("userId", List.of());
 
         // Insert a root directory user1
@@ -916,7 +911,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameElement() throws Exception {
+    void testRenameElement() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory by user1
@@ -936,7 +931,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameElementToSameName() throws Exception {
+    void testRenameElementToSameName() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory user1
@@ -953,7 +948,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRenameElementWithSameNameAndTypeInSameDirectory() throws Exception {
+    void testRenameElementWithSameNameAndTypeInSameDirectory() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
 
@@ -970,7 +965,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testDirectoryContentAfterInsertElement() throws Exception {
+    void testDirectoryContentAfterInsertElement() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory user1
@@ -984,7 +979,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testDirectory() throws Exception {
+    void testDirectory() throws Exception {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory by user1
@@ -997,7 +992,7 @@ public class DirectoryTest {
 
     @SneakyThrows
     @Test
-    public void testEmitDirectoryChangedNotification() {
+    void testEmitDirectoryChangedNotification() {
         checkRootDirectoriesList("Doe", List.of());
 
         // Insert a root directory by the user1
@@ -1037,7 +1032,7 @@ public class DirectoryTest {
 
     @SneakyThrows
     @Test
-    public void testGetElementName() {
+    void testGetElementName() {
         // Insert an element named "elementName1"
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
         ElementAttributes element1Attributes = toElementAttributes(TYPE_02_UUID, "elementName1", TYPE_02, "user1");
@@ -1058,7 +1053,7 @@ public class DirectoryTest {
 
     @SneakyThrows
     @Test
-    public void testGetElement() {
+    void testGetElement() {
         // Insert a root directory by the user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
 
@@ -1134,7 +1129,7 @@ public class DirectoryTest {
 
     @SneakyThrows
     @Test
-    public void testGetElementWithNonAdminUser() {
+    void testGetElementWithNonAdminUser() {
         // Insert a root directory by the user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", ADMIN_USER);
 
@@ -1173,7 +1168,7 @@ public class DirectoryTest {
 
     @SneakyThrows
     @Test
-    public void testElementAccessControl() {
+    void testElementAccessControl() {
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "user1");
 
@@ -1214,7 +1209,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testRootDirectoryExists() throws Exception {
+    void testRootDirectoryExists() throws Exception {
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", "user1");
 
@@ -1229,7 +1224,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testCreateDirectoryWithEmptyName() throws Exception {
+    void testCreateDirectoryWithEmptyName() throws Exception {
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", "user1");
 
@@ -1249,7 +1244,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testCreateElementWithEmptyName() throws Exception {
+    void testCreateElementWithEmptyName() throws Exception {
         // Insert a root directory user1
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", "user1");
 
@@ -1265,7 +1260,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testElementUpdateNotification() throws Exception {
+    void testElementUpdateNotification() throws Exception {
         // Insert a root directory
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", "userId");
         UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
@@ -1296,7 +1291,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testStudyUpdateNotification() throws Exception {
+    void testStudyUpdateNotification() throws Exception {
         String userId = "userId";
 
         // Insert a root directory
@@ -1356,7 +1351,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testSupervision() throws Exception {
+    void testSupervision() throws Exception {
         MvcResult mvcResult;
         // Test get elasticsearch host
         mvcResult = mockMvc.perform(get("/v1/supervision/elasticsearch-host"))
@@ -1661,7 +1656,7 @@ public class DirectoryTest {
         assertEquals(nbElementsInfos, Iterables.size(directoryElementInfosRepository.findAll()));
     }
 
-    public void assertRequestsCount(long select, long insert, long update, long delete) {
+    void assertRequestsCount(long select, long insert, long update, long delete) {
         assertSelectCount(select);
         assertInsertCount(insert);
         assertUpdateCount(update);
@@ -1767,7 +1762,7 @@ public class DirectoryTest {
 
     @SneakyThrows
     @Test
-    public void testNameCandidate() {
+    void testNameCandidate() {
 
         var directoryId = insertAndCheckRootDirectory("newDir", "userId");
 
@@ -1791,7 +1786,7 @@ public class DirectoryTest {
 
     @Test
     @SneakyThrows
-    public void testCreateElementInDirectory() {
+    void testCreateElementInDirectory() {
         String userId = "user";
         Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         ElementAttributes elementAttributes = ElementAttributes.toElementAttributes(UUID.randomUUID(), "elementName", TYPE_05, "user", 0L, null, now, now, userId);
@@ -1830,7 +1825,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void duplicateElementTest() throws Exception {
+    void duplicateElementTest() throws Exception {
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir", "user1");
         ElementAttributes elementAttributes = toElementAttributes(UUID.randomUUID(), "elementName", TYPE_05, "user1");
         insertAndCheckSubElementInRootDir(rootDirUuid, elementAttributes);
@@ -1861,7 +1856,7 @@ public class DirectoryTest {
 
     @Test
     @SneakyThrows
-    public void testCreateModificationElementWithAutomaticNewName() {
+    void testCreateModificationElementWithAutomaticNewName() {
         final String userId = "Doe";
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDirModif", userId);
 
@@ -1883,7 +1878,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testSearch() throws Exception {
+    void testSearch() throws Exception {
 
         //                          root (userId2)
         //         /                          |               \
@@ -1950,7 +1945,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testElementsAccessibilityOk() throws Exception {
+    void testElementsAccessibilityOk() throws Exception {
         checkRootDirectoriesList("userId", List.of());
         // Insert a root directory
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
@@ -1968,7 +1963,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testElementsAccessibilityNotOk() throws Exception {
+    void testElementsAccessibilityNotOk() throws Exception {
         checkRootDirectoriesList("userId", List.of());
 
         // Insert a root directory
@@ -1990,7 +1985,7 @@ public class DirectoryTest {
 
     private void assertQueuesEmptyThenClear(List<String> destinations) {
         try {
-            destinations.forEach(destination -> assertNull("Should not be any messages in queue " + destination + " : ", output.receive(100, destination)));
+            destinations.forEach(destination -> assertNull(output.receive(100, destination), "Should not be any messages in queue " + destination + " : "));
         } catch (Exception e) {
             // Ignoring
         } finally {
@@ -1999,7 +1994,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testCountUserCases() throws Exception {
+    void testCountUserCases() throws Exception {
         //TODO: the specific types such as study and filter... are kept on purpose for this test
         // It's will be removed later
         checkRootDirectoriesList("userId", List.of());
@@ -2032,7 +2027,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetDirectoryFromPath() throws Exception {
+    void testGetDirectoryFromPath() throws Exception {
 
         //                          root (userId2)
         //         /                          |               \
@@ -2147,7 +2142,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testDirectoryContentRecursive() throws Exception {
+    void testDirectoryContentRecursive() throws Exception {
         checkRootDirectoriesList("userId", List.of());
         //    rootDir  (contains modifRoot)
         //      |
@@ -2190,7 +2185,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testElementsUpdateOk() throws Exception {
+    void testElementsUpdateOk() throws Exception {
         checkRootDirectoriesList(USER_ID, List.of());
         // Insert a root directory
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
@@ -2208,7 +2203,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testElementsUpdateNotOk() throws Exception {
+    void testElementsUpdateNotOk() throws Exception {
         checkRootDirectoriesList(USER_ID, List.of());
         // Insert a root directory
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
@@ -2229,7 +2224,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testConsumeCaseExportFinished() {
+    void testConsumeCaseExportFinished() {
         UUID exportUuid = UUID.randomUUID();
         String userId = "user1";
         String errorMessage = "test error";
@@ -2246,7 +2241,7 @@ public class DirectoryTest {
     }
 
     @Test
-    public void testGetElementsNotModifiedSince() throws Exception {
+    void testGetElementsNotModifiedSince() throws Exception {
         UUID uuidNewRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID).getElementUuid();
         ElementAttributes recentElement = toElementAttributes(UUID.randomUUID(), "recentElement", TYPE_01, USER_ID, "descr recent");
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, recentElement);
@@ -2279,7 +2274,7 @@ public class DirectoryTest {
 
     @Test
     @SneakyThrows
-    public void testElementReferences() {
+    void testElementReferences() {
         String userId = "user";
 
         // create a root directory and an element

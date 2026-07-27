@@ -28,10 +28,9 @@ import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.hamcrest.core.IsEqual;
 import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,7 +39,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -55,7 +53,7 @@ import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 import static org.gridsuite.directory.server.services.PermissionService.ALL_USERS;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -65,13 +63,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 
-@RunWith(SpringRunner.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
-public class PermissionServiceTest {
-    public static final String TYPE_01 = "TYPE_01";
+class PermissionServiceTest {
+    static final String TYPE_01 = "TYPE_01";
 
     @Autowired
     private MockMvc mockMvc;
@@ -93,8 +90,8 @@ public class PermissionServiceTest {
 
     MockWebServer server;
 
-    public static final String ADMIN_USER = "ADMIN_USER";
-    public static final String ADMIN_ROLE = "ADMIN_EXPLORE";
+    static final String ADMIN_USER = "ADMIN_USER";
+    static final String ADMIN_ROLE = "ADMIN_EXPLORE";
     private static final String USER_ONE = "USER_ONE";
     private static final String USER_TWO = "USER_TWO";
     private static final String USER_ROLE = "USER_ROLE";
@@ -110,8 +107,8 @@ public class PermissionServiceTest {
     private String userTwoGroupsJson;
     private static final String EMPTY_GROUPS_JSON = "[]";
 
-    @Before
-    public void setup() throws Exception {
+    @BeforeEach
+    void setup() throws Exception {
         initializeGroupsJson();
 
         setupMockWebServer();
@@ -119,8 +116,8 @@ public class PermissionServiceTest {
         cleanDatabase();
     }
 
-    @After
-    public void tearDown() throws IOException {
+    @AfterEach
+    void tearDown() throws IOException {
         if (server != null) {
             server.shutdown();
         }
@@ -181,7 +178,7 @@ public class PermissionServiceTest {
     }
 
     @Test
-    public void testRootDirectories() throws Exception {
+    void testRootDirectories() throws Exception {
         String user1 = "user1";
         String user2 = "user2";
         String user3 = "user3";
@@ -244,7 +241,7 @@ public class PermissionServiceTest {
     }
 
     @Test
-    public void testElements() throws Exception {
+    void testElements() throws Exception {
         checkRootDirectories("user1", List.of());
         checkRootDirectories("user2", List.of());
         // Create directory tree for user1 : root1 -> dir1 -> element of type TYPE_01
@@ -312,7 +309,7 @@ public class PermissionServiceTest {
     }
 
     @Test
-    public void testExistence() throws Exception {
+    void testExistence() throws Exception {
         // Insert root directory with same name not allowed
         UUID rootUuid1 = insertRootDirectory("user1", "root1");
         insertRootDirectory("user1", "root1", HttpStatus.CONFLICT);
@@ -326,7 +323,7 @@ public class PermissionServiceTest {
     }
 
     @Test
-    public void testDirectoryContentWithPermissions() throws Exception {
+    void testDirectoryContentWithPermissions() throws Exception {
         // user1 owns a dir with 2 sub-dirs
         UUID rootUuid1 = insertRootDirectory("user1", "root1");
         UUID dirUuid1 = insertSubElement(rootUuid1, toElementAttributes(null, "dir1", DIRECTORY, "user1"));
@@ -356,7 +353,7 @@ public class PermissionServiceTest {
     }
 
     @Test
-    public void testSetDirectoryPermissions() throws Exception {
+    void testSetDirectoryPermissions() throws Exception {
         UUID rootDirectoryUuid = insertRootDirectory(ADMIN_USER, "root1");
 
         // Test case 1: Admin can set permissions
@@ -430,7 +427,7 @@ public class PermissionServiceTest {
     }
 
     @Test
-    public void testGetDirectoryPermissions() throws Exception {
+    void testGetDirectoryPermissions() throws Exception {
         UUID rootDirectoryUuid = insertRootDirectory(ADMIN_USER, "root1");
 
         // Test case 1: Admin user can retrieve permissions
@@ -508,7 +505,7 @@ public class PermissionServiceTest {
     }
 
     @Test
-    public void testRecursiveChecks() throws Exception {
+    void testRecursiveChecks() throws Exception {
         // Setup test users and directories
         String user1 = "user1";
         String user2 = "user2";
@@ -591,12 +588,12 @@ public class PermissionServiceTest {
      * Helper method to assert the permission check result
      */
     private void assertPermissionResult(MvcResult result, HttpStatus expectedStatus, DirectoryBusinessErrorCode expectedBusinessCode) throws UnsupportedEncodingException, JsonProcessingException {
-        assertEquals("Status code should match", expectedStatus.value(), result.getResponse().getStatus());
+        assertEquals(expectedStatus.value(), result.getResponse().getStatus(), "Status code should match");
 
         if (expectedBusinessCode != null) {
-            assertEquals("Business code in problem detail should match",
-                    expectedBusinessCode.value(),
-                    objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class).getBusinessErrorCode());
+            assertEquals(expectedBusinessCode.value(),
+                    objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class).getBusinessErrorCode(),
+                    "Business code in problem detail should match");
         }
     }
 
