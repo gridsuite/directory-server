@@ -158,8 +158,7 @@ public class DirectoryService {
             now,
             now,
             elementAttributes.getOwner(),
-            // references may be null when deserialized from a request that omits them (e.g. a plain element creation)
-            Optional.ofNullable(elementAttributes.getReferences()).orElseGet(List::of).stream().map(this::createReferenceEntity).toList());
+            elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList());
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
