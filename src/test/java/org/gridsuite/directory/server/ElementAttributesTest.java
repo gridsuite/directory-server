@@ -8,12 +8,12 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
@@ -32,7 +32,10 @@ import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>

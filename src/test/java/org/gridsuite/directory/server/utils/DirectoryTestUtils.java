@@ -8,10 +8,10 @@ package org.gridsuite.directory.server.utils;
 
 import lombok.NonNull;
 import okhttp3.mockwebserver.MockResponse;
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
-import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 

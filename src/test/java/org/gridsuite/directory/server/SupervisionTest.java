@@ -6,12 +6,12 @@
  */
 package org.gridsuite.directory.server;
 
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
-import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.services.SupervisionService;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
