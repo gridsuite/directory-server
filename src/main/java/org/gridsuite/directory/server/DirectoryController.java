@@ -371,7 +371,7 @@ public class DirectoryController {
     @Operation(summary = "Update status of elements")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Status was successfully updated"),
-        @ApiResponse(responseCode = "404", description = "At least one element was not found"),
+        @ApiResponse(responseCode = "404", description = "All elements were not found"),
     })
     public ResponseEntity<Void> updateElementsStatus(
             @Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuids,
