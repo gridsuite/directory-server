@@ -2329,7 +2329,7 @@ class DirectoryTest {
         insertAndCheckSubElementInRootDir(rootDirUuid, siblingElementAttributes);
         UUID siblingElementUuid = siblingElementAttributes.getElementUuid();
 
-        // All elements are created ACTIVE
+        // All elements are created CREATED
         assertElementsStatusInRepository(DirectoryElementStatus.CREATED, rootDirUuid, subDirUuid, nestedElementUuid, siblingElementUuid);
 
         // Mark subDir (a directory) and siblingElement (a plain element) as DELETING
