@@ -766,12 +766,10 @@ public class DirectoryService {
                 .toList();
 
         directoryElementRepository.updateStatus(allAffectedIds, status);
-        requestedElements.stream().distinct().forEach(element -> {
-            if (DIRECTORY.equals(element.getType())) {
-                notifyDirectoryHasChanged(element.getId(), userId);
-            } else if (element.getParentId() != null) {
-                notifyDirectoryHasChanged(element.getParentId(), userId);
-            }
-        });
+        Set<UUID> directoriesToNotify = requestedElements.stream()
+                .map(element -> DIRECTORY.equals(element.getType()) ? element.getId() : element.getParentId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        directoriesToNotify.forEach(uuid -> notifyDirectoryHasChanged(uuid, userId));
     }
 }
