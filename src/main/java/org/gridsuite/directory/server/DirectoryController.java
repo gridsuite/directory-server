@@ -368,10 +368,7 @@ public class DirectoryController {
 
     @PutMapping(value = "/elements", params = "status")
     @Operation(summary = "Update status of elements")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Status was successfully updated"),
-        @ApiResponse(responseCode = "404", description = "All elements were not found"),
-    })
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Status was successfully updated")})
     public ResponseEntity<Void> updateElementsStatus(
             @Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuids,
             @Parameter(description = "new status") @RequestParam("status") DirectoryElementStatus status,

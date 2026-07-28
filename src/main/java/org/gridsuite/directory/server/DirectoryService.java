@@ -749,10 +749,6 @@ public class DirectoryService {
             return;
         }
         List<DirectoryElementEntity> requestedElements = repositoryService.findAllByIdIn(elementsUuids);
-        if (requestedElements.isEmpty()) {
-            throw DirectoryException.of(DIRECTORY_ELEMENT_NOT_FOUND, "Elements '%s' not found", elementsUuids);
-        }
-
         List<UUID> directoryIds = requestedElements.stream()
                 .filter(element -> DIRECTORY.equals(element.getType()))
                 .map(DirectoryElementEntity::getId)
