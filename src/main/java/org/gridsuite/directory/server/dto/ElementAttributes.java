@@ -95,14 +95,14 @@ public class ElementAttributes {
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
         return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
                 rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(),
-                rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy(), DirectoryElementStatus.ACTIVE);
+                rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy(), DirectoryElementStatus.CREATED);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull String userId, long subdirectoriesCount, String elementDescription,
                                                         Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
         return toElementAttributes(elementUuid, elementName, elementType, userId, subdirectoriesCount, elementDescription,
-                creationDate, lastModificationDate, lastModifiedBy, DirectoryElementStatus.ACTIVE);
+                creationDate, lastModificationDate, lastModifiedBy, DirectoryElementStatus.CREATED);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,

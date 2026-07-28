@@ -161,7 +161,7 @@ public class DirectoryService {
             now,
             elementAttributes.getOwner(),
             elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList(),
-            DirectoryElementStatus.ACTIVE);
+            DirectoryElementStatus.CREATED);
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
@@ -239,7 +239,7 @@ public class DirectoryService {
                 } else {
                     //and then we create the rest of the path
                     parentDirectoryUuid = createElementWithNotif(
-                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, DirectoryElementStatus.ACTIVE),
+                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, DirectoryElementStatus.CREATED),
                         parentDirectoryUuid,
                         userId, false).getElementUuid();
                 }

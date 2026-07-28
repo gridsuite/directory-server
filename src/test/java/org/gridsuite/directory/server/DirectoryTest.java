@@ -2247,7 +2247,7 @@ class DirectoryTest {
                 UUID.randomUUID(), uuidNewRootDirectory, "oldElement", TYPE_01, USER_ID, "descr old",
                 Instant.now().minus(400, ChronoUnit.DAYS),
                 Instant.now().minus(400, ChronoUnit.DAYS),
-                USER_ID, List.of(), DirectoryElementStatus.ACTIVE
+                USER_ID, List.of(), DirectoryElementStatus.CREATED
         );
         directoryElementRepository.save(oldElement);
 
@@ -2330,14 +2330,14 @@ class DirectoryTest {
         UUID siblingElementUuid = siblingElementAttributes.getElementUuid();
 
         // All elements are created ACTIVE
-        assertElementsStatusInRepository(DirectoryElementStatus.ACTIVE, rootDirUuid, subDirUuid, nestedElementUuid, siblingElementUuid);
+        assertElementsStatusInRepository(DirectoryElementStatus.CREATED, rootDirUuid, subDirUuid, nestedElementUuid, siblingElementUuid);
 
         // Mark subDir (a directory) and siblingElement (a plain element) as DELETING
         updateElementsStatus(List.of(subDirUuid, siblingElementUuid), DirectoryElementStatus.DELETING, USER_ID);
 
         // The directory, its descendant and the sibling element are DELETING; the root is untouched
         assertElementsStatusInRepository(DirectoryElementStatus.DELETING, subDirUuid, nestedElementUuid, siblingElementUuid);
-        assertElementsStatusInRepository(DirectoryElementStatus.ACTIVE, rootDirUuid);
+        assertElementsStatusInRepository(DirectoryElementStatus.CREATED, rootDirUuid);
 
         // One notification per requested element: subDir itself (directory), rootDir (parent of siblingElement)
         assertDirectoriesNotified(Set.of(subDirUuid, rootDirUuid), 2, USER_ID);

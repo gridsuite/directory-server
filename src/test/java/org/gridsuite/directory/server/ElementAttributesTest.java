@@ -62,9 +62,9 @@ class ElementAttributesTest {
         Instant localCreationDate = Instant.now();
 
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY,
-                "userId", "description", localCreationDate, localCreationDate, "userId", List.of(), DirectoryElementStatus.ACTIVE);
+                "userId", "description", localCreationDate, localCreationDate, "userId", List.of(), DirectoryElementStatus.CREATED);
         DirectoryElementEntity elementEntity2 = new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", TYPE_01,
-                "userId", "description", localCreationDate, localCreationDate, "userId", List.of(), DirectoryElementStatus.ACTIVE);
+                "userId", "description", localCreationDate, localCreationDate, "userId", List.of(), DirectoryElementStatus.CREATED);
 
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().elementName("newName").build(), "userId"));
         assertTrue(elementEntity.isAttributesUpdatable(ElementAttributes.builder().build(), "userId"));
@@ -97,10 +97,10 @@ class ElementAttributesTest {
 
         verifyElementAttributes(toElementAttributesWithReferences(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description",
                 lastModificationDate, lastModificationDate, "userId",
-                List.of(new ReferenceEmbeddable(UUID.randomUUID(), ReferenceType.STUDY_NODE.name())), DirectoryElementStatus.ACTIVE), 1L));
+                List.of(new ReferenceEmbeddable(UUID.randomUUID(), ReferenceType.STUDY_NODE.name())), DirectoryElementStatus.CREATED), 1L));
 
         verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate,
-                "userId", List.of(), DirectoryElementStatus.ACTIVE), 1L));
+                "userId", List.of(), DirectoryElementStatus.CREATED), 1L));
         verifyElementAttributes(toElementAttributes(new RootDirectoryAttributes("name", "userId", "description", creationDate, creationDate, "userId")));
 
         assertThrows(NullPointerException.class, () -> toElementAttributes((DirectoryElementEntity) null));

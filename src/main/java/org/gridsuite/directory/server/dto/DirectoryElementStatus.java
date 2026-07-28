@@ -11,6 +11,6 @@ package org.gridsuite.directory.server.dto;
  */
 
 public enum DirectoryElementStatus {
-    ACTIVE,
+    CREATED,
     DELETING
 }
