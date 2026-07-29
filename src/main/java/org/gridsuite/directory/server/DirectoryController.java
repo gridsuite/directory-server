@@ -365,4 +365,15 @@ public class DirectoryController {
         List<String> decodedDirectoryPath = directoryPath.stream().map(s -> URLDecoder.decode(s, StandardCharsets.UTF_8)).toList();
         return ResponseEntity.ok().body(service.getDirectoryUuidFromPath(decodedDirectoryPath));
     }
+
+    @PutMapping(value = "/elements", params = "status")
+    @Operation(summary = "Update status of elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Status was successfully updated")})
+    public ResponseEntity<Void> updateElementsStatus(
+            @Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuids,
+            @Parameter(description = "new status") @RequestParam("status") DirectoryElementStatus status,
+            @RequestHeader("userId") String userId) {
+        service.updateElementsStatus(elementsUuids, status, userId);
+        return ResponseEntity.ok().build();
+    }
 }

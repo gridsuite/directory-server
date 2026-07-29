@@ -20,11 +20,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import static java.lang.Boolean.TRUE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
@@ -158,7 +160,8 @@ public class DirectoryService {
             now,
             now,
             elementAttributes.getOwner(),
-            elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList());
+            elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList(),
+            DirectoryElementStatus.CREATED);
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
@@ -236,7 +239,7 @@ public class DirectoryService {
                 } else {
                     //and then we create the rest of the path
                     parentDirectoryUuid = createElementWithNotif(
-                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId),
+                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, DirectoryElementStatus.CREATED),
                         parentDirectoryUuid,
                         userId, false).getElementUuid();
                 }
@@ -738,5 +741,31 @@ public class DirectoryService {
         permissionService.updateDirectoryPermissions(directoryUuid, permissions, owner);
 
         notifyDirectoryHasChanged(directoryUuid, userId);
+    }
+
+    @Transactional
+    public void updateElementsStatus(List<UUID> elementsUuids, DirectoryElementStatus status, String userId) {
+        if (elementsUuids == null || elementsUuids.isEmpty()) {
+            return;
+        }
+        List<DirectoryElementEntity> requestedElements = repositoryService.findAllByIdIn(elementsUuids);
+        List<UUID> directoryIds = requestedElements.stream()
+                .filter(element -> DIRECTORY.equals(element.getType()))
+                .map(DirectoryElementEntity::getId)
+                .toList();
+
+        List<UUID> descendantIds = repositoryService.findAllDescendants(directoryIds).stream()
+                .map(DirectoryElementEntity::getId)
+                .toList();
+        List<UUID> allAffectedIds = Stream.concat(elementsUuids.stream(), descendantIds.stream())
+                .distinct()
+                .toList();
+
+        directoryElementRepository.updateStatus(allAffectedIds, status);
+        Set<UUID> directoriesToNotify = requestedElements.stream()
+                .map(element -> DIRECTORY.equals(element.getType()) ? element.getId() : element.getParentId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        directoriesToNotify.forEach(uuid -> notifyDirectoryHasChanged(uuid, userId));
     }
 }
