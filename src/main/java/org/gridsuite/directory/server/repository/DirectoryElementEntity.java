@@ -9,6 +9,7 @@ package org.gridsuite.directory.server.repository;
 import jakarta.persistence.*;
 import lombok.*;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import java.time.Instant;
@@ -63,6 +64,10 @@ public class DirectoryElementEntity {
         indexes = @Index(name = "element_idx", columnList = "element_id")
     )
     private List<ReferenceEmbeddable> references = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private DirectoryElementStatus status;
 
     // Return a list that cannot be modified to avoid side effects
     public List<ReferenceEmbeddable> getReferences() {

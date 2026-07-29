@@ -8,6 +8,7 @@ package org.gridsuite.directory.server.utils;
 
 import lombok.NonNull;
 import okhttp3.mockwebserver.MockResponse;
+import org.gridsuite.directory.server.dto.DirectoryElementStatus;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -27,11 +28,11 @@ public final class DirectoryTestUtils {
     }
 
     public static DirectoryElementEntity createRootElement(String elementName, String type, String userId) {
-        return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, userId, null, Instant.now(), Instant.now(), userId, List.of());
+        return new DirectoryElementEntity(UUID.randomUUID(), null, elementName, type, userId, null, Instant.now(), Instant.now(), userId, List.of(), DirectoryElementStatus.CREATED);
     }
 
     public static DirectoryElementEntity createElement(UUID parentDirectoryUuid, String elementName, String type, String userId) {
-        return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, userId, null, Instant.now(), Instant.now(), userId, List.of());
+        return new DirectoryElementEntity(UUID.randomUUID(), parentDirectoryUuid, elementName, type, userId, null, Instant.now(), Instant.now(), userId, List.of(), DirectoryElementStatus.CREATED);
     }
 
     public static MockResponse jsonResponse(HttpStatus status, String body) {
