@@ -75,7 +75,7 @@ public class ConsumerService {
                 String updateType = message.getHeaders().get(HEADER_UPDATE_TYPE, String.class);
                 // UPDATE_TYPE_STUDY_CREATION_FINISHED is the update type used when study insertion or duplication is finished, and when a study import fails
                 if (UPDATE_TYPE_STUDY_CREATION_FINISHED.equals(updateType) && studyUuidHeader != null) {
-                    directoryService.studyUpdated(UUID.fromString(studyUuidHeader), error, userId);
+                    directoryService.studyCreatedNotification(UUID.fromString(studyUuidHeader), error, userId);
                 }
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
