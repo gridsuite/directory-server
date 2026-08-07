@@ -26,7 +26,10 @@ import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
-import org.gridsuite.directory.server.repository.*;
+import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.PermissionId;
+import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.gridsuite.directory.server.services.ConsumerService;
 import org.gridsuite.directory.server.services.UserAdminService;
 import org.gridsuite.directory.server.utils.DirectoryTestUtils;
@@ -54,14 +57,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.util.CollectionUtils;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.NotificationService.*;
-import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
 import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDY_CREATION_FINISHED;
@@ -1341,6 +1345,47 @@ class DirectoryTest {
         UUID studyUuid = UUID.randomUUID();
         String studyName = "studyName";
         ElementAttributes subEltAttributes = toElementAttributes(studyUuid, studyName, TYPE_01, userId, "descr");
+        subEltAttributes.setStatus(DirectoryElementStatus.CREATING);
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
+
+        input.send(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid.toString())
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_CREATION_FINISHED)
+            .build(), studyUpdateDestination);
+
+        // Assert that the broker message has been sent a directory update request message
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        List<DirectoryInfos> directoriesInfos = objectMapper.readValue(headers.get(HEADER_DIRECTORIES_INFOS, String.class), new TypeReference<>() { });
+        assertNotNull(directoriesInfos);
+        DirectoryInfos directoryInfos = directoriesInfos.stream().filter(directory -> uuidNewRootDirectory.equals(directory.uuid())).findFirst().orElse(null);
+        assertNotNull(directoryInfos);
+        assertTrue(directoryInfos.isRoot());
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(headers.get(HEADER_ERROR), null);
+        assertEquals(List.of(studyName), headers.get(HEADER_ELEMENT_NAMES));
+
+        DirectoryElementEntity directoryElement = directoryElementRepository.findById(studyUuid).get();
+        assertEquals(DirectoryElementStatus.CREATED, directoryElement.getStatus());
+    }
+
+    @Test
+    void testStudyFailedUpdateNotification() throws Exception {
+        String userId = "userId";
+
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", userId);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert a study
+        UUID studyUuid = UUID.randomUUID();
+        String studyName = "studyName";
+        ElementAttributes subEltAttributes = toElementAttributes(studyUuid, studyName, TYPE_01, userId, "descr");
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
 
         input.send(MessageBuilder.withPayload("")
@@ -1371,6 +1416,7 @@ class DirectoryTest {
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(headers.get(HEADER_ERROR), null);
         assertEquals(List.of(studyName), headers.get(HEADER_ELEMENT_NAMES));
 
         // Assert that the broker message has been sent a directory update request message
@@ -1386,6 +1432,7 @@ class DirectoryTest {
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(headers.get(HEADER_ERROR), "error");
         assertEquals(List.of(studyName), headers.get(HEADER_ELEMENT_NAMES));
     }
 

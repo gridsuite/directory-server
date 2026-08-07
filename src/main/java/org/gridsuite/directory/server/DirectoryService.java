@@ -72,17 +72,18 @@ public class DirectoryService {
 
     //TODO: this consumer is the kept here at the moment, but it will be moved to explore server later on
     @Transactional
-    public void studyUpdated(UUID studyUuid, String errorMessage, String userId) {
+    public void studyCreatedNotification(UUID studyUuid, String errorMessage, String userId) {
         UUID parentUuid = repositoryService.getParentUuid(studyUuid);
-        Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
-        String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
-        if (errorMessage != null && elementName != null) {
+        DirectoryElementEntity elementEntity = getDirectoryElementEntity(studyUuid);
+        if (errorMessage != null && elementEntity.getName() != null) {
             deleteElementWithNotif(studyUuid, userId);
+        } else {
+            elementEntity.setStatus(DirectoryElementStatus.CREATED);
         }
         // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
         // then avoid sending a notification with parentUuid=null and isRoot=true
         if (parentUuid != null) {
-            notifyDirectoryHasChanged(parentUuid, userId, elementName, errorMessage);
+            notifyDirectoryHasChanged(parentUuid, userId, elementEntity.getName(), errorMessage);
         }
     }
 
@@ -161,7 +162,7 @@ public class DirectoryService {
             now,
             elementAttributes.getOwner(),
             elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList(),
-            DirectoryElementStatus.CREATED);
+            elementAttributes.getStatus() != null ? elementAttributes.getStatus() : DirectoryElementStatus.CREATED);
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
