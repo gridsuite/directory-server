@@ -74,17 +74,16 @@ public class DirectoryService {
     @Transactional
     public void studyCreatedNotification(UUID studyUuid, String errorMessage, String userId) {
         UUID parentUuid = repositoryService.getParentUuid(studyUuid);
-        Optional<DirectoryElementEntity> elementEntity = repositoryService.getElementEntity(studyUuid);
-        String elementName = elementEntity.map(DirectoryElementEntity::getName).orElse(null);
-        if (errorMessage != null && elementName != null) {
+        DirectoryElementEntity elementEntity = getDirectoryElementEntity(studyUuid);
+        if (errorMessage != null && elementEntity.getName() != null) {
             deleteElementWithNotif(studyUuid, userId);
         } else {
-            directoryElementRepository.updateStatus(List.of(studyUuid), DirectoryElementStatus.CREATED);
+            elementEntity.setStatus(DirectoryElementStatus.CREATED);
         }
         // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
         // then avoid sending a notification with parentUuid=null and isRoot=true
         if (parentUuid != null) {
-            notifyDirectoryHasChanged(parentUuid, userId, elementName, errorMessage);
+            notifyDirectoryHasChanged(parentUuid, userId, elementEntity.getName(), errorMessage);
         }
     }
 
