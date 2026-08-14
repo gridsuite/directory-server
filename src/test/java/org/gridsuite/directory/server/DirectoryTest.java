@@ -2314,6 +2314,78 @@ class DirectoryTest {
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
     }
 
+    @Test
+    @SneakyThrows
+    void testUpdateElementsReferences() {
+        String userId = "user";
+
+        // create a root directory and two elements
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", userId, null, null, null, null), userId);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.ADD_DIRECTORY, userId);
+
+        ElementAttributes element1Attributes = directoryService.createElement(
+                DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        ElementAttributes element2Attributes = directoryService.createElement(
+                DirectoryTestUtils.toElementAttributes(null, "element2", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        // add the same origin reference to both elements
+        UUID originReferenceUuid = UUID.randomUUID();
+        ReferenceAttributes originReferenceAttributes = ReferenceAttributes.builder().referenceId(originReferenceUuid).referenceType(ReferenceType.STUDY_NODE).build();
+
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", element1Attributes.getElementUuid()))
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(originReferenceAttributes)))
+                .andExpect(status().isOk());
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", element2Attributes.getElementUuid()))
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(originReferenceAttributes)))
+                .andExpect(status().isOk());
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        // move both elements' reference from originReferenceUuid to targetReferenceUuid in a single call
+        UUID targetReferenceUuid = UUID.randomUUID();
+        mockMvc.perform(put("/v1/elements/references")
+                        .header("userId", userId)
+                        .queryParam("ids", element1Attributes.getElementUuid().toString(), element2Attributes.getElementUuid().toString())
+                        .queryParam("originReferenceUuid", originReferenceUuid.toString())
+                        .queryParam("targetReferenceUuid", targetReferenceUuid.toString()))
+                .andExpect(status().isOk());
+
+        // one UPDATE_DIRECTORY notification per moved element
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        // both elements must now reference targetReferenceUuid, and no longer originReferenceUuid
+        ElementAttributes updatedElement1 = directoryService.getElementWithReferences(element1Attributes.getElementUuid());
+        ElementAttributes updatedElement2 = directoryService.getElementWithReferences(element2Attributes.getElementUuid());
+
+        assertEquals(1, updatedElement1.getReferences().size());
+        assertEquals(targetReferenceUuid, updatedElement1.getReferences().get(0).getReferenceId());
+
+        assertEquals(1, updatedElement2.getReferences().size());
+        assertEquals(targetReferenceUuid, updatedElement2.getReferences().get(0).getReferenceId());
+    }
+
+    @Test
+    @SneakyThrows
+    void testUpdateElementsReferencesElementNotFound() {
+        UUID unknownElementUuid = UUID.randomUUID();
+
+        mockMvc.perform(put("/v1/elements/references")
+                        .header("userId", USER_ID)
+                        .queryParam("ids", unknownElementUuid.toString())
+                        .queryParam("originReferenceUuid", UUID.randomUUID().toString())
+                        .queryParam("targetReferenceUuid", UUID.randomUUID().toString()))
+                .andExpect(status().isNotFound());
+    }
+
     private void testNotificationDirectory(UUID directoryUuid, NotificationType notificationType, String userId) throws JsonProcessingException {
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));

@@ -347,6 +347,21 @@ public class DirectoryService {
     }
 
     @Transactional
+    public void updateElementsReferences(@NonNull List<UUID> elementsUuids, @NonNull UUID originReferenceUuid,
+                                         @NonNull UUID targetReferenceUuid, String userId) {
+        elementsUuids.forEach(elementUuid -> {
+            DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
+
+            directoryElementEntity.getReferences().stream()
+                    .filter(ref -> ref.getReferenceId().equals(originReferenceUuid))
+                    .findFirst()
+                    .ifPresent(ref -> ref.setReferenceId(targetReferenceUuid));
+
+            notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
+        });
+    }
+
+    @Transactional
     public void deleteElementReference(UUID elementUuid, UUID referenceUuid, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
         directoryElementEntity.removeReference(referenceUuid);
