@@ -108,6 +108,13 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPath(elementUuid));
     }
 
+    @GetMapping(value = "/elements/paths", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the path of several elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The path of each element")})
+    public ResponseEntity<Map<UUID, List<ElementAttributes>>> getPaths(@RequestParam("ids") List<UUID> elementUuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getPaths(elementUuids));
+    }
+
     @GetMapping(value = "/elements/{elementUuid}/name", produces = MediaType.TEXT_PLAIN_VALUE)
     @Operation(summary = "Get name of element")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Name of an element"),
@@ -379,5 +386,16 @@ public class DirectoryController {
     public ResponseEntity<UUID> getDirectoryUuidFromPath(@RequestParam("directoryPath") List<String> directoryPath) {
         List<String> decodedDirectoryPath = directoryPath.stream().map(s -> URLDecoder.decode(s, StandardCharsets.UTF_8)).toList();
         return ResponseEntity.ok().body(service.getDirectoryUuidFromPath(decodedDirectoryPath));
+    }
+
+    @PutMapping(value = "/elements", params = "status")
+    @Operation(summary = "Update status of elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Status was successfully updated")})
+    public ResponseEntity<Void> updateElementsStatus(
+            @Parameter(description = "elements UUIDs") @RequestParam("ids") List<UUID> elementsUuids,
+            @Parameter(description = "new status") @RequestParam("status") DirectoryElementStatus status,
+            @RequestHeader("userId") String userId) {
+        service.updateElementsStatus(elementsUuids, status, userId);
+        return ResponseEntity.ok().build();
     }
 }

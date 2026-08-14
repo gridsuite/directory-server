@@ -22,11 +22,8 @@ import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
-import org.gridsuite.directory.server.dto.DirectoryInfos;
-import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.ReferenceAttributes;
+import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.elasticsearch.DirectoryElementInfosRepository;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
@@ -60,14 +57,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.util.CollectionUtils;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.NotificationService.*;
-import static org.gridsuite.directory.server.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
 import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDY_CREATION_FINISHED;
@@ -384,6 +382,48 @@ class DirectoryTest {
 
         mockMvc.perform(get("/v1/elements/" + unknownElementUuid + "/path")
                 .header("userId", "user1")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testGetPaths() throws Exception {
+        // Insert a root directory
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
+
+        // Insert a subDirectory1 in the root directory
+        UUID directoryUUID = UUID.randomUUID();
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(directoryUUID, "subDirectory1", DIRECTORY, "Doe"));
+
+        // Insert two elements in the subDirectory1, and one directly in the root directory
+        UUID element1UUID = UUID.randomUUID();
+        insertAndCheckSubElement(directoryUUID, toElementAttributes(element1UUID, "element1", TYPE_03, "Doe"));
+        UUID element2UUID = UUID.randomUUID();
+        insertAndCheckSubElement(directoryUUID, toElementAttributes(element2UUID, "element2", TYPE_03, "Doe"));
+        UUID element3UUID = UUID.randomUUID();
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(element3UUID, "element3", TYPE_03, "Doe"));
+        UUID unknownElementUuid = UUID.randomUUID();
+
+        // ids are sent as repeated query params, as UriComponentsBuilder does on the caller side
+        String result = mockMvc.perform(get("/v1/elements/paths")
+                        .param("ids", element1UUID.toString(), element2UUID.toString(), element3UUID.toString(), unknownElementUuid.toString())
+                        .header("userId", "Doe"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Map<UUID, List<ElementAttributes>> paths = objectMapper.readValue(result, new TypeReference<>() { });
+
+        // the unknown element is omitted rather than failing the whole call
+        assertEquals(3, paths.size());
+        assertEquals(
+                Arrays.asList(rootDirUuid, directoryUUID, element1UUID),
+                paths.get(element1UUID).stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList())
+        );
+        assertEquals(
+                Arrays.asList(rootDirUuid, directoryUUID, element2UUID),
+                paths.get(element2UUID).stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList())
+        );
+        assertEquals(
+                Arrays.asList(rootDirUuid, element3UUID),
+                paths.get(element3UUID).stream().map(ElementAttributes::getElementUuid).collect(Collectors.toList())
+        );
     }
 
     @Test
@@ -1305,6 +1345,47 @@ class DirectoryTest {
         UUID studyUuid = UUID.randomUUID();
         String studyName = "studyName";
         ElementAttributes subEltAttributes = toElementAttributes(studyUuid, studyName, TYPE_01, userId, "descr");
+        subEltAttributes.setStatus(DirectoryElementStatus.CREATING);
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
+
+        input.send(MessageBuilder.withPayload("")
+            .setHeader(HEADER_STUDY_UUID, studyUuid.toString())
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_CREATION_FINISHED)
+            .build(), studyUpdateDestination);
+
+        // Assert that the broker message has been sent a directory update request message
+        Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userId, headers.get(HEADER_USER_ID));
+        List<DirectoryInfos> directoriesInfos = objectMapper.readValue(headers.get(HEADER_DIRECTORIES_INFOS, String.class), new TypeReference<>() { });
+        assertNotNull(directoriesInfos);
+        DirectoryInfos directoryInfos = directoriesInfos.stream().filter(directory -> uuidNewRootDirectory.equals(directory.uuid())).findFirst().orElse(null);
+        assertNotNull(directoryInfos);
+        assertTrue(directoryInfos.isRoot());
+        assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(headers.get(HEADER_ERROR), null);
+        assertEquals(List.of(studyName), headers.get(HEADER_ELEMENT_NAMES));
+
+        DirectoryElementEntity directoryElement = directoryElementRepository.findById(studyUuid).get();
+        assertEquals(DirectoryElementStatus.CREATED, directoryElement.getStatus());
+    }
+
+    @Test
+    void testStudyFailedUpdateNotification() throws Exception {
+        String userId = "userId";
+
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", userId);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert a study
+        UUID studyUuid = UUID.randomUUID();
+        String studyName = "studyName";
+        ElementAttributes subEltAttributes = toElementAttributes(studyUuid, studyName, TYPE_01, userId, "descr");
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
 
         input.send(MessageBuilder.withPayload("")
@@ -1335,6 +1416,7 @@ class DirectoryTest {
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(headers.get(HEADER_ERROR), null);
         assertEquals(List.of(studyName), headers.get(HEADER_ELEMENT_NAMES));
 
         // Assert that the broker message has been sent a directory update request message
@@ -1350,6 +1432,7 @@ class DirectoryTest {
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(headers.get(HEADER_ERROR), "error");
         assertEquals(List.of(studyName), headers.get(HEADER_ELEMENT_NAMES));
     }
 
@@ -2253,7 +2336,7 @@ class DirectoryTest {
                 UUID.randomUUID(), uuidNewRootDirectory, "oldElement", TYPE_01, USER_ID, "descr old",
                 Instant.now().minus(400, ChronoUnit.DAYS),
                 Instant.now().minus(400, ChronoUnit.DAYS),
-                USER_ID, List.of()
+                USER_ID, List.of(), DirectoryElementStatus.CREATED
         );
         directoryElementRepository.save(oldElement);
 
@@ -2315,75 +2398,74 @@ class DirectoryTest {
     }
 
     @Test
-    @SneakyThrows
-    void testUpdateElementsReferences() {
-        String userId = "user";
+    public void testUpdateElementsStatus() throws Exception {
+        // Build the following tree:
+        // rootDir
+        //  ├── subDir
+        //  │    └── nestedElement (TYPE_01)
+        //  └── siblingElement (TYPE_01)
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDir", USER_ID);
 
-        // create a root directory and two elements
-        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", userId, null, null, null, null), userId);
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.ADD_DIRECTORY, userId);
+        ElementAttributes subDirAttributes = toElementAttributes(null, "subDir", DIRECTORY, USER_ID);
+        insertAndCheckSubElementInRootDir(rootDirUuid, subDirAttributes);
+        UUID subDirUuid = subDirAttributes.getElementUuid();
 
-        ElementAttributes element1Attributes = directoryService.createElement(
-                DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+        ElementAttributes nestedElementAttributes = toElementAttributes(UUID.randomUUID(), "nestedElement", TYPE_01, USER_ID);
+        insertAndCheckSubElement(subDirUuid, nestedElementAttributes);
+        UUID nestedElementUuid = nestedElementAttributes.getElementUuid();
 
-        ElementAttributes element2Attributes = directoryService.createElement(
-                DirectoryTestUtils.toElementAttributes(null, "element2", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+        ElementAttributes siblingElementAttributes = toElementAttributes(UUID.randomUUID(), "siblingElement", TYPE_01, USER_ID);
+        insertAndCheckSubElementInRootDir(rootDirUuid, siblingElementAttributes);
+        UUID siblingElementUuid = siblingElementAttributes.getElementUuid();
 
-        // add the same origin reference to both elements
-        UUID originReferenceUuid = UUID.randomUUID();
-        ReferenceAttributes originReferenceAttributes = ReferenceAttributes.builder().referenceId(originReferenceUuid).referenceType(ReferenceType.STUDY_NODE).build();
+        // All elements are created CREATED
+        assertElementsStatusInRepository(DirectoryElementStatus.CREATED, rootDirUuid, subDirUuid, nestedElementUuid, siblingElementUuid);
 
-        mockMvc.perform(post(String.format("/v1/elements/%s/references", element1Attributes.getElementUuid()))
-                        .header("userId", userId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(originReferenceAttributes)))
-                .andExpect(status().isOk());
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+        // Mark subDir (a directory) and siblingElement (a plain element) as DELETING
+        updateElementsStatus(List.of(subDirUuid, siblingElementUuid), DirectoryElementStatus.DELETING, USER_ID);
 
-        mockMvc.perform(post(String.format("/v1/elements/%s/references", element2Attributes.getElementUuid()))
-                        .header("userId", userId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(originReferenceAttributes)))
-                .andExpect(status().isOk());
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+        // The directory, its descendant and the sibling element are DELETING; the root is untouched
+        assertElementsStatusInRepository(DirectoryElementStatus.DELETING, subDirUuid, nestedElementUuid, siblingElementUuid);
+        assertElementsStatusInRepository(DirectoryElementStatus.CREATED, rootDirUuid);
 
-        // move both elements' reference from originReferenceUuid to targetReferenceUuid in a single call
-        UUID targetReferenceUuid = UUID.randomUUID();
-        mockMvc.perform(put("/v1/elements/references")
-                        .header("userId", userId)
-                        .queryParam("ids", element1Attributes.getElementUuid().toString(), element2Attributes.getElementUuid().toString())
-                        .queryParam("originReferenceUuid", originReferenceUuid.toString())
-                        .queryParam("targetReferenceUuid", targetReferenceUuid.toString()))
-                .andExpect(status().isOk());
+        // One notification per requested element: subDir itself (directory), rootDir (parent of siblingElement)
+        assertDirectoriesNotified(Set.of(subDirUuid, rootDirUuid), 2, USER_ID);
 
-        // one UPDATE_DIRECTORY notification per moved element
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
-
-        // both elements must now reference targetReferenceUuid, and no longer originReferenceUuid
-        ElementAttributes updatedElement1 = directoryService.getElementWithReferences(element1Attributes.getElementUuid());
-        ElementAttributes updatedElement2 = directoryService.getElementWithReferences(element2Attributes.getElementUuid());
-
-        assertEquals(1, updatedElement1.getReferences().size());
-        assertEquals(targetReferenceUuid, updatedElement1.getReferences().get(0).getReferenceId());
-
-        assertEquals(1, updatedElement2.getReferences().size());
-        assertEquals(targetReferenceUuid, updatedElement2.getReferences().get(0).getReferenceId());
+        // The status is propagated to the DTOs returned by the API
+        Map<UUID, DirectoryElementStatus> statusById = getElements(List.of(subDirUuid, nestedElementUuid, siblingElementUuid), USER_ID, true, 200).stream()
+                .collect(Collectors.toMap(ElementAttributes::getElementUuid, ElementAttributes::getStatus));
+        assertEquals(DirectoryElementStatus.DELETING, statusById.get(subDirUuid));
+        assertEquals(DirectoryElementStatus.DELETING, statusById.get(nestedElementUuid));
+        assertEquals(DirectoryElementStatus.DELETING, statusById.get(siblingElementUuid));
     }
 
-    @Test
-    @SneakyThrows
-    void testUpdateElementsReferencesElementNotFound() {
-        UUID unknownElementUuid = UUID.randomUUID();
+    private void updateElementsStatus(List<UUID> elementsUuids, DirectoryElementStatus status, String userId) throws Exception {
+        String ids = elementsUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+        mockMvc.perform(put("/v1/elements?status=" + status + "&ids=" + ids)
+                        .header("userId", userId))
+                .andExpect(status().isOk());
+    }
 
-        mockMvc.perform(put("/v1/elements/references")
-                        .header("userId", USER_ID)
-                        .queryParam("ids", unknownElementUuid.toString())
-                        .queryParam("originReferenceUuid", UUID.randomUUID().toString())
-                        .queryParam("targetReferenceUuid", UUID.randomUUID().toString()))
-                .andExpect(status().isNotFound());
+    private void assertElementsStatusInRepository(DirectoryElementStatus expectedStatus, UUID... elementUuids) {
+        for (UUID elementUuid : elementUuids) {
+            DirectoryElementEntity entity = directoryElementRepository.findById(elementUuid).orElseThrow();
+            assertEquals(expectedStatus, entity.getStatus(), "Unexpected status for element " + entity.getName());
+        }
+    }
+
+    private void assertDirectoriesNotified(Set<UUID> expectedDirectoryUuids, int expectedMessageCount, String userId) throws Exception {
+        Set<UUID> notifiedDirectoryUuids = new HashSet<>();
+        for (int i = 0; i < expectedMessageCount; i++) {
+            Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
+            assertNotNull(message, "Expected " + expectedMessageCount + " notifications but received only " + i);
+            MessageHeaders headers = message.getHeaders();
+            assertEquals(userId, headers.get(HEADER_USER_ID));
+            assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+            List<DirectoryInfos> directoriesInfos = objectMapper.readValue(headers.get(HEADER_DIRECTORIES_INFOS, String.class), new TypeReference<>() { });
+            assertNotNull(directoriesInfos);
+            directoriesInfos.forEach(directoryInfos -> notifiedDirectoryUuids.add(directoryInfos.uuid()));
+        }
+        assertEquals(expectedDirectoryUuids, notifiedDirectoryUuids);
     }
 
     private void testNotificationDirectory(UUID directoryUuid, NotificationType notificationType, String userId) throws JsonProcessingException {
@@ -2406,5 +2488,105 @@ class DirectoryTest {
 
         assertEquals(notificationType, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    @SneakyThrows
+    void testUpdateElementsReferences() {
+        String userId = "user";
+
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", userId, null, null, null, null), userId);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.ADD_DIRECTORY, userId);
+
+        ElementAttributes element1Attributes = directoryService.createElement(
+                DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        ElementAttributes element2Attributes = directoryService.createElement(
+                DirectoryTestUtils.toElementAttributes(null, "element2", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        // both elements reference the same origin node - the exact scenario from the bug report:
+        // two ELEMENT rows sharing one reference_id, both must move together
+        UUID originReferenceUuid = UUID.randomUUID();
+        ReferenceAttributes originReferenceAttributes = ReferenceAttributes.builder().referenceId(originReferenceUuid).referenceType(ReferenceType.STUDY_NODE).build();
+
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", element1Attributes.getElementUuid()))
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(originReferenceAttributes)))
+                .andExpect(status().isOk());
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", element2Attributes.getElementUuid()))
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(originReferenceAttributes)))
+                .andExpect(status().isOk());
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        // move both elements' reference from originReferenceUuid to targetReferenceUuid in one call
+        UUID targetReferenceUuid = UUID.randomUUID();
+        mockMvc.perform(put("/v1/elements/references")
+                        .header("userId", userId)
+                        .param("ids", element1Attributes.getElementUuid().toString(), element2Attributes.getElementUuid().toString())
+                        .param("originReferenceUuid", originReferenceUuid.toString())
+                        .param("targetReferenceUuid", targetReferenceUuid.toString()))
+                .andExpect(status().isOk());
+
+        // one UPDATE_DIRECTORY notification per moved element, both pointing at the same parent directory
+        assertDirectoriesNotified(Set.of(rootAttributes.getElementUuid()), 2, userId);
+
+        // fetch each element individually with references - the bulk GET /v1/elements endpoint doesn't return them
+        ElementAttributes updatedElement1 = directoryService.getElementWithReferences(element1Attributes.getElementUuid());
+        ElementAttributes updatedElement2 = directoryService.getElementWithReferences(element2Attributes.getElementUuid());
+
+        // BOTH elements must now reference targetReferenceUuid - this is the regression case: mutating a field
+        // on an object already inside a Hibernate bag collection doesn't reliably mark it dirty for flush
+        assertEquals(1, updatedElement1.getReferences().size());
+        assertEquals(targetReferenceUuid, updatedElement1.getReferences().get(0).getReferenceId());
+        assertEquals(ReferenceType.STUDY_NODE, updatedElement1.getReferences().get(0).getReferenceType());
+
+        assertEquals(1, updatedElement2.getReferences().size());
+        assertEquals(targetReferenceUuid, updatedElement2.getReferences().get(0).getReferenceId());
+        assertEquals(ReferenceType.STUDY_NODE, updatedElement2.getReferences().get(0).getReferenceType());
+    }
+
+    @Test
+    @SneakyThrows
+    void testUpdateElementsReferencesElementNotFound() {
+        UUID unknownElementUuid = UUID.randomUUID();
+
+        mockMvc.perform(put("/v1/elements/references")
+                        .header("userId", USER_ID)
+                        .param("ids", unknownElementUuid.toString())
+                        .param("originReferenceUuid", UUID.randomUUID().toString())
+                        .param("targetReferenceUuid", UUID.randomUUID().toString()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @SneakyThrows
+    void testUpdateElementsReferencesNoMatchingOriginIsNoOp() {
+        String userId = "user";
+
+        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", userId, null, null, null, null), userId);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.ADD_DIRECTORY, userId);
+
+        ElementAttributes elementAttributes = directoryService.createElement(
+                DirectoryTestUtils.toElementAttributes(null, "element1", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        // element has no reference matching this origin - the reference list itself must stay untouched
+        mockMvc.perform(put("/v1/elements/references")
+                        .header("userId", userId)
+                        .param("ids", elementAttributes.getElementUuid().toString())
+                        .param("originReferenceUuid", UUID.randomUUID().toString())
+                        .param("targetReferenceUuid", UUID.randomUUID().toString()))
+                .andExpect(status().isOk());
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        ElementAttributes unchangedElement = directoryService.getElementWithReferences(elementAttributes.getElementUuid());
+        assertTrue(unchangedElement.getReferences() == null || unchangedElement.getReferences().isEmpty());
     }
 }

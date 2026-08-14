@@ -149,4 +149,8 @@ public class DirectoryRepositoryService {
     public List<UUID> findAllDescendantsUuids(@NonNull UUID elementId) {
         return directoryElementRepository.findAllDescendantsUuids(elementId);
     }
+
+    public List<DirectoryElementEntity> findAllDescendants(@NonNull Collection<UUID> elementIds) {
+        return elementIds.isEmpty() ? List.of() : directoryElementRepository.findAllDescendants(elementIds);
+    }
 }
