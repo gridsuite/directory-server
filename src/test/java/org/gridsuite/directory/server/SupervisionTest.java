@@ -145,13 +145,13 @@ class SupervisionTest {
         DirectoryElementEntity elementEntity = new DirectoryElementEntity(UUID.randomUUID(), null, "name", "STUDY", "userId", "description",
                 Instant.now().minus(400, ChronoUnit.DAYS), Instant.now().minus(400, ChronoUnit.DAYS), "userId", List.of(), DirectoryElementStatus.CREATED);
 
-        when(directoryElementRepository.findAllByTypeAndLastModificationDateBeforeOrderByLastModificationDateDesc(eq("STUDY"), any(Instant.class)))
+        when(directoryElementRepository.findAllByTypeAndLastModificationDateBeforeOrderByLastModificationDateAsc(eq("STUDY"), any(Instant.class)))
                 .thenReturn(List.of(elementEntity));
 
         List<ElementAttributes> result = supervisionService.getUnmodifiedElementsByType("STUDY", Duration.ofDays(365));
 
         assertEquals(1, result.size());
-        verify(directoryElementRepository, times(1)).findAllByTypeAndLastModificationDateBeforeOrderByLastModificationDateDesc(eq("STUDY"), any(Instant.class));
+        verify(directoryElementRepository, times(1)).findAllByTypeAndLastModificationDateBeforeOrderByLastModificationDateAsc(eq("STUDY"), any(Instant.class));
 
         var invalidDuration = Duration.ofDays(-365);
         assertThrows(ResponseStatusException.class, () -> supervisionService.getUnmodifiedElementsByType("STUDY", invalidDuration));
