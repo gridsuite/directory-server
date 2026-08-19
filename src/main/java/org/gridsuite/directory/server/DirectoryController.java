@@ -339,8 +339,9 @@ public class DirectoryController {
     public ResponseEntity<Void> updateElementsReferences(@RequestParam("ids") List<UUID> elementUuids,
                                                          @RequestParam("originReferenceUuid") UUID originReferenceUuid,
                                                          @RequestParam("targetReferenceUuid") UUID targetReferenceUuid,
+                                                         @RequestParam("targetReferenceType") ReferenceAttributes.ReferenceType targetReferenceType,
                                                          @RequestHeader("userId") String userId) {
-        service.updateElementsReferences(elementUuids, originReferenceUuid, targetReferenceUuid, userId);
+        service.updateElementsReferences(elementUuids, originReferenceUuid, targetReferenceUuid, targetReferenceType, userId);
         return ResponseEntity.ok().build();
     }
 
