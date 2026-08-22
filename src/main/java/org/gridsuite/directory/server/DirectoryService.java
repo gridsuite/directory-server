@@ -357,11 +357,11 @@ public class DirectoryService {
             DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
 
             directoryElementEntity.getReferences().stream()
-                    .filter(ref -> ref.getReferenceId().equals(originReferenceUuid))
+                    .filter(ref -> originReferenceUuid.equals(ref.getReferenceId()))
                     .findFirst()
                     .ifPresent(ref -> {
-                        directoryElementEntity.removeReference(ref);
-                        directoryElementEntity.addReference(new ReferenceEmbeddable(targetReferenceUuid, referenceType.name()));
+                        ref.setReferenceId(targetReferenceUuid);
+                        ref.setReferenceType(referenceType.name());
                     });
 
             notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
