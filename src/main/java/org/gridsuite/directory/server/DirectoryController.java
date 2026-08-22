@@ -330,13 +330,13 @@ public class DirectoryController {
     }
 
     @PutMapping(value = "/elements/references")
-    @Operation(summary = "Move a node reference from one target to another, for multiple elements")
+    @Operation(summary = "For each shared element from a list, updates one of their reference from an origin reference to a target reference")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "References were successfully updated"),
         @ApiResponse(responseCode = "404", description = "At least one element was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized to update at least one element")
     })
-    public ResponseEntity<Void> updateElementsReferences(@RequestParam("ids") List<UUID> elementUuids,
+    public ResponseEntity<Void> updateSharedElementsReferences(@RequestParam("ids") List<UUID> elementUuids,
                                                          @RequestParam("originReferenceUuid") UUID originReferenceUuid,
                                                          @RequestParam("targetReferenceUuid") UUID targetReferenceUuid,
                                                          @RequestParam("targetReferenceType") ReferenceAttributes.ReferenceType targetReferenceType,
