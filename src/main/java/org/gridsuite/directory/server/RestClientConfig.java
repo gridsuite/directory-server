@@ -8,33 +8,30 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 /**
  * @author Seddik Yengui <seddik.yengui at rte-france.com>
  */
 
 @Configuration
-public class RestTemplateConfig {
+public class RestClientConfig {
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        final RestTemplate restTemplate = builder.build();
-
-        for (int i = 0; i < restTemplate.getMessageConverters().size(); i++) {
-            final HttpMessageConverter<?> httpMessageConverter = restTemplate.getMessageConverters().get(i);
-            if (httpMessageConverter instanceof MappingJackson2HttpMessageConverter) {
-                restTemplate.getMessageConverters().set(i, mappingJackson2HttpMessageConverter());
+    public RestClient restClient(RestClient.Builder builder) {
+        return builder.messageConverters(messageConverters -> {
+            for (int i = 0; i < messageConverters.size(); i++) {
+                final HttpMessageConverter<?> httpMessageConverter = messageConverters.get(i);
+                if (httpMessageConverter instanceof MappingJackson2HttpMessageConverter) {
+                    messageConverters.set(i, mappingJackson2HttpMessageConverter());
+                }
             }
-        }
-
-        return restTemplate;
+        }).build();
     }
 
     public MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter() {
