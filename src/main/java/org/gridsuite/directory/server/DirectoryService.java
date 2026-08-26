@@ -362,9 +362,8 @@ public class DirectoryService {
                     .ifPresent(ref -> {
                         ref.setReferenceId(targetReferenceUuid);
                         ref.setReferenceType(targetReferenceType.name());
+                        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
                     });
-
-            notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
         });
     }
 
