@@ -377,10 +377,12 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void updateElementLastModifiedAttributes(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
+    public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
         elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
-
+      if (!elementToUpdate.getReferences().isEmpty()) {
+            notifySharedElementHasChanged(elementToUpdate, lastModifiedBy);
+        }
     }
 
     private record MovedElement(UUID parentDirectoryUuid, String elementName, boolean isDirectory, boolean isRoot) { }
@@ -749,6 +751,16 @@ public class DirectoryService {
             isDirectoryMoving,
             NotificationType.DELETE_DIRECTORY
         );
+    }
+
+    private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
+        List<UUID> studyNodeUuids = sharedElement.getReferences().stream()
+                .filter(reference -> ReferenceAttributes.ReferenceType.STUDY_NODE.name().equals(reference.getReferenceType()))
+                .map(ReferenceEmbeddable::getReferenceId)
+                .toList();
+        if (!studyNodeUuids.isEmpty()) {
+            notificationService.emitSharedElementChanged(sharedElement.getId(), userId, studyNodeUuids);
+        }
     }
 
     /**

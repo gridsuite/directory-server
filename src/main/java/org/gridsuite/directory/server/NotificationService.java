@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -40,6 +41,7 @@ public class NotificationService {
     public static final String HEADER_NOTIFICATION_TYPE = "notificationType";
     public static final String HEADER_ELEMENT_NAMES = "elementNames";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    public static final String HEADER_STUDY_NODE_UUIDS = "studyNodeUuids";
     public static final String HEADER_IS_DIRECTORY_MOVING = "isDirectoryMoving";
     public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
     public static final String HEADER_EXPORT_UUID = "exportUuid";
@@ -60,6 +62,11 @@ public class NotificationService {
     private void sendUpdateMessage(Message<String> message) {
         MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
         directoryUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
+    }
+
+    private void sendSharedElementUpdateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        directoryUpdatePublisher.send("publishElementSharedUpdate-out-0", message);
     }
 
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
@@ -97,5 +104,21 @@ public class NotificationService {
                 .setHeader(HEADER_NOTIFICATION_TYPE, CASE_EXPORT_FINISHED)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES);
         sendUpdateMessage(messageBuilder.build());
+    }
+
+    /**
+     * @param studyNodeUuids uuids of the study nodes (directory references of type STUDY_NODE)
+     *                       pointing at {@code elementUuid}, so study-server knows which nodes to invalidate
+     */
+    public void emitSharedElementChanged(UUID elementUuid, String userId, List<UUID> studyNodeUuids) {
+        // comma-joined, not a typed List header : keeps this consistent with every other header in this
+        // service, which readers extract with Message.getHeaders().get(name, String.class)
+        String joinedStudyNodeUuids = studyNodeUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+        MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_ELEMENT_UUID, elementUuid)
+            .setHeader(HEADER_STUDY_NODE_UUIDS, joinedStudyNodeUuids)
+            .setHeader(HEADER_NOTIFICATION_TYPE, NotificationType.UPDATE_SHARED_ELEMENT);
+        sendSharedElementUpdateMessage(messageBuilder.build());
     }
 }
