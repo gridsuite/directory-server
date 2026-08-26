@@ -42,6 +42,7 @@ public class NotificationService {
     public static final String HEADER_ELEMENT_NAMES = "elementNames";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_STUDY_NODE_UUIDS = "studyNodeUuids";
+    public static final String HEADER_NETWORK_MODIFICATION_UUIDS = "networkModificationUuids";
     public static final String HEADER_IS_DIRECTORY_MOVING = "isDirectoryMoving";
     public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
     public static final String HEADER_EXPORT_UUID = "exportUuid";
@@ -107,17 +108,21 @@ public class NotificationService {
     }
 
     /**
-     * @param studyNodeUuids uuids of the study nodes (directory references of type STUDY_NODE)
-     *                       pointing at {@code elementUuid}, so study-server knows which nodes to invalidate
+     * @param studyNodeUuids uuids of the study nodes (directory references of type STUDY_NODE) pointing directly
+     *                       at {@code elementUuid}, so study-server knows which nodes to invalidate
+     * @param networkModificationUuids uuids of the composite modifications (directory references of type
+     *                       NETWORK_MODIFICATION) pointing at {@code elementUuid} - directory-server has no
+     *                       visibility on which node ultimately contains them, study-server has to resolve that
      */
-    public void emitSharedElementChanged(UUID elementUuid, String userId, List<UUID> studyNodeUuids) {
-        // comma-joined, not a typed List header : keeps this consistent with every other header in this
-        // service, which readers extract with Message.getHeaders().get(name, String.class)
+    public void emitSharedElementChanged(UUID elementUuid, String userId, List<UUID> studyNodeUuids, List<UUID> networkModificationUuids) {
+
         String joinedStudyNodeUuids = studyNodeUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+        String joinedNetworkModificationUuids = networkModificationUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
             .setHeader(HEADER_USER_ID, userId)
             .setHeader(HEADER_ELEMENT_UUID, elementUuid)
             .setHeader(HEADER_STUDY_NODE_UUIDS, joinedStudyNodeUuids)
+            .setHeader(HEADER_NETWORK_MODIFICATION_UUIDS, joinedNetworkModificationUuids)
             .setHeader(HEADER_NOTIFICATION_TYPE, NotificationType.UPDATE_SHARED_ELEMENT);
         sendSharedElementUpdateMessage(messageBuilder.build());
     }

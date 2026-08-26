@@ -380,7 +380,7 @@ public class DirectoryService {
     public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
         elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
-      if (!elementToUpdate.getReferences().isEmpty()) {
+        if (!elementToUpdate.getReferences().isEmpty()) {
             notifySharedElementHasChanged(elementToUpdate, lastModifiedBy);
         }
     }
@@ -754,12 +754,13 @@ public class DirectoryService {
     }
 
     private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
-        List<UUID> studyNodeUuids = sharedElement.getReferences().stream()
-                .filter(reference -> ReferenceAttributes.ReferenceType.STUDY_NODE.name().equals(reference.getReferenceType()))
-                .map(ReferenceEmbeddable::getReferenceId)
-                .toList();
-        if (!studyNodeUuids.isEmpty()) {
-            notificationService.emitSharedElementChanged(sharedElement.getId(), userId, studyNodeUuids);
+        Map<String, List<UUID>> referenceIdsByType = sharedElement.getReferences().stream()
+                .collect(Collectors.groupingBy(ReferenceEmbeddable::getReferenceType,
+                        Collectors.mapping(ReferenceEmbeddable::getReferenceId, Collectors.toList())));
+        List<UUID> studyNodeUuids = referenceIdsByType.getOrDefault(ReferenceAttributes.ReferenceType.STUDY_NODE.name(), List.of());
+        List<UUID> networkModificationUuids = referenceIdsByType.getOrDefault(ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION.name(), List.of());
+        if (!studyNodeUuids.isEmpty() || !networkModificationUuids.isEmpty()) {
+            notificationService.emitSharedElementChanged(sharedElement.getId(), userId, studyNodeUuids, networkModificationUuids);
         }
     }
 
