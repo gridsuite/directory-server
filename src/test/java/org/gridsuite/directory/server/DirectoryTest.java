@@ -671,7 +671,7 @@ class DirectoryTest {
 
         assertNbElementsInRepositories(3);
 
-        // assert that the broker message has been sent a update notification on directory
+        // assert that the broker message has been sent an update notification on directory
         Message<byte[]> message = output.receive(TIMEOUT, directoryUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
@@ -2506,7 +2506,6 @@ class DirectoryTest {
                 DirectoryTestUtils.toElementAttributes(null, "element2", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
-        // both elements reference the same origin node - the exact scenario from the bug report:
         // two ELEMENT rows sharing one reference_id, both must move together
         UUID originReferenceUuid = UUID.randomUUID();
         ReferenceAttributes originReferenceAttributes = ReferenceAttributes.builder().referenceId(originReferenceUuid).referenceType(ReferenceType.STUDY_NODE).build();
@@ -2538,12 +2537,11 @@ class DirectoryTest {
         // one UPDATE_DIRECTORY notification per moved element, both pointing at the same parent directory
         assertDirectoriesNotified(Set.of(rootAttributes.getElementUuid()), 2, userId);
 
-        // fetch each element individually with references - the bulk GET /v1/elements endpoint doesn't return them
+        // fetch each element individually with references
         ElementAttributes updatedElement1 = directoryService.getElementWithReferences(element1Attributes.getElementUuid());
         ElementAttributes updatedElement2 = directoryService.getElementWithReferences(element2Attributes.getElementUuid());
 
-        // BOTH elements must now reference targetReferenceUuid - this is the regression case: mutating a field
-        // on an object already inside a Hibernate bag collection doesn't reliably mark it dirty for flush
+        // BOTH elements must now reference targetReferenceUuid
         assertEquals(1, updatedElement1.getReferences().size());
         assertEquals(targetReferenceUuid, updatedElement1.getReferences().get(0).getReferenceId());
         assertEquals(ReferenceType.STUDY_NODE, updatedElement1.getReferences().get(0).getReferenceType());
