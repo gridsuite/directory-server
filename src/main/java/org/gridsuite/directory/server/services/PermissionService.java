@@ -17,6 +17,7 @@ import org.gridsuite.directory.server.repository.PermissionId;
 import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.springframework.stereotype.Service;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
@@ -68,6 +69,29 @@ public class PermissionService {
             case WRITE -> checkWritePermission(userId, elementUuids, targetDirectoryUuid, recursiveCheck);
             case MANAGE -> checkManagePermission(userId, elementUuids);
         }
+    }
+
+    /**
+     * Tells which of the given elements the user may access.
+     *
+     * @param userId         User ID checking permissions for
+     * @param elementUuids   List of element UUIDs to check permissions on
+     * @param permissionType Type of permission to check (READ, WRITE, MANAGE)
+     * @return the uuids of the accessible elements, in no particular order
+     */
+    public List<UUID> filterAccessibleElements(String userId, List<UUID> elementUuids, PermissionType permissionType) {
+        boolean isExploreAdmin = roleService.isUserExploreAdmin();
+        //Resolved once for the whole batch: hasElementPermission would otherwise query user-admin-server for
+        //every single element.
+        List<UUID> userGroupIds = isExploreAdmin ? List.of() : getUserGroupIds(userId);
+        return directoryElementRepository.findAllByIdIn(elementUuids).stream()
+            //If it's a directory we check its own permission else we check the permission on its parent directory
+            .filter(element -> isExploreAdmin || hasElementPermission(userId,
+                element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId(),
+                permissionType,
+                () -> userGroupIds))
+            .map(DirectoryElementEntity::getId)
+            .toList();
     }
 
     public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {
@@ -204,6 +228,10 @@ public class PermissionService {
     }
 
     private boolean hasElementPermission(String userId, UUID uuid, PermissionType permissionType) {
+        return hasElementPermission(userId, uuid, permissionType, () -> getUserGroupIds(userId));
+    }
+
+    private boolean hasElementPermission(String userId, UUID uuid, PermissionType permissionType, Supplier<List<UUID>> userGroupIds) {
         //Check global permission first
         boolean globalPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, ALL_USERS, "")), permissionType);
         if (globalPermission) {
@@ -217,12 +245,15 @@ public class PermissionService {
         }
 
         //Finally check group permission
-        return userAdminService.getUserGroups(userId)
+        return userGroupIds.get()
                 .stream()
-                .map(UserGroupDTO::id)
                 .anyMatch(groupId ->
                         checkPermission(permissionRepository.findById(new PermissionId(uuid, "", groupId.toString())), permissionType)
                 );
+    }
+
+    private List<UUID> getUserGroupIds(String userId) {
+        return userAdminService.getUserGroups(userId).stream().map(UserGroupDTO::id).toList();
     }
 
     private boolean checkPermission(Optional<PermissionEntity> permissionEntity, PermissionType permissionType) {
