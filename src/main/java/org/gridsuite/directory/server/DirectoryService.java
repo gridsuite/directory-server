@@ -352,7 +352,7 @@ public class DirectoryService {
 
     @Transactional
     public void updateElementsReferences(@NonNull List<UUID> elementsUuids, @NonNull UUID originReferenceUuid,
-                                         @NonNull UUID targetReferenceUuid, @NonNull ReferenceAttributes.ReferenceType referenceType, String userId) {
+                                         @NonNull UUID targetReferenceUuid, @NonNull ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
         elementsUuids.forEach(elementUuid -> {
             DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
 
@@ -361,10 +361,9 @@ public class DirectoryService {
                     .findFirst()
                     .ifPresent(ref -> {
                         ref.setReferenceId(targetReferenceUuid);
-                        ref.setReferenceType(referenceType.name());
+                        ref.setReferenceType(targetReferenceType.name());
+                        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
                     });
-
-            notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
         });
     }
 
