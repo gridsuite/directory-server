@@ -118,6 +118,7 @@ class DirectoryTest {
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
     private final String studyUpdateDestination = "study.update";
+    private final String elementSharedUpdateDestination = "element.shared.update";
 
     private static final String GROUPS_SUFFIX = "/groups";
     private static final String EMPTY_GROUPS_JSON = "[]";
@@ -198,7 +199,7 @@ class DirectoryTest {
 
     @AfterEach
     void tearDown() {
-        List<String> destinations = List.of(elementUpdateDestination, directoryUpdateDestination);
+        List<String> destinations = List.of(elementUpdateDestination, directoryUpdateDestination, elementSharedUpdateDestination);
         assertQueuesEmptyThenClear(destinations);
     }
 
@@ -1331,6 +1332,94 @@ class DirectoryTest {
 
         assertEquals(newModificationDate, updatedElement.getLastModificationDate());
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
+    }
+
+    @Test
+    @SneakyThrows
+    void testElementUpdateNotificationWithSharedReferences() {
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert a composite element referencing two study nodes, a network modification, and an unrelated directory element
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "compositeElement", TYPE_01, USER_ID, "descr compositeElement");
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
+        UUID elementUuid = subEltAttributes.getElementUuid();
+
+        UUID studyNodeUuid1 = UUID.randomUUID();
+        UUID studyNodeUuid2 = UUID.randomUUID();
+        UUID networkModificationUuid = UUID.randomUUID();
+        UUID unrelatedDirectoryElementUuid = UUID.randomUUID();
+        addReference(elementUuid, studyNodeUuid1, ReferenceType.STUDY_NODE, uuidNewRootDirectory);
+        addReference(elementUuid, studyNodeUuid2, ReferenceType.STUDY_NODE, uuidNewRootDirectory);
+        addReference(elementUuid, networkModificationUuid, ReferenceType.NETWORK_MODIFICATION, uuidNewRootDirectory);
+        addReference(elementUuid, unrelatedDirectoryElementUuid, ReferenceType.DIRECTORY_ELEMENT, uuidNewRootDirectory);
+
+        Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        String userMakingModification = "newUser";
+
+        input.send(MessageBuilder.withPayload("")
+            .setHeader(HEADER_MODIFIED_BY, userMakingModification)
+            .setHeader(HEADER_MODIFICATION_DATE, newModificationDate.toString())
+            .setHeader(HEADER_ELEMENT_UUID, elementUuid.toString())
+            .build(), elementUpdateDestination);
+
+        Message<byte[]> message = output.receive(TIMEOUT, elementSharedUpdateDestination);
+        assertNotNull(message, "Expected a shared element update notification");
+        assertEquals("", new String(message.getPayload()));
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userMakingModification, headers.get(HEADER_USER_ID));
+        assertEquals(elementUuid, headers.get(HEADER_ELEMENT_UUID));
+        assertEquals(NotificationType.UPDATE_SHARED_ELEMENT, headers.get(HEADER_NOTIFICATION_TYPE));
+        Set<UUID> notifiedStudyNodeUuids = Arrays.stream(headers.get(HEADER_STUDY_NODE_UUIDS, String.class).split(","))
+            .map(UUID::fromString).collect(Collectors.toSet());
+        Set<UUID> notifiedNetworkModificationUuids = Arrays.stream(headers.get(HEADER_NETWORK_MODIFICATION_UUIDS, String.class).split(","))
+            .map(UUID::fromString).collect(Collectors.toSet());
+        assertEquals(Set.of(studyNodeUuid1, studyNodeUuid2), notifiedStudyNodeUuids);
+        assertEquals(Set.of(networkModificationUuid), notifiedNetworkModificationUuids);
+    }
+
+    @Test
+    @SneakyThrows
+    void testElementUpdateNotificationWithoutSharedReferences() {
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert an element that only references an unrelated directory element (no study node or network modification)
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "elementWithNoRelevantReference", TYPE_01, USER_ID, "descr");
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
+        UUID elementUuid = subEltAttributes.getElementUuid();
+        addReference(elementUuid, UUID.randomUUID(), ReferenceType.DIRECTORY_ELEMENT, uuidNewRootDirectory);
+
+        Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        String userMakingModification = "newUser";
+
+        input.send(MessageBuilder.withPayload("")
+            .setHeader(HEADER_MODIFIED_BY, userMakingModification)
+            .setHeader(HEADER_MODIFICATION_DATE, newModificationDate.toString())
+            .setHeader(HEADER_ELEMENT_UUID, elementUuid.toString())
+            .build(), elementUpdateDestination);
+
+        // no shared element notification is emitted since no reference is of a type study-server cares about
+        assertNull(output.receive(100, elementSharedUpdateDestination));
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/" + elementUuid))
+            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
+        assertEquals(newModificationDate, updatedElement.getLastModificationDate());
+        assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
+    }
+
+    private void addReference(UUID elementUuid, UUID referenceId, ReferenceType referenceType, UUID parentDirectoryUuid) throws Exception {
+        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder().referenceId(referenceId).referenceType(referenceType).build();
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", elementUuid))
+                .header("userId", USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(referenceAttributes)))
+            .andExpect(status().isOk());
+        testNotificationDirectory(parentDirectoryUuid, NotificationType.UPDATE_DIRECTORY, USER_ID);
     }
 
     @Test
