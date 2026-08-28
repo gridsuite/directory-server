@@ -126,6 +126,13 @@ public class DirectoryElementEntity {
     }
 
     public void removeReference(UUID referenceId) {
-        this.references.removeIf(reference -> reference.getReferenceId().equals(referenceId));
+        this.references.stream()
+                .filter(reference -> Objects.equals(reference.getReferenceId(), referenceId))
+                .findFirst()
+                .ifPresent(this::removeReference);
+    }
+
+    public void removeReference(ReferenceEmbeddable reference) {
+        this.references.remove(reference);
     }
 }
