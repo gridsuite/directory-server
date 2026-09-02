@@ -28,8 +28,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.TRUE;
-import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
+import static org.gridsuite.directory.server.dto.ElementAttributes.*;
+import static org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
@@ -753,13 +753,11 @@ public class DirectoryService {
     }
 
     private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
-        Map<String, List<UUID>> referenceIdsByType = sharedElement.getReferences().stream()
-                .collect(Collectors.groupingBy(ReferenceEmbeddable::getReferenceType,
-                        Collectors.mapping(ReferenceEmbeddable::getReferenceId, Collectors.toList())));
-        List<UUID> studyNodeUuids = referenceIdsByType.getOrDefault(ReferenceAttributes.ReferenceType.STUDY_NODE.name(), List.of());
-        List<UUID> networkModificationUuids = referenceIdsByType.getOrDefault(ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION.name(), List.of());
-        if (!studyNodeUuids.isEmpty() || !networkModificationUuids.isEmpty()) {
-            notificationService.emitSharedElementChanged(sharedElement.getId(), userId, studyNodeUuids, networkModificationUuids);
+        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
+        boolean hasRelevantReference = Stream.of(ReferenceType.STUDY_NODE, ReferenceType.NETWORK_MODIFICATION)
+                .anyMatch(type -> !referencesByType.getOrDefault(type, List.of()).isEmpty());
+        if (hasRelevantReference) {
+            notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, userId);
         }
     }
 

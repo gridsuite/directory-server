@@ -1336,7 +1336,7 @@ class DirectoryTest {
 
     @Test
     @SneakyThrows
-    void testElementUpdateNotificationWithSharedReferences() {
+    void testSharedElementUpdateNotification() {
         // Insert a root directory
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
         UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
@@ -1366,15 +1366,16 @@ class DirectoryTest {
 
         Message<byte[]> message = output.receive(TIMEOUT, elementSharedUpdateDestination);
         assertNotNull(message, "Expected a shared element update notification");
-        assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userMakingModification, headers.get(HEADER_USER_ID));
         assertEquals(elementUuid, headers.get(HEADER_ELEMENT_UUID));
         assertEquals(NotificationType.UPDATE_SHARED_ELEMENT, headers.get(HEADER_NOTIFICATION_TYPE));
-        Set<UUID> notifiedStudyNodeUuids = Arrays.stream(headers.get(HEADER_STUDY_NODE_UUIDS, String.class).split(","))
-            .map(UUID::fromString).collect(Collectors.toSet());
-        Set<UUID> notifiedNetworkModificationUuids = Arrays.stream(headers.get(HEADER_NETWORK_MODIFICATION_UUIDS, String.class).split(","))
-            .map(UUID::fromString).collect(Collectors.toSet());
+
+        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = objectMapper.readValue(message.getPayload(), new TypeReference<>() { });
+        Set<UUID> notifiedStudyNodeUuids = referencesByType.get(ReferenceType.STUDY_NODE).stream()
+            .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
+        Set<UUID> notifiedNetworkModificationUuids = referencesByType.get(ReferenceType.NETWORK_MODIFICATION).stream()
+            .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
         assertEquals(Set.of(studyNodeUuid1, studyNodeUuid2), notifiedStudyNodeUuids);
         assertEquals(Set.of(networkModificationUuid), notifiedNetworkModificationUuids);
     }
