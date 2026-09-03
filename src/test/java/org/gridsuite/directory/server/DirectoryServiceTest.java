@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.UUID;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.DirectoryService.MAX_RETRY;
+import static org.gridsuite.directory.server.dto.DirectoryElementStatus.CREATED;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -143,7 +144,7 @@ class DirectoryServiceTest {
         assertNotEquals(elementAttributes.getElementName(), newElementAttributes.getElementName());
 
         // Duplicate an element in the same directory with new name generation does not throw an exception
-        newElementAttributes = directoryService.duplicateElement(elementUuid, UUID.randomUUID(), rootUuid, "User1");
+        newElementAttributes = directoryService.duplicateElement(elementUuid, UUID.randomUUID(), rootUuid, CREATED, "User1");
         assertNotEquals(elementAttributes.getElementName(), newElementAttributes.getElementName());
 
         // Insert a new element in a new root directory
@@ -153,7 +154,7 @@ class DirectoryServiceTest {
         // Duplicate an element in the new root directory with new name generation throw an exception if all retries fail
         InOrder inOrder = inOrder(directoryService);
         when(directoryService.getDuplicateNameCandidate(root2Uuid, elementAttributes.getElementName(), elementAttributes.getType(), "User1")).thenReturn(elementAttributes.getElementName());
-        directoryException = assertThrows(DirectoryException.class, () -> directoryService.duplicateElement(element2Uuid, root2Uuid, root2Uuid, "User1"));
+        directoryException = assertThrows(DirectoryException.class, () -> directoryService.duplicateElement(element2Uuid, root2Uuid, root2Uuid, CREATED, "User1"));
         assertEquals(DIRECTORY_ELEMENT_NAME_CONFLICT, directoryException.getBusinessErrorCode());
         assertEquals(DirectoryException.createElementNameAlreadyExists(elementAttributes.getElementName()).getMessage(), directoryException.getMessage());
         inOrder.verify(directoryService, calls(MAX_RETRY)).getDuplicateNameCandidate(root2Uuid, elementAttributes.getElementName(), elementAttributes.getType(), "User1");
@@ -285,7 +286,7 @@ class DirectoryServiceTest {
             "user1", null, false, NotificationType.UPDATE_DIRECTORY);
 
         // duplicate "element1" renamed "element1(1)"
-        directoryService.duplicateElement(newElementAttributes.getElementUuid(), UUID.randomUUID(), rootUuid, "user1");
+        directoryService.duplicateElement(newElementAttributes.getElementUuid(), UUID.randomUUID(), rootUuid, CREATED, "user1");
         verify(notificationService, times(1)).emitDirectoryChanged(List.of(new DirectoryInfos(rootUuid, true)), List.of(elementAttributes.getElementName() + "(1)"),
             "user1", null, false, NotificationType.UPDATE_DIRECTORY);
 
