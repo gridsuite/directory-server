@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.stream.Collectors;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
@@ -502,6 +503,56 @@ class PermissionServiceTest {
         };
 
         permissionRepository.save(permission);
+    }
+
+    @Test
+    void testFilterAccessibleElements() throws Exception {
+        UUID openDir = insertRootDirectory(ADMIN_USER, "openDir");
+        UUID restrictedDir = insertRootDirectory(ADMIN_USER, "restrictedDir");
+
+        UUID openElement = insertSubElement(openDir, toElementAttributes(null, "openElement", TYPE_01, ADMIN_USER));
+        UUID restrictedElement = insertSubElement(restrictedDir, toElementAttributes(null, "restrictedElement", TYPE_01, ADMIN_USER));
+        UUID unknownElement = UUID.randomUUID();
+
+        // Only GROUP_TWO may write into restrictedDir, while USER_ONE belongs to GROUP_ONE
+        updateDirectoryPermissions(ADMIN_USER, restrictedDir, List.of(
+                new PermissionDTO(true, List.of(), READ),
+                new PermissionDTO(false, List.of(GROUP_TWO_ID), WRITE)
+        )).andExpect(status().isOk());
+
+        // USER_ONE can't write in restrictedDir
+        assertThat(getAccessibleElements(USER_ONE, List.of(openElement, restrictedElement), WRITE))
+                .containsExactlyInAnyOrder(openElement);
+
+        // USER_TWO belongs to GROUP_TWO, so it may write into both
+        assertThat(getAccessibleElements(USER_TWO, List.of(openElement, restrictedElement), WRITE))
+                .containsExactlyInAnyOrder(openElement, restrictedElement);
+
+        // READ is left open to everyone on both directories
+        assertThat(getAccessibleElements(USER_ONE, List.of(openElement, restrictedElement), READ))
+                .containsExactlyInAnyOrder(openElement, restrictedElement);
+
+        // An unknown element is never accessible, not even to an explore admin
+        assertThat(getAccessibleElements(USER_ONE, List.of(unknownElement), WRITE)).isEmpty();
+        assertThat(getAccessibleElements(ADMIN_USER, List.of(openElement, restrictedElement, unknownElement), WRITE))
+                .containsExactlyInAnyOrder(openElement, restrictedElement);
+    }
+
+    /**
+     * Helper method asking which of the given elements the user may access
+     */
+    private List<UUID> getAccessibleElements(String userId, List<UUID> elementUuids, PermissionType permissionType) throws Exception {
+        String ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/permission")
+                        .param("ids", ids)
+                        .param("accessType", permissionType.name())
+                        .header(USER_ID_HEADER, userId)
+                        .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
     }
 
     @Test
