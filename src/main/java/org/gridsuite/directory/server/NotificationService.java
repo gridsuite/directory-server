@@ -9,7 +9,7 @@ package org.gridsuite.directory.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.gridsuite.directory.server.dto.DirectoryInfos;
-import org.gridsuite.directory.server.services.*;
+import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +20,7 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -62,6 +63,11 @@ public class NotificationService {
         directoryUpdatePublisher.send("publishDirectoryUpdate-out-0", message);
     }
 
+    private void sendSharedElementUpdateMessage(Message<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>> message) {
+        MESSAGE_OUTPUT_LOGGER.debug("Sending message : {}", message);
+        directoryUpdatePublisher.send("publishElementSharedUpdate-out-0", message);
+    }
+
     public void emitDirectoryChanged(UUID directoryUuid, String elementName, String userId, String error, boolean isRoot, NotificationType notificationType) {
         emitDirectoryChanged(List.of(new DirectoryInfos(directoryUuid, isRoot)), List.of(elementName), userId, error, false, notificationType);
     }
@@ -97,5 +103,19 @@ public class NotificationService {
                 .setHeader(HEADER_NOTIFICATION_TYPE, CASE_EXPORT_FINISHED)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES);
         sendUpdateMessage(messageBuilder.build());
+    }
+
+    /**
+     * @param referencesByType directory references pointing at {@code elementUuid}, grouped by type - notably
+     *                       STUDY_NODE (study nodes directly invalidated) and NETWORK_MODIFICATION (composite
+     *                       modifications directory-server has no visibility on; study-server has to resolve
+     *                       which nodes ultimately contain them)
+     */
+    public void emitSharedElementChanged(UUID elementUuid, Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, String userId) {
+        MessageBuilder<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>> messageBuilder = MessageBuilder.withPayload(referencesByType)
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_ELEMENT_UUID, elementUuid)
+            .setHeader(HEADER_NOTIFICATION_TYPE, NotificationType.UPDATE_SHARED_ELEMENT);
+        sendSharedElementUpdateMessage(messageBuilder.build());
     }
 }

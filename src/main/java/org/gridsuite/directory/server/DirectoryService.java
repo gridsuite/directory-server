@@ -24,12 +24,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.TRUE;
-import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
-import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
+import static org.gridsuite.directory.server.dto.ElementAttributes.*;
+import static org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
@@ -376,10 +377,12 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void updateElementLastModifiedAttributes(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
+    public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
         elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
-
+        if (!elementToUpdate.getReferences().isEmpty()) {
+            notifySharedElementHasChanged(elementToUpdate, lastModifiedBy);
+        }
     }
 
     private record MovedElement(UUID parentDirectoryUuid, String elementName, boolean isDirectory, boolean isRoot) { }
@@ -748,6 +751,13 @@ public class DirectoryService {
             isDirectoryMoving,
             NotificationType.DELETE_DIRECTORY
         );
+    }
+
+    private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
+        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
+        if (referencesByType.values().stream().anyMatch(Predicate.not(List::isEmpty))) {
+            notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, userId);
+        }
     }
 
     /**
