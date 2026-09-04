@@ -1336,7 +1336,7 @@ class DirectoryTest {
 
     @Test
     @SneakyThrows
-    void testSharedElementUpdateNotification() {
+    void testSharedElementUpdated() {
         // Insert a root directory
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
         UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
@@ -1382,16 +1382,17 @@ class DirectoryTest {
 
     @Test
     @SneakyThrows
-    void testElementUpdateNotificationWithoutSharedReferences() {
+    void testElementUpdated() {
         // Insert a root directory
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
         UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
 
-        // Insert an element that only references an unrelated directory element (no study node or network modification)
-        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "elementWithNoRelevantReference", TYPE_01, USER_ID, "descr");
+        // Insert an element referencing a single directory element
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "elementWithReference", TYPE_01, USER_ID, "descr");
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
         UUID elementUuid = subEltAttributes.getElementUuid();
-        addReference(elementUuid, UUID.randomUUID(), ReferenceType.DIRECTORY_ELEMENT, uuidNewRootDirectory);
+        UUID directoryElementUuid = UUID.randomUUID();
+        addReference(elementUuid, directoryElementUuid, ReferenceType.DIRECTORY_ELEMENT, uuidNewRootDirectory);
 
         Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
         String userMakingModification = "newUser";
@@ -1402,8 +1403,18 @@ class DirectoryTest {
             .setHeader(HEADER_ELEMENT_UUID, elementUuid.toString())
             .build(), elementUpdateDestination);
 
-        // no shared element notification is emitted since no reference is of a type study-server cares about
-        assertNull(output.receive(100, elementSharedUpdateDestination));
+        // a shared element notification is emitted for any non-empty reference type
+        Message<byte[]> message = output.receive(TIMEOUT, elementSharedUpdateDestination);
+        assertNotNull(message, "Expected a shared element update notification");
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userMakingModification, headers.get(HEADER_USER_ID));
+        assertEquals(elementUuid, headers.get(HEADER_ELEMENT_UUID));
+        assertEquals(NotificationType.UPDATE_SHARED_ELEMENT, headers.get(HEADER_NOTIFICATION_TYPE));
+
+        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = objectMapper.readValue(message.getPayload(), new TypeReference<>() { });
+        Set<UUID> notifiedDirectoryElementUuids = referencesByType.get(ReferenceType.DIRECTORY_ELEMENT).stream()
+            .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
+        assertEquals(Set.of(directoryElementUuid), notifiedDirectoryElementUuids);
 
         MvcResult result = mockMvc.perform(get("/v1/elements/" + elementUuid))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))

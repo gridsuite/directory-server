@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -754,9 +755,7 @@ public class DirectoryService {
 
     private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
         Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
-        boolean hasRelevantReference = Stream.of(ReferenceType.STUDY_NODE, ReferenceType.NETWORK_MODIFICATION)
-                .anyMatch(type -> !referencesByType.getOrDefault(type, List.of()).isEmpty());
-        if (hasRelevantReference) {
+        if (referencesByType.values().stream().anyMatch(Predicate.not(List::isEmpty))) {
             notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, userId);
         }
     }
