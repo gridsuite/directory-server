@@ -329,6 +329,22 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type, userId));
     }
 
+    @PutMapping(value = "/elements/references")
+    @Operation(summary = "For each shared element from a list, updates one of their reference from an origin reference to a target reference")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "References were successfully updated"),
+        @ApiResponse(responseCode = "404", description = "At least one element was not found"),
+        @ApiResponse(responseCode = "403", description = "Not authorized to update at least one element")
+    })
+    public ResponseEntity<Void> updateSharedElementsReferences(@RequestParam("ids") List<UUID> elementUuids,
+                                                         @RequestParam("originReferenceUuid") UUID originReferenceUuid,
+                                                         @RequestParam("targetReferenceUuid") UUID targetReferenceUuid,
+                                                         @RequestParam("targetReferenceType") ReferenceAttributes.ReferenceType targetReferenceType,
+                                                         @RequestHeader("userId") String userId) {
+        service.updateElementsReferences(elementUuids, originReferenceUuid, targetReferenceUuid, targetReferenceType, userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/elements/{elementUuid}/notification")
     @Operation(summary = "Create change element notification")
     @ApiResponses(value = {
