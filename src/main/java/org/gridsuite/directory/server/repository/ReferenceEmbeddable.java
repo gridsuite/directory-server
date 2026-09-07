@@ -8,6 +8,7 @@ package org.gridsuite.directory.server.repository;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.Embedded;
 import lombok.*;
 import org.gridsuite.directory.server.dto.ReferenceAttributes;
 import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
@@ -27,12 +28,16 @@ public class ReferenceEmbeddable {
     @Column(name = "reference_id")
     private UUID referenceId;
 
+    @Embedded
+    private ReferenceContainerEmbeddable referenceContainer;
+
     @Column(name = "reference_type")
     private String referenceType;
 
     public ReferenceAttributes toReferenceAttributes() {
         return ReferenceAttributes.builder()
             .referenceId(referenceId)
+            .referenceContainer(referenceContainer.toReferenceAttributes())
             .referenceType(ReferenceType.valueOf(referenceType))
             .build();
     }

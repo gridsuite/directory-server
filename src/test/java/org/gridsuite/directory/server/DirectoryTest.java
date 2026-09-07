@@ -67,6 +67,7 @@ import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.NotificationService.*;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
 import static org.gridsuite.directory.server.services.ConsumerService.UPDATE_TYPE_STUDY_CREATION_FINISHED;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
@@ -2239,10 +2240,7 @@ class DirectoryTest {
         // create rootDir
         UUID uuidNewRootDirectory = retrieveInsertAndCheckRootDirectory("rootDir", USER_ID).getElementUuid();
 
-        List<ReferenceAttributes> referenceAttributesList = List.of(
-            ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceType(ReferenceType.STUDY_NODE).build(),
-            ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceType(ReferenceType.STUDY_NODE).build()
-        );
+        List<ReferenceAttributes> referenceAttributesList = List.of(createElementReference(STUDY_NODE), createElementReference(STUDY_NODE));
 
         // create modifRoot
         ElementAttributes rootModifAttributes = toElementAttributesWithReferences(null, "modifRoot", MODIFICATION, referenceAttributesList, USER_ID);
@@ -2268,6 +2266,14 @@ class DirectoryTest {
 
         // SQLStatementCountValidator ignore native queries
         assertRequestsCount(9, 0, 0, 0);
+    }
+
+    private ReferenceAttributes createElementReference(ReferenceType referenceType) {
+        return ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceContainer(createReferenceContainer()).referenceType(referenceType).build();
+    }
+
+    private ReferenceContainer createReferenceContainer() {
+        return ReferenceContainer.builder().rootContainerId(UUID.randomUUID()).containerId(UUID.randomUUID()).build();
     }
 
     @Test
@@ -2373,8 +2379,7 @@ class DirectoryTest {
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
         // create a reference to the element
-        UUID referenceId = UUID.randomUUID();
-        ReferenceAttributes referenceAttributes = ReferenceAttributes.builder().referenceId(referenceId).referenceType(ReferenceType.STUDY_NODE).build();
+        ReferenceAttributes referenceAttributes = createElementReference(STUDY_NODE);
         mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -2387,7 +2392,7 @@ class DirectoryTest {
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
         // delete the reference to the element
-        mockMvc.perform(delete(String.format("/v1/elements/%s/references/%s", elementAttributes.getElementUuid(), referenceId))
+        mockMvc.perform(delete(String.format("/v1/elements/%s/references/%s", elementAttributes.getElementUuid(), referenceAttributes.getReferenceId()))
                 .header("userId", userId))
             .andExpect(status().isOk());
 
@@ -2507,13 +2512,11 @@ class DirectoryTest {
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
         // composite1 starts out referencing a study node
-        UUID nodeUuid = UUID.randomUUID();
-        ReferenceAttributes nodeReferenceAttributes = ReferenceAttributes.builder().referenceId(nodeUuid).referenceType(ReferenceType.STUDY_NODE).build();
-
+        ReferenceAttributes composite1ReferenceAttributes = createElementReference(STUDY_NODE);
         mockMvc.perform(post(String.format("/v1/elements/%s/references", composite1Attributes.getElementUuid()))
                         .header("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(nodeReferenceAttributes)))
+                        .content(objectMapper.writeValueAsString(composite1ReferenceAttributes)))
                 .andExpect(status().isOk());
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
@@ -2521,13 +2524,17 @@ class DirectoryTest {
         ElementAttributes originModificationAttributes = directoryService.createElement(
                 DirectoryTestUtils.toElementAttributes(null, "originModification", "ELEMENT", userId), rootAttributes.getElementUuid(), userId, false);
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
-        UUID originModificationUuid = originModificationAttributes.getElementUuid();
-        ReferenceAttributes modificationReferenceAttributes = ReferenceAttributes.builder().referenceId(originModificationUuid).referenceType(ReferenceType.NETWORK_MODIFICATION).build();
+        ReferenceContainer composite2ReferenceContainer = ReferenceContainer.builder().rootContainerId(UUID.randomUUID()).containerId(originModificationAttributes.getElementUuid()).build();
+        ReferenceAttributes composite2ReferenceAttributes = ReferenceAttributes.builder()
+            .referenceId(UUID.randomUUID())
+            .referenceContainer(composite2ReferenceContainer)
+            .referenceType(ReferenceType.STUDY_NODE_NETWORK_MODIFICATION)
+            .build();
 
         mockMvc.perform(post(String.format("/v1/elements/%s/references", composite2Attributes.getElementUuid()))
                         .header("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(modificationReferenceAttributes)))
+                        .content(objectMapper.writeValueAsString(composite2ReferenceAttributes)))
                 .andExpect(status().isOk());
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
@@ -2537,24 +2544,23 @@ class DirectoryTest {
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
         UUID targetModificationUuid = targetModificationAttributes.getElementUuid();
 
-        // composite1 moves from the study node to the network-modification composite
-        mockMvc.perform(put("/v1/elements/references")
-                        .header("userId", userId)
-                        .param("ids", composite1Attributes.getElementUuid().toString())
-                        .param("originReferenceUuid", nodeUuid.toString())
-                        .param("targetReferenceUuid", targetModificationUuid.toString())
-                        .param("targetReferenceType", ReferenceType.NETWORK_MODIFICATION.name()))
-                .andExpect(status().isOk());
+        // composite1 reference moves from the study node to the network-modification composite
+        composite1ReferenceAttributes.setReferenceContainer(ReferenceContainer.builder().rootContainerId(UUID.randomUUID()).containerId(targetModificationUuid).build());
+        composite1ReferenceAttributes.setReferenceType(ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
+        mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", composite1Attributes.getElementUuid(), composite1ReferenceAttributes.getReferenceId()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(composite1ReferenceAttributes)))
+            .andExpect(status().isOk());
 
         // composite2 moves from the network-modification composite to a study node
-        UUID targetNodeUuid = UUID.randomUUID();
-        mockMvc.perform(put("/v1/elements/references")
-                        .header("userId", userId)
-                        .param("ids", composite2Attributes.getElementUuid().toString())
-                        .param("originReferenceUuid", originModificationUuid.toString())
-                        .param("targetReferenceUuid", targetNodeUuid.toString())
-                        .param("targetReferenceType", ReferenceType.STUDY_NODE.name()))
-                .andExpect(status().isOk());
+        composite2ReferenceAttributes.setReferenceContainer(createReferenceContainer());
+        composite2ReferenceAttributes.setReferenceType(STUDY_NODE);
+        mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", composite2Attributes.getElementUuid(), composite2ReferenceAttributes.getReferenceId()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(composite2ReferenceAttributes)))
+            .andExpect(status().isOk());
 
         // one UPDATE_DIRECTORY notification per moved composite, both pointing at the same parent directory
         assertDirectoriesNotified(Set.of(rootAttributes.getElementUuid()), 2, userId);
@@ -2565,54 +2571,26 @@ class DirectoryTest {
 
         // composite1 now references the network-modification composite
         assertEquals(1, updatedComposite1.getReferences().size());
-        assertEquals(targetModificationUuid, updatedComposite1.getReferences().getFirst().getReferenceId());
-        assertEquals(ReferenceType.NETWORK_MODIFICATION, updatedComposite1.getReferences().getFirst().getReferenceType());
+        assertEquals(ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, updatedComposite1.getReferences().getFirst().getReferenceType());
+        assertTrue(new MatcherJson<>(objectMapper, composite1ReferenceAttributes.getReferenceContainer()).matchesSafely(updatedComposite1.getReferences().getFirst().getReferenceContainer()));
+        assertEquals(targetModificationUuid, updatedComposite1.getReferences().getFirst().getReferenceContainer().getContainerId());
 
         // composite2 now references the study node
         assertEquals(1, updatedComposite2.getReferences().size());
-        assertEquals(targetNodeUuid, updatedComposite2.getReferences().getFirst().getReferenceId());
-        assertEquals(ReferenceType.STUDY_NODE, updatedComposite2.getReferences().getFirst().getReferenceType());
+        assertEquals(STUDY_NODE, updatedComposite2.getReferences().getFirst().getReferenceType());
+        assertTrue(new MatcherJson<>(objectMapper, composite2ReferenceAttributes.getReferenceContainer()).matchesSafely(updatedComposite2.getReferences().getFirst().getReferenceContainer()));
+        assertNotEquals(originModificationAttributes.getElementUuid(), updatedComposite2.getReferences().getFirst().getReferenceContainer().getContainerId());
     }
 
     @Test
     @SneakyThrows
     void testUpdateElementsReferencesElementNotFound() {
-        UUID unknownElementUuid = UUID.randomUUID();
+        mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", UUID.randomUUID(), UUID.randomUUID()))
+                .header("userId", USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createElementReference(STUDY_NODE))))
+            .andExpect(status().isNotFound());
 
-        mockMvc.perform(put("/v1/elements/references")
-                        .header("userId", USER_ID)
-                        .param("ids", unknownElementUuid.toString())
-                        .param("originReferenceUuid", UUID.randomUUID().toString())
-                        .param("targetReferenceUuid", UUID.randomUUID().toString())
-                        .param("targetReferenceType", ReferenceType.STUDY_NODE.name()))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    @SneakyThrows
-    void testUpdateElementsReferencesWithNoMatchingElements() {
-        String userId = "user";
-
-        ElementAttributes rootAttributes = directoryService.createRootDirectory(new RootDirectoryAttributes("root", userId, null, null, null, null), userId);
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.ADD_DIRECTORY, userId);
-
-        ElementAttributes compositeAttributes = directoryService.createElement(
-                DirectoryTestUtils.toElementAttributes(null, "composite", "TYPE", userId), rootAttributes.getElementUuid(), userId, false);
-        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
-
-        // composite has no reference matching this study node - the reference list itself must stay untouched
-        UUID unknownNodeUuid = UUID.randomUUID();
-        UUID unknownTargetNodeUuid = UUID.randomUUID();
-        mockMvc.perform(put("/v1/elements/references")
-                        .header("userId", userId)
-                        .param("ids", compositeAttributes.getElementUuid().toString())
-                        .param("originReferenceUuid", unknownNodeUuid.toString())
-                        .param("targetReferenceUuid", unknownTargetNodeUuid.toString())
-                        .param("targetReferenceType", ReferenceType.STUDY_NODE.name()))
-                .andExpect(status().isOk());
-        assertDirectoriesNotified(Set.of(), 0, userId);
-
-        ElementAttributes unchangedComposite = directoryService.getElementWithReferences(compositeAttributes.getElementUuid());
-        assertTrue(unchangedComposite.getReferences() == null || unchangedComposite.getReferences().isEmpty());
+        assertDirectoriesNotified(Set.of(), 0, USER_ID);
     }
 }

@@ -329,19 +329,18 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type, userId));
     }
 
-    @PutMapping(value = "/elements/references")
-    @Operation(summary = "For each shared element from a list, updates one of their reference from an origin reference to a target reference")
+    @PutMapping(value = "/elements/{elementUuid}/references/{referenceUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Update an element reference")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "References were successfully updated"),
+        @ApiResponse(responseCode = "200", description = "Reference were successfully updated"),
         @ApiResponse(responseCode = "404", description = "At least one element was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized to update at least one element")
     })
-    public ResponseEntity<Void> updateSharedElementsReferences(@RequestParam("ids") List<UUID> elementUuids,
-                                                         @RequestParam("originReferenceUuid") UUID originReferenceUuid,
-                                                         @RequestParam("targetReferenceUuid") UUID targetReferenceUuid,
-                                                         @RequestParam("targetReferenceType") ReferenceAttributes.ReferenceType targetReferenceType,
-                                                         @RequestHeader("userId") String userId) {
-        service.updateElementsReferences(elementUuids, originReferenceUuid, targetReferenceUuid, targetReferenceType, userId);
+    public ResponseEntity<Void> updateElementReference(@PathVariable("elementUuid") UUID elementId,
+                                                       @PathVariable("referenceUuid") UUID referenceId,
+                                                       @RequestBody ReferenceAttributes referenceAttributes,
+                                                       @RequestHeader("userId") String userId) {
+        service.updateElementReference(elementId, referenceId, referenceAttributes, userId);
         return ResponseEntity.ok().build();
     }
 

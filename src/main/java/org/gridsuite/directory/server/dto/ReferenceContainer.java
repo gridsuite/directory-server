@@ -21,14 +21,14 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @SuperBuilder
-public class ReferenceAttributes {
-    public enum ReferenceType {
-        STUDY_NODE,
-        STUDY_NODE_NETWORK_MODIFICATION,
-        DIRECTORY_NETWORK_MODIFICATION,
-    }
-
-    @NonNull private UUID referenceId;
-    @NonNull private ReferenceContainer referenceContainer;
-    @NonNull private ReferenceType referenceType;
+/**
+ * ReferenceContainer represents the information that makes it easy to locate the reference where it is used.
+ * It depends on the type of reference:
+ * STUDY_NODE: rootContainerId: studyId; containerId: nodeId
+ * STUDY_NODE_NETWORK_MODIFICATION: rootContainerId: nodeId; containerId: parentCompositeId
+ * DIRECTORY_NETWORK_MODIFICATION: rootContainerId: directoryId; containerId: parentCompositeId
+ */
+public class ReferenceContainer {
+    @NonNull private UUID rootContainerId;
+    @NonNull private UUID containerId;
 }
