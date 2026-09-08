@@ -11,7 +11,7 @@ import org.gridsuite.directory.server.dto.UserGroupDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -26,21 +26,21 @@ public class UserAdminService {
     private static final String USER_ADMIN_API_VERSION = "v1";
     private static final String GET_USER_GROUPS_URI = "/users/{sub}/groups";
     private static final String DELIMITER = "/";
-    private final RestTemplate restTemplate;
+    private final RestClient restClient;
     @Setter
     private String userAdminServerBaseUri;
 
     @Autowired
-    public UserAdminService(RestTemplate restTemplate, RemoteServicesProperties remoteServicesProperties) {
+    public UserAdminService(RestClient restClient, RemoteServicesProperties remoteServicesProperties) {
         this.userAdminServerBaseUri = remoteServicesProperties.getServiceUri("user-admin-server");
-        this.restTemplate = restTemplate;
+        this.restClient = restClient;
     }
 
     public List<UserGroupDTO> getUserGroups(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + GET_USER_GROUPS_URI)
                 .buildAndExpand(sub).toUriString();
         try {
-            return List.of(Objects.requireNonNull(restTemplate.getForEntity(userAdminServerBaseUri + path, UserGroupDTO[].class).getBody()));
+            return List.of(Objects.requireNonNull(restClient.get().uri(userAdminServerBaseUri + path).retrieve().toEntity(UserGroupDTO[].class).getBody()));
         } catch (HttpStatusCodeException e) {
             return List.of();
         }
