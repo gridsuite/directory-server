@@ -231,7 +231,7 @@ public class PermissionService {
         return hasElementPermission(userId, uuid, permissionType, () -> getUserGroupIds(userId));
     }
 
-    private boolean hasElementPermission(String userId, UUID uuid, PermissionType permissionType, Supplier<List<UUID>> userGroupIds) {
+    private boolean hasElementPermission(String userId, UUID uuid, PermissionType permissionType, Supplier<List<UUID>> userGroupIdsSupplier) {
         //Check global permission first
         boolean globalPermission = checkPermission(permissionRepository.findById(new PermissionId(uuid, ALL_USERS, "")), permissionType);
         if (globalPermission) {
@@ -245,7 +245,7 @@ public class PermissionService {
         }
 
         //Finally check group permission
-        return userGroupIds.get()
+        return userGroupIdsSupplier.get()
                 .stream()
                 .anyMatch(groupId ->
                         checkPermission(permissionRepository.findById(new PermissionId(uuid, "", groupId.toString())), permissionType)
