@@ -544,7 +544,7 @@ class PermissionServiceTest {
     private List<UUID> getAccessibleElements(String userId, List<UUID> elementUuids, PermissionType permissionType) throws Exception {
         String ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
 
-        MvcResult result = mockMvc.perform(get("/v1/elements/permission")
+        MvcResult result = mockMvc.perform(get("/v1/elements/accessible")
                         .param("ids", ids)
                         .param("accessType", permissionType.name())
                         .header(USER_ID_HEADER, userId)
