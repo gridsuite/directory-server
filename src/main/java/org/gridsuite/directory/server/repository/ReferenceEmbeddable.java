@@ -35,10 +35,6 @@ public class ReferenceEmbeddable {
     private String referenceType;
 
     public ReferenceAttributes toReferenceAttributes() {
-        return ReferenceAttributes.builder()
-            .referenceId(referenceId)
-            .referenceContainer(referenceContainer.toReferenceAttributes())
-            .referenceType(ReferenceType.valueOf(referenceType))
-            .build();
+        return new ReferenceAttributes(referenceId, referenceContainer.toReferenceAttributes(), ReferenceType.valueOf(referenceType));
     }
 }

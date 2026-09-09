@@ -2269,7 +2269,7 @@ class DirectoryTest {
     }
 
     private ReferenceAttributes createElementReference(ReferenceType referenceType) {
-        return ReferenceAttributes.builder().referenceId(UUID.randomUUID()).referenceContainer(createReferenceContainer()).referenceType(referenceType).build();
+        return new ReferenceAttributes(UUID.randomUUID(), createReferenceContainer(), referenceType);
     }
 
     private ReferenceContainer createReferenceContainer() {
@@ -2525,11 +2525,7 @@ class DirectoryTest {
                 DirectoryTestUtils.toElementAttributes(null, "originModification", "ELEMENT", userId), rootAttributes.getElementUuid(), userId, false);
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
         ReferenceContainer composite2ReferenceContainer = ReferenceContainer.builder().rootContainerId(UUID.randomUUID()).containerId(originModificationAttributes.getElementUuid()).build();
-        ReferenceAttributes composite2ReferenceAttributes = ReferenceAttributes.builder()
-            .referenceId(UUID.randomUUID())
-            .referenceContainer(composite2ReferenceContainer)
-            .referenceType(ReferenceType.STUDY_NODE_NETWORK_MODIFICATION)
-            .build();
+        ReferenceAttributes composite2ReferenceAttributes = new ReferenceAttributes(UUID.randomUUID(), composite2ReferenceContainer, ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
 
         mockMvc.perform(post(String.format("/v1/elements/%s/references", composite2Attributes.getElementUuid()))
                         .header("userId", userId)
@@ -2545,21 +2541,20 @@ class DirectoryTest {
         UUID targetModificationUuid = targetModificationAttributes.getElementUuid();
 
         // composite1 reference moves from the study node to the network-modification composite
-        composite1ReferenceAttributes.setReferenceContainer(ReferenceContainer.builder().rootContainerId(UUID.randomUUID()).containerId(targetModificationUuid).build());
-        composite1ReferenceAttributes.setReferenceType(ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
+        ReferenceAttributes newComposite1ReferenceAttributes = new ReferenceAttributes(composite1ReferenceAttributes.getReferenceId(),
+            ReferenceContainer.builder().rootContainerId(UUID.randomUUID()).containerId(targetModificationUuid).build(), ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
         mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", composite1Attributes.getElementUuid(), composite1ReferenceAttributes.getReferenceId()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(composite1ReferenceAttributes)))
+                .content(objectMapper.writeValueAsString(newComposite1ReferenceAttributes)))
             .andExpect(status().isOk());
 
         // composite2 moves from the network-modification composite to a study node
-        composite2ReferenceAttributes.setReferenceContainer(createReferenceContainer());
-        composite2ReferenceAttributes.setReferenceType(STUDY_NODE);
+        ReferenceAttributes newComposite2ReferenceAttributes = new ReferenceAttributes(composite2ReferenceAttributes.getReferenceId(), createReferenceContainer(), ReferenceType.STUDY_NODE);
         mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", composite2Attributes.getElementUuid(), composite2ReferenceAttributes.getReferenceId()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(composite2ReferenceAttributes)))
+                .content(objectMapper.writeValueAsString(newComposite2ReferenceAttributes)))
             .andExpect(status().isOk());
 
         // one UPDATE_DIRECTORY notification per moved composite, both pointing at the same parent directory
@@ -2572,13 +2567,13 @@ class DirectoryTest {
         // composite1 now references the network-modification composite
         assertEquals(1, updatedComposite1.getReferences().size());
         assertEquals(ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, updatedComposite1.getReferences().getFirst().getReferenceType());
-        assertTrue(new MatcherJson<>(objectMapper, composite1ReferenceAttributes.getReferenceContainer()).matchesSafely(updatedComposite1.getReferences().getFirst().getReferenceContainer()));
+        assertTrue(new MatcherJson<>(objectMapper, newComposite1ReferenceAttributes.getReferenceContainer()).matchesSafely(updatedComposite1.getReferences().getFirst().getReferenceContainer()));
         assertEquals(targetModificationUuid, updatedComposite1.getReferences().getFirst().getReferenceContainer().getContainerId());
 
         // composite2 now references the study node
         assertEquals(1, updatedComposite2.getReferences().size());
         assertEquals(STUDY_NODE, updatedComposite2.getReferences().getFirst().getReferenceType());
-        assertTrue(new MatcherJson<>(objectMapper, composite2ReferenceAttributes.getReferenceContainer()).matchesSafely(updatedComposite2.getReferences().getFirst().getReferenceContainer()));
+        assertTrue(new MatcherJson<>(objectMapper, newComposite2ReferenceAttributes.getReferenceContainer()).matchesSafely(updatedComposite2.getReferences().getFirst().getReferenceContainer()));
         assertNotEquals(originModificationAttributes.getElementUuid(), updatedComposite2.getReferences().getFirst().getReferenceContainer().getContainerId());
     }
 

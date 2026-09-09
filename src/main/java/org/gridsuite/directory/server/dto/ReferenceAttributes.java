@@ -6,11 +6,9 @@
  */
 package org.gridsuite.directory.server.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.Setter;
-import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
@@ -18,9 +16,7 @@ import java.util.UUID;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @Getter
-@Setter
-@NoArgsConstructor
-@SuperBuilder
+@AllArgsConstructor
 public class ReferenceAttributes {
     public enum ReferenceType {
         STUDY_NODE,
