@@ -82,10 +82,10 @@ public class DirectoryController {
                                                            @PathVariable("elementUuid") UUID elementUuid,
                                                            @Parameter(description = "ID of the new element") @RequestParam("newElementUuid") UUID newElementUuid,
                                                            @Parameter(description = "Optional UUID of the target directory where the new element will be placed. Defaults to the same directory as "
-                                                                   + "the original element if not specified.")
-                                                           @RequestParam(name = "targetDirectoryId", required = false) UUID targetDirectoryId,
+                                                                   + "the original element if not specified.") @RequestParam(name = "targetDirectoryId", required = false) UUID targetDirectoryId,
+                                                           @Parameter(description = "status of the new element") @RequestParam(value = "newElementStatus") DirectoryElementStatus newElementStatus,
                                                            @RequestHeader("userId") String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.duplicateElement(elementUuid, newElementUuid, targetDirectoryId, userId));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.duplicateElement(elementUuid, newElementUuid, targetDirectoryId, newElementStatus, userId));
     }
 
     @PostMapping(value = "/directories/paths/elements", consumes = MediaType.APPLICATION_JSON_VALUE)
