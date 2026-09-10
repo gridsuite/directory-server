@@ -66,6 +66,7 @@ import java.util.stream.Collectors;
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.NotificationService.*;
+import static org.gridsuite.directory.server.dto.DirectoryElementStatus.CREATED;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.directory.server.services.ConsumerService.HEADER_STUDY_UUID;
@@ -1372,7 +1373,7 @@ class DirectoryTest {
         assertEquals(List.of(studyName), headers.get(HEADER_ELEMENT_NAMES));
 
         DirectoryElementEntity directoryElement = directoryElementRepository.findById(studyUuid).get();
-        assertEquals(DirectoryElementStatus.CREATED, directoryElement.getStatus());
+        assertEquals(CREATED, directoryElement.getStatus());
     }
 
     @Test
@@ -1919,7 +1920,7 @@ class DirectoryTest {
         UUID elementUUID = elementAttributes.getElementUuid();
         UUID newElementUuid = UUID.randomUUID();
         // duplicate the element
-        ElementAttributes duplicatedElement = directoryService.duplicateElement(elementUUID, newElementUuid, null, "user1");
+        ElementAttributes duplicatedElement = directoryService.duplicateElement(elementUUID, newElementUuid, null, CREATED, "user1");
         assertEquals("elementName(1)", duplicatedElement.getElementName());
         assertEquals(newElementUuid, duplicatedElement.getElementUuid());
 
@@ -2342,7 +2343,7 @@ class DirectoryTest {
                 UUID.randomUUID(), uuidNewRootDirectory, "oldElement", TYPE_01, USER_ID, "descr old",
                 Instant.now().minus(400, ChronoUnit.DAYS),
                 Instant.now().minus(400, ChronoUnit.DAYS),
-                USER_ID, List.of(), DirectoryElementStatus.CREATED
+                USER_ID, List.of(), CREATED
         );
         directoryElementRepository.save(oldElement);
 
@@ -2424,14 +2425,14 @@ class DirectoryTest {
         UUID siblingElementUuid = siblingElementAttributes.getElementUuid();
 
         // All elements are created CREATED
-        assertElementsStatusInRepository(DirectoryElementStatus.CREATED, rootDirUuid, subDirUuid, nestedElementUuid, siblingElementUuid);
+        assertElementsStatusInRepository(CREATED, rootDirUuid, subDirUuid, nestedElementUuid, siblingElementUuid);
 
         // Mark subDir (a directory) and siblingElement (a plain element) as DELETING
         updateElementsStatus(List.of(subDirUuid, siblingElementUuid), DirectoryElementStatus.DELETING, USER_ID);
 
         // The directory, its descendant and the sibling element are DELETING; the root is untouched
         assertElementsStatusInRepository(DirectoryElementStatus.DELETING, subDirUuid, nestedElementUuid, siblingElementUuid);
-        assertElementsStatusInRepository(DirectoryElementStatus.CREATED, rootDirUuid);
+        assertElementsStatusInRepository(CREATED, rootDirUuid);
 
         // One notification per requested element: subDir itself (directory), rootDir (parent of siblingElement)
         assertDirectoriesNotified(Set.of(subDirUuid, rootDirUuid), 2, USER_ID);

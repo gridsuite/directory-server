@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.TRUE;
+import static org.gridsuite.directory.server.dto.DirectoryElementStatus.CREATED;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
@@ -80,7 +81,7 @@ public class DirectoryService {
         if (errorMessage != null && elementEntity.getName() != null) {
             deleteElementWithNotif(studyUuid, userId);
         } else {
-            elementEntity.setStatus(DirectoryElementStatus.CREATED);
+            elementEntity.setStatus(CREATED);
         }
         // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
         // then avoid sending a notification with parentUuid=null and isRoot=true
@@ -112,7 +113,7 @@ public class DirectoryService {
         return toElementAttributesWithReferences(elementEntity);
     }
 
-    public ElementAttributes duplicateElement(UUID elementId, UUID newElementId, UUID targetDirectoryId, String userId) {
+    public ElementAttributes duplicateElement(UUID elementId, UUID newElementId, UUID targetDirectoryId, DirectoryElementStatus elementStatus, String userId) {
         DirectoryElementEntity directoryElementEntity = directoryElementRepository.findById(elementId)
             .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementId));
         String elementType = directoryElementEntity.getType();
@@ -123,6 +124,7 @@ public class DirectoryService {
             .owner(userId)
             .description(directoryElementEntity.getDescription())
             .elementName(directoryElementEntity.getName())
+            .status(elementStatus)
             .build();
 
         assertDirectoryExist(parentDirectoryUuid);
@@ -164,7 +166,7 @@ public class DirectoryService {
             now,
             elementAttributes.getOwner(),
             elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList(),
-            elementAttributes.getStatus() != null ? elementAttributes.getStatus() : DirectoryElementStatus.CREATED);
+            elementAttributes.getStatus() != null ? elementAttributes.getStatus() : CREATED);
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
@@ -242,7 +244,7 @@ public class DirectoryService {
                 } else {
                     //and then we create the rest of the path
                     parentDirectoryUuid = createElementWithNotif(
-                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, DirectoryElementStatus.CREATED),
+                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, CREATED),
                         parentDirectoryUuid,
                         userId, false).getElementUuid();
                 }
