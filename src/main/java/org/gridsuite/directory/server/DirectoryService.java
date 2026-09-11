@@ -12,6 +12,7 @@ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.ReferenceContainerEmbeddable;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -42,6 +43,7 @@ import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 public class DirectoryService {
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
+    public static final String REFERENCE = "REFERENCE";
     private static final int ES_PAGE_MAX_SIZE = 50;
     static final int MAX_RETRY = 3;
     static final int DELAY_RETRY = 50;
@@ -348,32 +350,29 @@ public class DirectoryService {
     private ReferenceEmbeddable createReferenceEntity(ReferenceAttributes referenceAttributes) {
         return new ReferenceEmbeddable(
             referenceAttributes.getReferenceId(),
+            createReferencePathEntity(referenceAttributes.getReferenceContainer()),
             referenceAttributes.getReferenceType().name()
         );
     }
 
-    @Transactional
-    public void updateElementsReferences(@NonNull List<UUID> elementsUuids, @NonNull UUID originReferenceUuid,
-                                         @NonNull UUID targetReferenceUuid, @NonNull ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
-        elementsUuids.forEach(elementUuid -> {
-            DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
+    private ReferenceContainerEmbeddable createReferencePathEntity(ReferenceContainer referenceId) {
+        return new ReferenceContainerEmbeddable(referenceId.getRootContainerId(), referenceId.getContainerId());
+    }
 
-            directoryElementEntity.getReferences().stream()
-                    .filter(ref -> originReferenceUuid.equals(ref.getReferenceId()))
-                    .findFirst()
-                    .ifPresent(ref -> {
-                        ref.setReferenceId(targetReferenceUuid);
-                        ref.setReferenceType(targetReferenceType.name());
-                        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
-                    });
-        });
+    @Transactional
+    public void updateElementReference(@NonNull UUID elementId, @NonNull UUID referenceId, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+        DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementId);
+        ReferenceEmbeddable reference = directoryElementEntity.getReference(referenceId)
+            .orElseThrow(() -> DirectoryException.createElementNotFound(REFERENCE, referenceAttributes.getReferenceId()));
+        reference.setReferenceContainer(createReferencePathEntity(referenceAttributes.getReferenceContainer()));
+        reference.setReferenceType(referenceAttributes.getReferenceType().name());
+        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementId : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 
     @Transactional
     public void deleteElementReference(UUID elementUuid, UUID referenceUuid, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
         directoryElementEntity.removeReference(referenceUuid);
-
         notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 

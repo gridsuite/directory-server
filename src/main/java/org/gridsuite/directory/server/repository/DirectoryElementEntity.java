@@ -126,10 +126,13 @@ public class DirectoryElementEntity {
     }
 
     public void removeReference(UUID referenceId) {
-        this.references.stream()
-                .filter(reference -> Objects.equals(reference.getReferenceId(), referenceId))
-                .findFirst()
-                .ifPresent(this::removeReference);
+        getReference(referenceId).ifPresent(this::removeReference);
+    }
+
+    public Optional<ReferenceEmbeddable> getReference(UUID referenceId) {
+        return this.references.stream()
+            .filter(reference -> reference.getReferenceId().equals(referenceId))
+            .findFirst();
     }
 
     public void removeReference(ReferenceEmbeddable reference) {
