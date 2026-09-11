@@ -1351,11 +1351,11 @@ class DirectoryTest {
         UUID studyNodeUuid1 = UUID.randomUUID();
         UUID studyNodeUuid2 = UUID.randomUUID();
         UUID networkModificationUuid = UUID.randomUUID();
-        UUID unrelatedDirectoryElementUuid = UUID.randomUUID();
+        UUID directoryElementUuid = UUID.randomUUID();
         addReference(elementUuid, studyNodeUuid1, ReferenceType.STUDY_NODE, uuidNewRootDirectory);
         addReference(elementUuid, studyNodeUuid2, ReferenceType.STUDY_NODE, uuidNewRootDirectory);
         addReference(elementUuid, networkModificationUuid, ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, uuidNewRootDirectory);
-        addReference(elementUuid, unrelatedDirectoryElementUuid, ReferenceType.DIRECTORY_NETWORK_MODIFICATION, uuidNewRootDirectory);
+        addReference(elementUuid, directoryElementUuid, ReferenceType.DIRECTORY_NETWORK_MODIFICATION, uuidNewRootDirectory);
 
         Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
         String userMakingModification = "newUser";
@@ -1378,6 +1378,9 @@ class DirectoryTest {
             .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
         Set<UUID> notifiedNetworkModificationUuids = referencesByType.get(ReferenceType.STUDY_NODE_NETWORK_MODIFICATION).stream()
             .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
+        Set<UUID> notifiedDirectoryElementUuids = referencesByType.get(ReferenceType.DIRECTORY_NETWORK_MODIFICATION).stream()
+            .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
+        assertEquals(Set.of(directoryElementUuid), notifiedDirectoryElementUuids);
         assertEquals(Set.of(studyNodeUuid1, studyNodeUuid2), notifiedStudyNodeUuids);
         assertEquals(Set.of(networkModificationUuid), notifiedNetworkModificationUuids);
     }
@@ -1393,8 +1396,6 @@ class DirectoryTest {
         ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "elementWithReference", TYPE_01, USER_ID, "descr");
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
         UUID elementUuid = subEltAttributes.getElementUuid();
-        UUID directoryElementUuid = UUID.randomUUID();
-        addReference(elementUuid, directoryElementUuid, ReferenceType.DIRECTORY_NETWORK_MODIFICATION, uuidNewRootDirectory);
 
         Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
         String userMakingModification = "newUser";
@@ -1405,18 +1406,8 @@ class DirectoryTest {
             .setHeader(HEADER_ELEMENT_UUID, elementUuid.toString())
             .build(), elementUpdateDestination);
 
-        // a shared element notification is emitted for any non-empty reference type
-        Message<byte[]> message = output.receive(TIMEOUT, elementSharedUpdateDestination);
-        assertNotNull(message, "Expected a shared element update notification");
-        MessageHeaders headers = message.getHeaders();
-        assertEquals(userMakingModification, headers.get(HEADER_USER_ID));
-        assertEquals(elementUuid, headers.get(HEADER_ELEMENT_UUID));
-        assertEquals(NotificationType.UPDATE_SHARED_ELEMENT, headers.get(HEADER_NOTIFICATION_TYPE));
-
-        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = objectMapper.readValue(message.getPayload(), new TypeReference<>() { });
-        Set<UUID> notifiedDirectoryElementUuids = referencesByType.get(ReferenceType.DIRECTORY_NETWORK_MODIFICATION).stream()
-            .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
-        assertEquals(Set.of(directoryElementUuid), notifiedDirectoryElementUuids);
+        // no shared element notification is emitted since no reference is of a type study-server cares about
+        assertNull(output.receive(TIMEOUT, elementSharedUpdateDestination));
 
         MvcResult result = mockMvc.perform(get("/v1/elements/" + elementUuid))
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))

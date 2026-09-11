@@ -25,11 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.TRUE;
+import static java.util.function.Predicate.not;
 import static org.gridsuite.directory.server.dto.DirectoryElementStatus.CREATED;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
@@ -182,7 +182,7 @@ public class DirectoryService {
                     elementEntity.setName(getDuplicateNameCandidate(parentDirectoryUuid, baseElementName, elementEntity.getType(), userId));
                 }
                 return repositoryService.saveElement(elementEntity);
-            } catch (DataIntegrityViolationException e) {
+            } catch (DataIntegrityViolationException _) {
                 if (generateNewName) {
                     retryCount++;
                 } else {
@@ -604,7 +604,7 @@ public class DirectoryService {
             directories = repositoryService.findDirectoriesByNameAndParentId(directoryName, parentDirectoryUuid);
         }
         if (!directories.isEmpty()) {
-            return directories.get(0).getId();
+            return directories.getFirst().getId();
         }
         return null;
     }
@@ -757,7 +757,7 @@ public class DirectoryService {
 
     private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
         Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
-        if (referencesByType.values().stream().anyMatch(Predicate.not(List::isEmpty))) {
+        if (referencesByType.values().stream().anyMatch(not(List::isEmpty))) {
             notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, userId);
         }
     }
