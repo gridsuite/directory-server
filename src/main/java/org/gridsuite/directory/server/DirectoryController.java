@@ -236,6 +236,18 @@ public class DirectoryController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/elements/accessible", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Filter the given elements to the ones the user has the given permission on, "
+        + "a directory being checked on itself and any other element on its parent directory")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The uuids of the given elements the user has that permission on"),
+    })
+    public ResponseEntity<List<UUID>> getAccessibleElements(@RequestParam("ids") List<UUID> elementUuids,
+                                                            @RequestParam(value = "accessType") PermissionType permissionType,
+                                                            @RequestHeader("userId") String userId) {
+        return ResponseEntity.ok().body(permissionService.filterAccessibleElements(userId, elementUuids, permissionType));
+    }
+
     @GetMapping(value = "/directories/{directoryUuid}/permissions", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get permissions for the directory")
     @ApiResponses(value = {
