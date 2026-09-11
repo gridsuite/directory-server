@@ -120,6 +120,7 @@ class DirectoryTest {
     private final String elementUpdateDestination = "element.update";
     private final String directoryUpdateDestination = "directory.update";
     private final String studyUpdateDestination = "study.update";
+    private final String elementSharedUpdateDestination = "element.shared.update";
 
     private static final String GROUPS_SUFFIX = "/groups";
     private static final String EMPTY_GROUPS_JSON = "[]";
@@ -200,7 +201,7 @@ class DirectoryTest {
 
     @AfterEach
     void tearDown() {
-        List<String> destinations = List.of(elementUpdateDestination, directoryUpdateDestination);
+        List<String> destinations = List.of(elementUpdateDestination, directoryUpdateDestination, elementSharedUpdateDestination);
         assertQueuesEmptyThenClear(destinations);
     }
 
@@ -1336,6 +1337,97 @@ class DirectoryTest {
     }
 
     @Test
+    @SneakyThrows
+    void testSharedElementUpdated() {
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert a composite element referencing two study nodes, a network modification, and an unrelated directory element
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "compositeElement", TYPE_01, USER_ID, "descr compositeElement");
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
+        UUID elementUuid = subEltAttributes.getElementUuid();
+
+        UUID studyNodeUuid1 = UUID.randomUUID();
+        UUID studyNodeUuid2 = UUID.randomUUID();
+        UUID networkModificationUuid = UUID.randomUUID();
+        UUID directoryElementUuid = UUID.randomUUID();
+        addReference(elementUuid, studyNodeUuid1, ReferenceType.STUDY_NODE, uuidNewRootDirectory);
+        addReference(elementUuid, studyNodeUuid2, ReferenceType.STUDY_NODE, uuidNewRootDirectory);
+        addReference(elementUuid, networkModificationUuid, ReferenceType.STUDY_NODE_NETWORK_MODIFICATION, uuidNewRootDirectory);
+        addReference(elementUuid, directoryElementUuid, ReferenceType.DIRECTORY_NETWORK_MODIFICATION, uuidNewRootDirectory);
+
+        Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        String userMakingModification = "newUser";
+
+        input.send(MessageBuilder.withPayload("")
+            .setHeader(HEADER_MODIFIED_BY, userMakingModification)
+            .setHeader(HEADER_MODIFICATION_DATE, newModificationDate.toString())
+            .setHeader(HEADER_ELEMENT_UUID, elementUuid.toString())
+            .build(), elementUpdateDestination);
+
+        Message<byte[]> message = output.receive(TIMEOUT, elementSharedUpdateDestination);
+        assertNotNull(message, "Expected a shared element update notification");
+        MessageHeaders headers = message.getHeaders();
+        assertEquals(userMakingModification, headers.get(HEADER_USER_ID));
+        assertEquals(elementUuid, headers.get(HEADER_ELEMENT_UUID));
+        assertEquals(NotificationType.UPDATE_SHARED_ELEMENT, headers.get(HEADER_NOTIFICATION_TYPE));
+
+        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = objectMapper.readValue(message.getPayload(), new TypeReference<>() { });
+        Set<UUID> notifiedStudyNodeUuids = referencesByType.get(ReferenceType.STUDY_NODE).stream()
+            .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
+        Set<UUID> notifiedNetworkModificationUuids = referencesByType.get(ReferenceType.STUDY_NODE_NETWORK_MODIFICATION).stream()
+            .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
+        Set<UUID> notifiedDirectoryElementUuids = referencesByType.get(ReferenceType.DIRECTORY_NETWORK_MODIFICATION).stream()
+            .map(ReferenceAttributes::getReferenceId).collect(Collectors.toSet());
+        assertEquals(Set.of(directoryElementUuid), notifiedDirectoryElementUuids);
+        assertEquals(Set.of(studyNodeUuid1, studyNodeUuid2), notifiedStudyNodeUuids);
+        assertEquals(Set.of(networkModificationUuid), notifiedNetworkModificationUuids);
+    }
+
+    @Test
+    @SneakyThrows
+    void testElementUpdated() {
+        // Insert a root directory
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", USER_ID);
+        UUID uuidNewRootDirectory = newRootDirectory.getElementUuid();
+
+        // Insert an element referencing a single directory element
+        ElementAttributes subEltAttributes = toElementAttributes(UUID.randomUUID(), "elementWithReference", TYPE_01, USER_ID, "descr");
+        insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subEltAttributes);
+        UUID elementUuid = subEltAttributes.getElementUuid();
+
+        Instant newModificationDate = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        String userMakingModification = "newUser";
+
+        input.send(MessageBuilder.withPayload("")
+            .setHeader(HEADER_MODIFIED_BY, userMakingModification)
+            .setHeader(HEADER_MODIFICATION_DATE, newModificationDate.toString())
+            .setHeader(HEADER_ELEMENT_UUID, elementUuid.toString())
+            .build(), elementUpdateDestination);
+
+        // no shared element notification is emitted since no reference is of a type study-server cares about
+        assertNull(output.receive(TIMEOUT, elementSharedUpdateDestination));
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/" + elementUuid))
+            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
+            .andReturn();
+        ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
+        assertEquals(newModificationDate, updatedElement.getLastModificationDate());
+        assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
+    }
+
+    private void addReference(UUID elementUuid, UUID referenceId, ReferenceType referenceType, UUID parentDirectoryUuid) throws Exception {
+        ReferenceAttributes referenceAttributes = new ReferenceAttributes(referenceId, createReferenceContainer(), referenceType);
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", elementUuid))
+                .header("userId", USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(referenceAttributes)))
+            .andExpect(status().isOk());
+        testNotificationDirectory(parentDirectoryUuid, NotificationType.UPDATE_DIRECTORY, USER_ID);
+    }
+
+    @Test
     void testStudyUpdateNotification() throws Exception {
         String userId = "userId";
 
@@ -1369,7 +1461,7 @@ class DirectoryTest {
         assertEquals(true, headers.get(HEADER_IS_PUBLIC_DIRECTORY));
         assertEquals(NotificationType.UPDATE_DIRECTORY, headers.get(HEADER_NOTIFICATION_TYPE));
         assertEquals(UPDATE_TYPE_DIRECTORIES, headers.get(HEADER_UPDATE_TYPE));
-        assertEquals(headers.get(HEADER_ERROR), null);
+        assertEquals(null, headers.get(HEADER_ERROR));
         assertEquals(List.of(studyName), headers.get(HEADER_ELEMENT_NAMES));
 
         DirectoryElementEntity directoryElement = directoryElementRepository.findById(studyUuid).get();
@@ -2551,7 +2643,8 @@ class DirectoryTest {
             .andExpect(status().isOk());
 
         // composite2 moves from the network-modification composite to a study node
-        ReferenceAttributes newComposite2ReferenceAttributes = new ReferenceAttributes(composite2ReferenceAttributes.getReferenceId(), createReferenceContainer(), ReferenceType.STUDY_NODE);
+        ReferenceAttributes newComposite2ReferenceAttributes = new ReferenceAttributes(composite2ReferenceAttributes.getReferenceId(),
+            createReferenceContainer(), ReferenceType.STUDY_NODE);
         mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", composite2Attributes.getElementUuid(), composite2ReferenceAttributes.getReferenceId()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
