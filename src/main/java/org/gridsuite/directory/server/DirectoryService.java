@@ -12,6 +12,7 @@ import org.gridsuite.directory.server.dto.elasticsearch.DirectoryElementInfos;
 import org.gridsuite.directory.server.error.DirectoryException;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
+import org.gridsuite.directory.server.repository.ReferenceContainerEmbeddable;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.services.*;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,7 +30,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.TRUE;
-import static org.gridsuite.directory.server.dto.ElementAttributes.*;
+import static org.gridsuite.directory.server.dto.DirectoryElementStatus.CREATED;
+import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
+import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
 import static org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
@@ -42,6 +45,7 @@ import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 public class DirectoryService {
     public static final String DIRECTORY = "DIRECTORY";
     public static final String ELEMENT = "ELEMENT";
+    public static final String REFERENCE = "REFERENCE";
     private static final int ES_PAGE_MAX_SIZE = 50;
     static final int MAX_RETRY = 3;
     static final int DELAY_RETRY = 50;
@@ -79,7 +83,7 @@ public class DirectoryService {
         if (errorMessage != null && elementEntity.getName() != null) {
             deleteElementWithNotif(studyUuid, userId);
         } else {
-            elementEntity.setStatus(DirectoryElementStatus.CREATED);
+            elementEntity.setStatus(CREATED);
         }
         // At study creation, if the corresponding element doesn't exist here yet and doesn't have parent
         // then avoid sending a notification with parentUuid=null and isRoot=true
@@ -111,7 +115,7 @@ public class DirectoryService {
         return toElementAttributesWithReferences(elementEntity);
     }
 
-    public ElementAttributes duplicateElement(UUID elementId, UUID newElementId, UUID targetDirectoryId, String userId) {
+    public ElementAttributes duplicateElement(UUID elementId, UUID newElementId, UUID targetDirectoryId, DirectoryElementStatus elementStatus, String userId) {
         DirectoryElementEntity directoryElementEntity = directoryElementRepository.findById(elementId)
             .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementId));
         String elementType = directoryElementEntity.getType();
@@ -122,6 +126,7 @@ public class DirectoryService {
             .owner(userId)
             .description(directoryElementEntity.getDescription())
             .elementName(directoryElementEntity.getName())
+            .status(elementStatus)
             .build();
 
         assertDirectoryExist(parentDirectoryUuid);
@@ -163,7 +168,7 @@ public class DirectoryService {
             now,
             elementAttributes.getOwner(),
             elementAttributes.getReferences().stream().map(this::createReferenceEntity).toList(),
-            elementAttributes.getStatus() != null ? elementAttributes.getStatus() : DirectoryElementStatus.CREATED);
+            elementAttributes.getStatus() != null ? elementAttributes.getStatus() : CREATED);
 
         return tryInsertElement(elementEntity, parentDirectoryUuid, userId, generateNewName);
     }
@@ -241,7 +246,7 @@ public class DirectoryService {
                 } else {
                     //and then we create the rest of the path
                     parentDirectoryUuid = createElementWithNotif(
-                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, DirectoryElementStatus.CREATED),
+                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, CREATED),
                         parentDirectoryUuid,
                         userId, false).getElementUuid();
                 }
@@ -347,32 +352,29 @@ public class DirectoryService {
     private ReferenceEmbeddable createReferenceEntity(ReferenceAttributes referenceAttributes) {
         return new ReferenceEmbeddable(
             referenceAttributes.getReferenceId(),
+            createReferencePathEntity(referenceAttributes.getReferenceContainer()),
             referenceAttributes.getReferenceType().name()
         );
     }
 
-    @Transactional
-    public void updateElementsReferences(@NonNull List<UUID> elementsUuids, @NonNull UUID originReferenceUuid,
-                                         @NonNull UUID targetReferenceUuid, @NonNull ReferenceAttributes.ReferenceType targetReferenceType, String userId) {
-        elementsUuids.forEach(elementUuid -> {
-            DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
+    private ReferenceContainerEmbeddable createReferencePathEntity(ReferenceContainer referenceId) {
+        return new ReferenceContainerEmbeddable(referenceId.getRootContainerId(), referenceId.getContainerId());
+    }
 
-            directoryElementEntity.getReferences().stream()
-                    .filter(ref -> originReferenceUuid.equals(ref.getReferenceId()))
-                    .findFirst()
-                    .ifPresent(ref -> {
-                        ref.setReferenceId(targetReferenceUuid);
-                        ref.setReferenceType(targetReferenceType.name());
-                        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
-                    });
-        });
+    @Transactional
+    public void updateElementReference(@NonNull UUID elementId, @NonNull UUID referenceId, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+        DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementId);
+        ReferenceEmbeddable reference = directoryElementEntity.getReference(referenceId)
+            .orElseThrow(() -> DirectoryException.createElementNotFound(REFERENCE, referenceAttributes.getReferenceId()));
+        reference.setReferenceContainer(createReferencePathEntity(referenceAttributes.getReferenceContainer()));
+        reference.setReferenceType(referenceAttributes.getReferenceType().name());
+        notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementId : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 
     @Transactional
     public void deleteElementReference(UUID elementUuid, UUID referenceUuid, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
         directoryElementEntity.removeReference(referenceUuid);
-
         notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 
