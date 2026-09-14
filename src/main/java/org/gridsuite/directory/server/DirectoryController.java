@@ -277,30 +277,30 @@ public class DirectoryController {
     }
 
     @PostMapping(value = "/elements/{elementUuid}/references", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Add a reference to an element")
+    @Operation(summary = "Add one or several references to an element")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Reference was successfully added"),
+        @ApiResponse(responseCode = "200", description = "References were successfully added"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
     })
-    public ResponseEntity<Void> createElementReference(@PathVariable("elementUuid") UUID elementUuid,
-                                                       @RequestBody ReferenceAttributes referenceAttributes,
+    public ResponseEntity<Void> createElementReferences(@PathVariable("elementUuid") UUID elementUuid,
+                                                       @RequestBody List<ReferenceAttributes> referencesAttributes,
                                                        @RequestHeader("userId") String userId) {
-        service.createElementReference(elementUuid, referenceAttributes, userId);
+        service.createElementReferences(elementUuid, referencesAttributes, userId);
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping(value = "/elements/{elementUuid}/references/{referenceUuid}")
-    @Operation(summary = "Delete a reference to an element")
+    @DeleteMapping(value = "/elements/{elementUuid}/references")
+    @Operation(summary = "Delete one or several references to an element")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Reference was successfully deleted"),
+        @ApiResponse(responseCode = "200", description = "References were successfully deleted"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
     })
-    public ResponseEntity<Void> deleteElementReference(@PathVariable("elementUuid") UUID elementUuid,
-                                                       @PathVariable("referenceUuid") UUID referenceUuid,
+    public ResponseEntity<Void> deleteElementReferences(@PathVariable("elementUuid") UUID elementUuid,
+                                                       @RequestBody List<UUID> referenceUuids,
                                                        @RequestHeader("userId") String userId) {
-        service.deleteElementReference(elementUuid, referenceUuid, userId);
+        service.deleteElementReferences(elementUuid, referenceUuids, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -329,18 +329,17 @@ public class DirectoryController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(service.getDuplicateNameCandidate(directoryUuid, elementName, type, userId));
     }
 
-    @PutMapping(value = "/elements/{elementUuid}/references/{referenceUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Update an element reference")
+    @PutMapping(value = "/elements/{elementUuid}/references", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Update one or several element references")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Reference were successfully updated"),
+        @ApiResponse(responseCode = "200", description = "References were successfully updated"),
         @ApiResponse(responseCode = "404", description = "At least one element was not found"),
         @ApiResponse(responseCode = "403", description = "Not authorized to update at least one element")
     })
-    public ResponseEntity<Void> updateElementReference(@PathVariable("elementUuid") UUID elementId,
-                                                       @PathVariable("referenceUuid") UUID referenceId,
-                                                       @RequestBody ReferenceAttributes referenceAttributes,
+    public ResponseEntity<Void> updateElementReferences(@PathVariable("elementUuid") UUID elementId,
+                                                       @RequestBody List<ReferenceAttributes> referencesAttributes,
                                                        @RequestHeader("userId") String userId) {
-        service.updateElementReference(elementId, referenceId, referenceAttributes, userId);
+        service.updateElementReferences(elementId, referencesAttributes, userId);
         return ResponseEntity.ok().build();
     }
 
