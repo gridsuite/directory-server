@@ -6,11 +6,9 @@
  */
 package org.gridsuite.directory.server.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.SuperBuilder;
+import lombok.NonNull;
 
 import java.util.UUID;
 
@@ -18,17 +16,15 @@ import java.util.UUID;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @Getter
-@Setter
-@NoArgsConstructor
-@SuperBuilder
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@AllArgsConstructor
 public class ReferenceAttributes {
     public enum ReferenceType {
         STUDY_NODE,
-        NETWORK_MODIFICATION,
-        DIRECTORY_ELEMENT
+        STUDY_NODE_NETWORK_MODIFICATION,
+        DIRECTORY_NETWORK_MODIFICATION,
     }
 
-    private UUID referenceId;
-    private ReferenceType referenceType;
+    @NonNull private UUID referenceId;
+    @NonNull private ReferenceContainer referenceContainer;
+    @NonNull private ReferenceType referenceType;
 }

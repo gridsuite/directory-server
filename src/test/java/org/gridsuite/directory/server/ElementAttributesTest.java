@@ -8,12 +8,10 @@ package org.gridsuite.directory.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
-import org.gridsuite.directory.server.dto.DirectoryElementStatus;
-import org.gridsuite.directory.server.dto.ElementAttributes;
-import org.gridsuite.directory.server.dto.ReferenceAttributes;
+import org.gridsuite.directory.server.dto.*;
 import org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
-import org.gridsuite.directory.server.dto.RootDirectoryAttributes;
 import org.gridsuite.directory.server.repository.DirectoryElementEntity;
+import org.gridsuite.directory.server.repository.ReferenceContainerEmbeddable;
 import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import org.gridsuite.directory.server.utils.MatcherJson;
 import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
@@ -95,9 +93,12 @@ class ElementAttributesTest {
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", "description"));
         verifyElementAttributes(toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId"));
 
-        verifyElementAttributes(toElementAttributesWithReferences(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description",
+        verifyElementAttributes(toElementAttributesWithReferences(
+            new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description",
                 lastModificationDate, lastModificationDate, "userId",
-                List.of(new ReferenceEmbeddable(UUID.randomUUID(), ReferenceType.STUDY_NODE.name())), DirectoryElementStatus.CREATED), 1L));
+                List.of(new ReferenceEmbeddable(UUID.randomUUID(), new ReferenceContainerEmbeddable(UUID.randomUUID(), UUID.randomUUID()), ReferenceType.STUDY_NODE.name())),
+                DirectoryElementStatus.CREATED),
+            1L));
 
         verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate,
                 "userId", List.of(), DirectoryElementStatus.CREATED), 1L));
@@ -165,8 +166,18 @@ class ElementAttributesTest {
         }
         return "\"references\":[" + references.stream()
             .map(ref ->
-                "{" + toJsonString("referenceId", ref.getReferenceId()) + "," + toJsonString("referenceType", ref.getReferenceType().name()) + "}")
+                "{" + toJsonString("referenceId", ref.getReferenceId()) +
+                    "," + toJsonString(ref.getReferenceContainer()) +
+                    "," + toJsonString("referenceType", ref.getReferenceType().name())
+                    + "}")
             .collect(Collectors.joining(",")) + "]";
+    }
+
+    private String toJsonString(ReferenceContainer referenceContainer) {
+        return "\"referenceContainer\":{"
+            + toJsonString("rootContainerId", referenceContainer.getRootContainerId()) + ","
+            + toJsonString("containerId", referenceContainer.getContainerId())
+            + "}";
     }
 
     private String toJsonString(String key, Object value) {
