@@ -2379,25 +2379,28 @@ class DirectoryTest {
         elementAttributes = directoryService.createElement(elementAttributes, rootAttributes.getElementUuid(), userId, false);
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
-        // create a reference to the element
-        ReferenceAttributes referenceAttributes = createElementReference(STUDY_NODE);
+        ReferenceAttributes referenceAttributes1 = createElementReference(STUDY_NODE);
+        ReferenceAttributes referenceAttributes2 = createElementReference(STUDY_NODE);
         mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(referenceAttributes)))
+                .content(objectMapper.writeValueAsString(List.of(referenceAttributes1, referenceAttributes2))))
             .andExpect(status().isOk());
 
-        // check that the reference is created
-        elementAttributes.setReferences(List.of(referenceAttributes));
+        elementAttributes.setReferences(List.of(referenceAttributes1, referenceAttributes2));
         checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
-        // delete the reference to the element
-        mockMvc.perform(delete(String.format("/v1/elements/%s/references/%s", elementAttributes.getElementUuid(), referenceAttributes.getReferenceId()))
-                .header("userId", userId))
+        // delete both references to the element in a single call
+        SQLStatementCountValidator.reset();
+        mockMvc.perform(delete(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(List.of(referenceAttributes1.getReferenceId(), referenceAttributes2.getReferenceId()))))
             .andExpect(status().isOk());
 
         // check that the reference is created
+        assertRequestsCount(3, 0, 0, 1);
         elementAttributes.setReferences(List.of());
         checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
@@ -2517,7 +2520,7 @@ class DirectoryTest {
         mockMvc.perform(post(String.format("/v1/elements/%s/references", composite1Attributes.getElementUuid()))
                         .header("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(composite1ReferenceAttributes)))
+                        .content(objectMapper.writeValueAsString(List.of(composite1ReferenceAttributes))))
                 .andExpect(status().isOk());
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
@@ -2531,7 +2534,7 @@ class DirectoryTest {
         mockMvc.perform(post(String.format("/v1/elements/%s/references", composite2Attributes.getElementUuid()))
                         .header("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(composite2ReferenceAttributes)))
+                        .content(objectMapper.writeValueAsString(List.of(composite2ReferenceAttributes))))
                 .andExpect(status().isOk());
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
@@ -2544,18 +2547,18 @@ class DirectoryTest {
         // composite1 reference moves from the study node to the network-modification composite
         ReferenceAttributes newComposite1ReferenceAttributes = new ReferenceAttributes(composite1ReferenceAttributes.getReferenceId(),
             ReferenceContainer.builder().rootContainerId(UUID.randomUUID()).containerId(targetModificationUuid).build(), ReferenceType.STUDY_NODE_NETWORK_MODIFICATION);
-        mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", composite1Attributes.getElementUuid(), composite1ReferenceAttributes.getReferenceId()))
+        mockMvc.perform(put(String.format("/v1/elements/%s/references", composite1Attributes.getElementUuid()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(newComposite1ReferenceAttributes)))
+                .content(objectMapper.writeValueAsString(List.of(newComposite1ReferenceAttributes))))
             .andExpect(status().isOk());
 
         // composite2 moves from the network-modification composite to a study node
         ReferenceAttributes newComposite2ReferenceAttributes = new ReferenceAttributes(composite2ReferenceAttributes.getReferenceId(), createReferenceContainer(), ReferenceType.STUDY_NODE);
-        mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", composite2Attributes.getElementUuid(), composite2ReferenceAttributes.getReferenceId()))
+        mockMvc.perform(put(String.format("/v1/elements/%s/references", composite2Attributes.getElementUuid()))
                 .header("userId", userId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(newComposite2ReferenceAttributes)))
+                .content(objectMapper.writeValueAsString(List.of(newComposite2ReferenceAttributes))))
             .andExpect(status().isOk());
 
         // one UPDATE_DIRECTORY notification per moved composite, both pointing at the same parent directory
@@ -2581,10 +2584,10 @@ class DirectoryTest {
     @Test
     @SneakyThrows
     void testUpdateElementsReferencesElementNotFound() {
-        mockMvc.perform(put(String.format("/v1/elements/%s/references/%s", UUID.randomUUID(), UUID.randomUUID()))
+        mockMvc.perform(put(String.format("/v1/elements/%s/references", UUID.randomUUID()))
                 .header("userId", USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createElementReference(STUDY_NODE))))
+                .content(objectMapper.writeValueAsString(List.of(createElementReference(STUDY_NODE)))))
             .andExpect(status().isNotFound());
 
         assertDirectoriesNotified(Set.of(), 0, USER_ID);
