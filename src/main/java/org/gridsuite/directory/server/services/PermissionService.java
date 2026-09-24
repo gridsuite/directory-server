@@ -71,11 +71,10 @@ public class PermissionService {
     }
 
     /**
-     * Tells what the user may do with each of the given elements. The user groups are read once for the whole
-     * batch, so that asking about many elements costs a single call to the user-admin server.
+     * Get the permissions a user may have for the given elements.
      *
-     * @param userId       User ID checking permissions for
-     * @param elementUuids List of element UUIDs to check permissions on
+     * @param userId       User ID getting permissions for
+     * @param elementUuids List of element UUIDs to get permissions on
      * @return the strongest permission the user holds on each element. An element the user holds no permission
      * at all on is left out, as is an element that does not exist.
      */
@@ -84,30 +83,30 @@ public class PermissionService {
         if (roleService.isUserExploreAdmin()) {
             return elements.stream().collect(Collectors.toMap(DirectoryElementEntity::getId, element -> MANAGE));
         }
-        //If it's a directory we check its own permission else we check the permission on its parent directory
-        Map<UUID, UUID> checkedUuids = elements.stream().collect(Collectors.toMap(DirectoryElementEntity::getId,
+        // If it's a directory we get its own permission else we get the permission of its parent directory
+        Map<UUID, UUID> directoryUuidByElementUuid = elements.stream().collect(Collectors.toMap(DirectoryElementEntity::getId,
             element -> element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()));
 
-        Map<UUID, PermissionType> strongestPermissions = strongestPermissions(Set.copyOf(checkedUuids.values()), userId);
-        return checkedUuids.entrySet().stream()
-            .filter(element -> strongestPermissions.containsKey(element.getValue()))
-            .collect(Collectors.toMap(Map.Entry::getKey, element -> strongestPermissions.get(element.getValue())));
+        Map<UUID, PermissionType> permissionsByDirectory = strongestPermissions(Set.copyOf(directoryUuidByElementUuid.values()), userId);
+        return directoryUuidByElementUuid.entrySet().stream()
+            .filter(entry -> permissionsByDirectory.containsKey(entry.getValue()))
+            .collect(Collectors.toMap(Map.Entry::getKey, entry -> permissionsByDirectory.get(entry.getValue())));
     }
 
     /**
-     * Reads in one query the permissions that apply to the user among the given elements, several of which often
-     * share the directory their permission is read on.
+     * Reads in one query the permissions that apply to the user among the given elements.
      *
      * @return the strongest permission the user holds on each element, the ones they hold none on being left out
      */
     private Map<UUID, PermissionType> strongestPermissions(Set<UUID> elementUuids, String userId) {
         List<String> userGroupIds = getUserGroupIds(userId).stream().map(UUID::toString).toList();
         Map<UUID, PermissionType> strongestPermissions = new HashMap<>();
-        permissionRepository.findAllApplyingTo(elementUuids, userId, ALL_USERS, userGroupIds).forEach(permission -> {
-            PermissionType held = determineHighestPermission(permission);
-            if (held != null) {
-                strongestPermissions.merge(permission.getElementId(), held,
-                    (strongest, other) -> shouldUpdatePermission(strongest, other) ? other : strongest);
+        permissionRepository.findAllApplyingTo(elementUuids, userId, ALL_USERS, userGroupIds).forEach(permissionEntity -> {
+            // from every permission a user has, we keep the highest
+            PermissionType permissionType = determineHighestPermission(permissionEntity);
+            if (permissionType != null) {
+                strongestPermissions.merge(permissionEntity.getElementId(), permissionType,
+                    (current, other) -> shouldUpdatePermission(current, other) ? other : current);
             }
         });
         return strongestPermissions;

@@ -238,7 +238,7 @@ public class DirectoryController {
 
     @GetMapping(value = "/elements/permissions", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the permission the user holds on each of the given elements, "
-        + "a directory being checked on itself and any other element on its parent directory")
+        + "a directory being read on itself and any other element on its parent directory")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The strongest permission held on each element, "
             + "the ones held no permission at all on and the unknown ones being left out"),
