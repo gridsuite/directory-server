@@ -15,7 +15,9 @@ import org.gridsuite.directory.server.repository.ReferenceEmbeddable;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 
@@ -67,6 +69,10 @@ public class ElementAttributes {
             .stream()
             .map(ReferenceEmbeddable::toReferenceAttributes)
             .toList();
+    }
+
+    public static Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> toReferencesAttributesByType(@NonNull DirectoryElementEntity entity) {
+        return toReferencesAttributes(entity).stream().collect(Collectors.groupingBy(ReferenceAttributes::getReferenceType));
     }
 
     public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity) {

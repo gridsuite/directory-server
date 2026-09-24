@@ -135,7 +135,7 @@ public class DirectoryElementEntity {
             .findFirst();
     }
 
-    public void removeReference(ReferenceEmbeddable reference) {
+    private void removeReference(ReferenceEmbeddable reference) {
         this.references.remove(reference);
     }
 }
