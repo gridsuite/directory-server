@@ -8,8 +8,11 @@ package org.gridsuite.directory.server.repository;
 
 import lombok.NonNull;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,4 +31,15 @@ public interface PermissionRepository extends JpaRepository<PermissionEntity, Pe
     List<PermissionEntity> findAllByElementId(UUID elementId);
 
     void deleteAllByElementIdAndUserIdNot(UUID elementId, String userId);
+
+    /**
+     * @return among the given elements, the permissions that apply to the user: the one given to all users, their own,
+     * and the ones of the groups they belong to
+     */
+    @Query("SELECT p FROM PermissionEntity p WHERE p.elementId IN :elementIds "
+        + "AND (p.userId = :userId OR p.userId = :allUsersId OR p.userGroupId IN :userGroupIds)")
+    List<PermissionEntity> findAllApplyingTo(@Param("elementIds") Collection<UUID> elementIds,
+                                             @Param("userId") String userId,
+                                             @Param("allUsersId") String allUsersId,
+                                             @Param("userGroupIds") Collection<String> userGroupIds);
 }

@@ -532,6 +532,10 @@ class PermissionServiceTest {
         // An unknown element is left out, and so is an element no permission is held on at all
         assertThat(getElementsPermissions(USER_ONE, List.of(unknownElement))).isEmpty();
 
+        // A user belonging to no group holds what all users are given, and nothing more
+        assertThat(getElementsPermissions("USER_WITHOUT_GROUP", List.of(openElement, restrictedElement)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, WRITE, restrictedElement, READ));
+
         // An explore admin manages everything that exists
         assertThat(getElementsPermissions(ADMIN_USER, List.of(openElement, restrictedElement, unknownElement)))
                 .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, MANAGE, restrictedElement, MANAGE));

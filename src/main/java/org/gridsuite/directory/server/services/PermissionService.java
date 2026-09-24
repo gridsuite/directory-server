@@ -18,7 +18,6 @@ import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
@@ -81,28 +80,37 @@ public class PermissionService {
      * at all on is left out, as is an element that does not exist.
      */
     public Map<UUID, PermissionType> getElementsPermissions(String userId, List<UUID> elementUuids) {
-        boolean isExploreAdmin = roleService.isUserExploreAdmin();
-        Map<String, List<UUID>> userGroupIdsCache = new HashMap<>();
-        Map<UUID, PermissionType> permissions = new HashMap<>();
-        directoryElementRepository.findAllByIdIn(elementUuids).forEach(element -> {
-            //If it's a directory we check its own permission else we check the permission on its parent directory
-            UUID checkedUuid = element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId();
-            PermissionType permission = isExploreAdmin ? MANAGE : strongestPermission(checkedUuid, userId, userGroupIdsCache);
-            if (permission != null) {
-                permissions.put(element.getId(), permission);
-            }
-        });
-        return permissions;
+        List<DirectoryElementEntity> elements = directoryElementRepository.findAllByIdIn(elementUuids);
+        if (roleService.isUserExploreAdmin()) {
+            return elements.stream().collect(Collectors.toMap(DirectoryElementEntity::getId, element -> MANAGE));
+        }
+        //If it's a directory we check its own permission else we check the permission on its parent directory
+        Map<UUID, UUID> checkedUuids = elements.stream().collect(Collectors.toMap(DirectoryElementEntity::getId,
+            element -> element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()));
+
+        Map<UUID, PermissionType> strongestPermissions = strongestPermissions(Set.copyOf(checkedUuids.values()), userId);
+        return checkedUuids.entrySet().stream()
+            .filter(element -> strongestPermissions.containsKey(element.getValue()))
+            .collect(Collectors.toMap(Map.Entry::getKey, element -> strongestPermissions.get(element.getValue())));
     }
 
     /**
-     * @return the strongest permission the user holds on the element, null when they hold none
+     * Reads in one query the permissions that apply to the user among the given elements, several of which often
+     * share the directory their permission is read on.
+     *
+     * @return the strongest permission the user holds on each element, the ones they hold none on being left out
      */
-    private PermissionType strongestPermission(UUID elementUuid, String userId, Map<String, List<UUID>> userGroupIdsCache) {
-        return Stream.of(MANAGE, WRITE, READ)
-            .filter(permissionType -> hasPermission(elementUuid, permissionType, userId, userGroupIdsCache))
-            .findFirst()
-            .orElse(null);
+    private Map<UUID, PermissionType> strongestPermissions(Set<UUID> elementUuids, String userId) {
+        List<String> userGroupIds = getUserGroupIds(userId).stream().map(UUID::toString).toList();
+        Map<UUID, PermissionType> strongestPermissions = new HashMap<>();
+        permissionRepository.findAllApplyingTo(elementUuids, userId, ALL_USERS, userGroupIds).forEach(permission -> {
+            PermissionType held = determineHighestPermission(permission);
+            if (held != null) {
+                strongestPermissions.merge(permission.getElementId(), held,
+                    (strongest, other) -> shouldUpdatePermission(strongest, other) ? other : strongest);
+            }
+        });
+        return strongestPermissions;
     }
 
     public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {
