@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
+import com.vladmihalcea.sql.SQLStatementCountValidator;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -47,10 +48,13 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 import java.util.stream.Collectors;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 import static org.gridsuite.directory.server.services.PermissionService.ALL_USERS;
+import static org.gridsuite.directory.server.utils.DatabaseQueryUtils.assertRequestsCount;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
 import static org.junit.jupiter.api.Assertions.*;
@@ -502,6 +506,74 @@ class PermissionServiceTest {
         };
 
         permissionRepository.save(permission);
+    }
+
+    @Test
+    void testGetElementsPermissions() throws Exception {
+        UUID openDir = insertRootDirectory(ADMIN_USER, "openDir");
+        UUID restrictedDir = insertRootDirectory(ADMIN_USER, "restrictedDir");
+
+        UUID openElement = insertSubElement(openDir, toElementAttributes(null, "openElement", TYPE_01, ADMIN_USER));
+        UUID restrictedElement = insertSubElement(restrictedDir, toElementAttributes(null, "restrictedElement", TYPE_01, ADMIN_USER));
+        UUID unknownElement = UUID.randomUUID();
+
+        // Only GROUP_TWO may write into restrictedDir, while USER_ONE belongs to GROUP_ONE
+        updateDirectoryPermissions(ADMIN_USER, restrictedDir, List.of(
+                new PermissionDTO(true, List.of(), READ),
+                new PermissionDTO(false, List.of(GROUP_TWO_ID), WRITE)
+        )).andExpect(status().isOk());
+
+        // openDir is left writable to all users, while USER_ONE can only read restrictedDir
+        assertThat(getElementsPermissions(USER_ONE, List.of(openElement, restrictedElement)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, WRITE, restrictedElement, READ));
+
+        // USER_TWO belongs to GROUP_TWO, so it may write into restrictedDir too
+        assertThat(getElementsPermissions(USER_TWO, List.of(openElement, restrictedElement)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, WRITE, restrictedElement, WRITE));
+
+        // An unknown element is left out, and so is an element no permission is held on at all
+        assertThat(getElementsPermissions(USER_ONE, List.of(unknownElement))).isEmpty();
+
+        // A user belonging to no group holds what all users are given, and nothing more
+        assertThat(getElementsPermissions("USER_WITHOUT_GROUP", List.of(openElement, restrictedElement)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, WRITE, restrictedElement, READ));
+
+        // An explore admin manages everything that exists
+        assertThat(getElementsPermissions(ADMIN_USER, List.of(openElement, restrictedElement, unknownElement)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, MANAGE, restrictedElement, MANAGE));
+    }
+
+    @Test
+    void testGetElementsPermissionsReadsTheWholeBatchAtOnce() throws Exception {
+        UUID firstDir = insertRootDirectory(ADMIN_USER, "firstDir");
+        UUID secondDir = insertRootDirectory(ADMIN_USER, "secondDir");
+        List<UUID> elements = List.of(
+                insertSubElement(firstDir, toElementAttributes(null, "first", TYPE_01, ADMIN_USER)),
+                insertSubElement(firstDir, toElementAttributes(null, "second", TYPE_01, ADMIN_USER)),
+                insertSubElement(secondDir, toElementAttributes(null, "third", TYPE_01, ADMIN_USER)));
+
+        SQLStatementCountValidator.reset();
+
+        assertThat(getElementsPermissions(USER_ONE, elements)).hasSize(3);
+
+        // one read of the elements and one of the permissions that apply to the user, whatever the size of the batch
+        assertRequestsCount(2, 0, 0, 0);
+    }
+
+    /**
+     * Helper method asking what the user may do with each of the given elements
+     */
+    private Map<UUID, PermissionType> getElementsPermissions(String userId, List<UUID> elementUuids) throws Exception {
+        String ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/permissions")
+                        .param("ids", ids)
+                        .header(USER_ID_HEADER, userId)
+                        .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
     }
 
     @Test
