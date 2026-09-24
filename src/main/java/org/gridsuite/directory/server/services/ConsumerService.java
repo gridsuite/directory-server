@@ -59,7 +59,7 @@ public class ConsumerService {
             UUID elementUpdatedUuid = UUID.fromString(elementUpdatedUuidStr);
             Instant modificationDate = Instant.parse(modificationDateStr);
 
-            directoryService.updateElementLastModifiedAttributes(elementUpdatedUuid, modificationDate, modifiedBy);
+            directoryService.elementUpdatedNotification(elementUpdatedUuid, modificationDate, modifiedBy);
         };
     }
 

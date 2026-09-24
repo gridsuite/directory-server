@@ -29,9 +29,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Boolean.TRUE;
+import static java.util.function.Predicate.not;
 import static org.gridsuite.directory.server.dto.DirectoryElementStatus.CREATED;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributes;
 import static org.gridsuite.directory.server.dto.ElementAttributes.toElementAttributesWithReferences;
+import static org.gridsuite.directory.server.dto.ReferenceAttributes.ReferenceType;
 import static org.gridsuite.directory.server.error.DirectoryBusinessErrorCode.*;
 
 /**
@@ -180,7 +182,7 @@ public class DirectoryService {
                     elementEntity.setName(getDuplicateNameCandidate(parentDirectoryUuid, baseElementName, elementEntity.getType(), userId));
                 }
                 return repositoryService.saveElement(elementEntity);
-            } catch (DataIntegrityViolationException e) {
+            } catch (DataIntegrityViolationException _) {
                 if (generateNewName) {
                     retryCount++;
                 } else {
@@ -377,10 +379,12 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void updateElementLastModifiedAttributes(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
+    public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
         elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
-
+        if (!elementToUpdate.getReferences().isEmpty()) {
+            notifySharedElementHasChanged(elementToUpdate, lastModifiedBy);
+        }
     }
 
     private record MovedElement(UUID parentDirectoryUuid, String elementName, boolean isDirectory, boolean isRoot) { }
@@ -600,7 +604,7 @@ public class DirectoryService {
             directories = repositoryService.findDirectoriesByNameAndParentId(directoryName, parentDirectoryUuid);
         }
         if (!directories.isEmpty()) {
-            return directories.get(0).getId();
+            return directories.getFirst().getId();
         }
         return null;
     }
@@ -749,6 +753,13 @@ public class DirectoryService {
             isDirectoryMoving,
             NotificationType.DELETE_DIRECTORY
         );
+    }
+
+    private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
+        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
+        if (referencesByType.values().stream().anyMatch(not(List::isEmpty))) {
+            notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, userId);
+        }
     }
 
     /**
