@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
+import com.vladmihalcea.sql.SQLStatementCountValidator;
 import okhttp3.HttpUrl;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -53,6 +54,7 @@ import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 import static org.gridsuite.directory.server.services.PermissionService.ALL_USERS;
+import static org.gridsuite.directory.server.utils.DatabaseQueryUtils.assertRequestsCount;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.jsonResponse;
 import static org.gridsuite.directory.server.utils.DirectoryTestUtils.toElementAttributes;
 import static org.junit.jupiter.api.Assertions.*;
@@ -539,6 +541,23 @@ class PermissionServiceTest {
         // An explore admin manages everything that exists
         assertThat(getElementsPermissions(ADMIN_USER, List.of(openElement, restrictedElement, unknownElement)))
                 .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, MANAGE, restrictedElement, MANAGE));
+    }
+
+    @Test
+    void testGetElementsPermissionsReadsTheWholeBatchAtOnce() throws Exception {
+        UUID firstDir = insertRootDirectory(ADMIN_USER, "firstDir");
+        UUID secondDir = insertRootDirectory(ADMIN_USER, "secondDir");
+        List<UUID> elements = List.of(
+                insertSubElement(firstDir, toElementAttributes(null, "first", TYPE_01, ADMIN_USER)),
+                insertSubElement(firstDir, toElementAttributes(null, "second", TYPE_01, ADMIN_USER)),
+                insertSubElement(secondDir, toElementAttributes(null, "third", TYPE_01, ADMIN_USER)));
+
+        SQLStatementCountValidator.reset();
+
+        assertThat(getElementsPermissions(USER_ONE, elements)).hasSize(3);
+
+        // one read of the elements and one of the permissions that apply to the user, whatever the size of the batch
+        assertRequestsCount(2, 0, 0, 0);
     }
 
     /**
