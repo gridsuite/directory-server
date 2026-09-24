@@ -18,6 +18,7 @@ import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
@@ -71,7 +72,8 @@ public class PermissionService {
     }
 
     /**
-     * Get the permissions a user may have for the given elements.
+     * Tells what the user may do with each of the given elements. The user groups are read once for the whole
+     * batch, so that asking about many elements costs a single call to the user-admin server.
      *
      * @param userId       User ID checking permissions for
      * @param elementUuids List of element UUIDs to check permissions on
@@ -83,7 +85,7 @@ public class PermissionService {
         Map<String, List<UUID>> userGroupIdsCache = new HashMap<>();
         Map<UUID, PermissionType> permissions = new HashMap<>();
         directoryElementRepository.findAllByIdIn(elementUuids).forEach(element -> {
-            // If it's a directory we check its own permission else we check the permission on its parent directory
+            //If it's a directory we check its own permission else we check the permission on its parent directory
             UUID checkedUuid = element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId();
             PermissionType permission = isExploreAdmin ? MANAGE : strongestPermission(checkedUuid, userId, userGroupIdsCache);
             if (permission != null) {
@@ -94,31 +96,13 @@ public class PermissionService {
     }
 
     /**
-     * Reads the permissions that apply to the user on that element - the one given to all users, their own, and the
-     * ones of the groups they belong to - and keeps the strongest. The groups are only read when nothing stronger
-     * can come out of them.
-     *
      * @return the strongest permission the user holds on the element, null when they hold none
      */
     private PermissionType strongestPermission(UUID elementUuid, String userId, Map<String, List<UUID>> userGroupIdsCache) {
-        PermissionType strongest = strongestOf(null, permissionOf(elementUuid, ALL_USERS, ""));
-        strongest = strongestOf(strongest, permissionOf(elementUuid, userId, ""));
-        for (UUID groupId : userGroupIdsCache.computeIfAbsent(userId, this::getUserGroupIds)) {
-            if (strongest == MANAGE) {
-                break;
-            }
-            strongest = strongestOf(strongest, permissionOf(elementUuid, "", groupId.toString()));
-        }
-        return strongest;
-    }
-
-    private PermissionType strongestOf(PermissionType strongest, Optional<PermissionEntity> permission) {
-        PermissionType held = permission.map(this::determineHighestPermission).orElse(null);
-        return shouldUpdatePermission(strongest, held) ? held : strongest;
-    }
-
-    private Optional<PermissionEntity> permissionOf(UUID elementUuid, String userId, String userGroupId) {
-        return permissionRepository.findById(new PermissionId(elementUuid, userId, userGroupId));
+        return Stream.of(MANAGE, WRITE, READ)
+            .filter(permissionType -> hasPermission(elementUuid, permissionType, userId, userGroupIdsCache))
+            .findFirst()
+            .orElse(null);
     }
 
     public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {
@@ -262,16 +246,16 @@ public class PermissionService {
     }
 
     private boolean hasGlobalPermission(UUID elementUuid, PermissionType permissionType) {
-        return checkPermission(permissionOf(elementUuid, ALL_USERS, ""), permissionType);
+        return checkPermission(permissionRepository.findById(new PermissionId(elementUuid, ALL_USERS, "")), permissionType);
     }
 
     private boolean hasUserPermission(UUID elementUuid, PermissionType permissionType, String userId) {
-        return checkPermission(permissionOf(elementUuid, userId, ""), permissionType);
+        return checkPermission(permissionRepository.findById(new PermissionId(elementUuid, userId, "")), permissionType);
     }
 
     private boolean hasGroupPermission(UUID elementUuid, PermissionType permissionType, List<UUID> userGroupIds) {
         return userGroupIds.stream()
-            .anyMatch(groupId -> checkPermission(permissionOf(elementUuid, "", groupId.toString()), permissionType));
+            .anyMatch(groupId -> checkPermission(permissionRepository.findById(new PermissionId(elementUuid, "", groupId.toString())), permissionType));
     }
 
     private List<UUID> getUserGroupIds(String userId) {
