@@ -18,6 +18,7 @@ import org.gridsuite.directory.server.repository.PermissionRepository;
 import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
 import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
@@ -71,22 +72,37 @@ public class PermissionService {
     }
 
     /**
-     * Tells which of the given elements the user may access.
+     * Tells what the user may do with each of the given elements. The user groups are read once for the whole
+     * batch, so that asking about many elements costs a single call to the user-admin server.
      *
-     * @param userId         User ID checking permissions for
-     * @param elementUuids   List of element UUIDs to check permissions on
-     * @param permissionType Type of permission to check (READ, WRITE, MANAGE)
-     * @return the uuids of the accessible elements, in no particular order
+     * @param userId       User ID checking permissions for
+     * @param elementUuids List of element UUIDs to check permissions on
+     * @return the strongest permission the user holds on each element. An element the user holds no permission
+     * at all on is left out, as is an element that does not exist.
      */
-    public List<UUID> filterAccessibleElements(String userId, List<UUID> elementUuids, PermissionType permissionType) {
+    public Map<UUID, PermissionType> getElementsPermissions(String userId, List<UUID> elementUuids) {
         boolean isExploreAdmin = roleService.isUserExploreAdmin();
         Map<String, List<UUID>> userGroupIdsCache = new HashMap<>();
-        return directoryElementRepository.findAllByIdIn(elementUuids).stream()
+        Map<UUID, PermissionType> permissions = new HashMap<>();
+        directoryElementRepository.findAllByIdIn(elementUuids).forEach(element -> {
             //If it's a directory we check its own permission else we check the permission on its parent directory
-            .filter(element -> isExploreAdmin || hasPermission(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId(), permissionType, userId,
-                userGroupIdsCache))
-            .map(DirectoryElementEntity::getId)
-            .toList();
+            UUID checkedUuid = element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId();
+            PermissionType permission = isExploreAdmin ? MANAGE : strongestPermission(checkedUuid, userId, userGroupIdsCache);
+            if (permission != null) {
+                permissions.put(element.getId(), permission);
+            }
+        });
+        return permissions;
+    }
+
+    /**
+     * @return the strongest permission the user holds on the element, null when they hold none
+     */
+    private PermissionType strongestPermission(UUID elementUuid, String userId, Map<String, List<UUID>> userGroupIdsCache) {
+        return Stream.of(MANAGE, WRITE, READ)
+            .filter(permissionType -> hasPermission(elementUuid, permissionType, userId, userGroupIdsCache))
+            .findFirst()
+            .orElse(null);
     }
 
     public boolean hasReadPermissions(String userId, List<UUID> elementUuids) {

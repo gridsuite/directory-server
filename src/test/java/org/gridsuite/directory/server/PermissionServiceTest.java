@@ -49,6 +49,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.directory.server.DirectoryService.DIRECTORY;
+import static org.gridsuite.directory.server.dto.PermissionType.MANAGE;
 import static org.gridsuite.directory.server.dto.PermissionType.READ;
 import static org.gridsuite.directory.server.dto.PermissionType.WRITE;
 import static org.gridsuite.directory.server.services.PermissionService.ALL_USERS;
@@ -506,7 +507,7 @@ class PermissionServiceTest {
     }
 
     @Test
-    void testFilterAccessibleElements() throws Exception {
+    void testGetElementsPermissions() throws Exception {
         UUID openDir = insertRootDirectory(ADMIN_USER, "openDir");
         UUID restrictedDir = insertRootDirectory(ADMIN_USER, "restrictedDir");
 
@@ -520,33 +521,30 @@ class PermissionServiceTest {
                 new PermissionDTO(false, List.of(GROUP_TWO_ID), WRITE)
         )).andExpect(status().isOk());
 
-        // USER_ONE can't write in restrictedDir
-        assertThat(getAccessibleElements(USER_ONE, List.of(openElement, restrictedElement), WRITE))
-                .containsExactlyInAnyOrder(openElement);
+        // openDir is left writable to all users, while USER_ONE can only read restrictedDir
+        assertThat(getElementsPermissions(USER_ONE, List.of(openElement, restrictedElement)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, WRITE, restrictedElement, READ));
 
-        // USER_TWO belongs to GROUP_TWO, so it may write into both
-        assertThat(getAccessibleElements(USER_TWO, List.of(openElement, restrictedElement), WRITE))
-                .containsExactlyInAnyOrder(openElement, restrictedElement);
+        // USER_TWO belongs to GROUP_TWO, so it may write into restrictedDir too
+        assertThat(getElementsPermissions(USER_TWO, List.of(openElement, restrictedElement)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, WRITE, restrictedElement, WRITE));
 
-        // READ is left open to everyone on both directories
-        assertThat(getAccessibleElements(USER_ONE, List.of(openElement, restrictedElement), READ))
-                .containsExactlyInAnyOrder(openElement, restrictedElement);
+        // An unknown element is left out, and so is an element no permission is held on at all
+        assertThat(getElementsPermissions(USER_ONE, List.of(unknownElement))).isEmpty();
 
-        // An unknown element is never accessible, not even to an explore admin
-        assertThat(getAccessibleElements(USER_ONE, List.of(unknownElement), WRITE)).isEmpty();
-        assertThat(getAccessibleElements(ADMIN_USER, List.of(openElement, restrictedElement, unknownElement), WRITE))
-                .containsExactlyInAnyOrder(openElement, restrictedElement);
+        // An explore admin manages everything that exists
+        assertThat(getElementsPermissions(ADMIN_USER, List.of(openElement, restrictedElement, unknownElement)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(openElement, MANAGE, restrictedElement, MANAGE));
     }
 
     /**
-     * Helper method asking which of the given elements the user may access
+     * Helper method asking what the user may do with each of the given elements
      */
-    private List<UUID> getAccessibleElements(String userId, List<UUID> elementUuids, PermissionType permissionType) throws Exception {
+    private Map<UUID, PermissionType> getElementsPermissions(String userId, List<UUID> elementUuids) throws Exception {
         String ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
 
-        MvcResult result = mockMvc.perform(get("/v1/elements/accessible")
+        MvcResult result = mockMvc.perform(get("/v1/elements/permissions")
                         .param("ids", ids)
-                        .param("accessType", permissionType.name())
                         .header(USER_ID_HEADER, userId)
                         .header(USER_ROLES_HEADER, userId.equals(ADMIN_USER) ? ADMIN_ROLE : USER_ROLE))
                 .andExpect(status().isOk())
