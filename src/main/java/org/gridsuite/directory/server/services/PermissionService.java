@@ -262,16 +262,16 @@ public class PermissionService {
     }
 
     private boolean hasGlobalPermission(UUID elementUuid, PermissionType permissionType) {
-        return checkPermission(permissionRepository.findById(new PermissionId(elementUuid, ALL_USERS, "")), permissionType);
+        return checkPermission(permissionOf(elementUuid, ALL_USERS, ""), permissionType);
     }
 
     private boolean hasUserPermission(UUID elementUuid, PermissionType permissionType, String userId) {
-        return checkPermission(permissionRepository.findById(new PermissionId(elementUuid, userId, "")), permissionType);
+        return checkPermission(permissionOf(elementUuid, userId, ""), permissionType);
     }
 
     private boolean hasGroupPermission(UUID elementUuid, PermissionType permissionType, List<UUID> userGroupIds) {
         return userGroupIds.stream()
-            .anyMatch(groupId -> checkPermission(permissionRepository.findById(new PermissionId(elementUuid, "", groupId.toString())), permissionType));
+            .anyMatch(groupId -> checkPermission(permissionOf(elementUuid, "", groupId.toString()), permissionType));
     }
 
     private List<UUID> getUserGroupIds(String userId) {
