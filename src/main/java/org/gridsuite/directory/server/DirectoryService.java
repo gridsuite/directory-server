@@ -817,4 +817,10 @@ public class DirectoryService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         directoriesToNotify.forEach(uuid -> notifyDirectoryHasChanged(uuid, userId));
     }
+
+    public void handleSharedElementUpdate(UUID elementUuid, String userId) {
+        DirectoryElementEntity directoryElementEntity = directoryElementRepository.findById(elementUuid)
+                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
+        notifyDirectoryHasChanged(directoryElementEntity.getParentId(), userId);
+    }
 }

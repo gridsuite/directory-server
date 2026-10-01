@@ -21,7 +21,7 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 
 import static org.gridsuite.directory.server.NotificationService.*;
@@ -75,6 +75,17 @@ public class ConsumerService {
             // UPDATE_TYPE_STUDY_CREATION_FINISHED is the update type used when study insertion or duplication is finished, and when a study import fails
             if (UPDATE_TYPE_STUDY_CREATION_FINISHED.equals(updateType) && studyUuidHeader != null) {
                 directoryService.studyCreatedNotification(UUID.fromString(studyUuidHeader), error, userId);
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<?>> consumeSharedElementUpdate() {
+        return message -> {
+            String elementUpdatedUuidStr = message.getHeaders().get(HEADER_ELEMENT_UUID, String.class);
+            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
+            if (elementUpdatedUuidStr != null) {
+                directoryService.handleSharedElementUpdate(UUID.fromString(elementUpdatedUuidStr), userId);
             }
         };
     }

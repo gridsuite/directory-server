@@ -73,12 +73,12 @@ public class NotificationService {
     }
 
     @SneakyThrows
-    public void emitDirectoryChanged(List<DirectoryInfos> directoryrInfos, List<String> elementNames, String userId, String error, boolean isDirectoryMoving, NotificationType notificationType) {
+    public void emitDirectoryChanged(List<DirectoryInfos> directoryInfos, List<String> elementNames, String userId, String error, boolean isDirectoryMoving, NotificationType notificationType) {
 
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_ELEMENT_NAMES, elementNames)
-                .setHeader(HEADER_DIRECTORIES_INFOS, mapper.writeValueAsString(directoryrInfos)) // exception could be thrown here
+                .setHeader(HEADER_DIRECTORIES_INFOS, mapper.writeValueAsString(directoryInfos)) // exception could be thrown here
                 .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from borked REST request
                 .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
