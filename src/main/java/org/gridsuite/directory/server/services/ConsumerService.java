@@ -80,7 +80,7 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<?>> consumeSharedElementUpdate() {
+    public Consumer<Message<String>> consumeSharedElementUpdate() {
         return message -> {
             String elementUpdatedUuidStr = message.getHeaders().get(HEADER_ELEMENT_UUID, String.class);
             String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
