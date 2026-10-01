@@ -11,6 +11,7 @@ import org.gridsuite.directory.server.repository.DirectoryElementEntity;
 import org.gridsuite.directory.server.repository.DirectoryElementRepository;
 import org.gridsuite.directory.server.services.ConsumerService;
 import org.gridsuite.directory.server.services.DirectoryRepositoryService;
+import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.when;
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
  */
 @SpringBootTest
+@DisableElasticsearch
 public class ConsumerServiceTest {
 
     @Autowired
@@ -57,7 +59,7 @@ public class ConsumerServiceTest {
         directoryElementEntity.setParentId(parentUuid);
         when(directoryElementRepository.findById(elementUuid)).thenReturn(Optional.of(directoryElementEntity));
 
-        consumer.accept(MessageBuilder.withPayload("test")
+        consumer.accept(MessageBuilder.withPayload("")
                 .setHeader(HEADER_ELEMENT_UUID, elementUuid.toString())
                 .setHeader(HEADER_USER_ID, userId.toString())
                 .build());
