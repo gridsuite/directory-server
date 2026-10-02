@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 @DisableElasticsearch
-public class ConsumerServiceTest {
+class ConsumerServiceTest {
 
     @Autowired
     private ConsumerService consumerService;
@@ -53,7 +53,7 @@ public class ConsumerServiceTest {
     private DirectoryRepositoryService repositoryService;
 
     @Test
-    public void testConsumeSharedElementUpdated() {
+    void testConsumeSharedElementUpdated() {
         Consumer<Message<String>> consumer = consumerService.consumeSharedElementUpdate();
         UUID elementUuid = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
