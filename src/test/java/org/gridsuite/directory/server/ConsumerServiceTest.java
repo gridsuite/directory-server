@@ -15,8 +15,10 @@ import org.gridsuite.directory.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
@@ -34,6 +36,7 @@ import static org.mockito.Mockito.when;
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
  */
 @SpringBootTest
+@ContextConfiguration(classes = {DirectoryApplication.class, TestChannelBinderConfiguration.class})
 @DisableElasticsearch
 public class ConsumerServiceTest {
 
