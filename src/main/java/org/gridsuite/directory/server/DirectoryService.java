@@ -380,10 +380,15 @@ public class DirectoryService {
 
     @Transactional
     public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
-        DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
-        elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
-        if (!elementToUpdate.getReferences().isEmpty()) {
-            notifySharedElementHasChanged(elementToUpdate, lastModifiedBy);
+        Optional<DirectoryElementEntity> elementToUpdate = repositoryService.getElementEntity(elementUuid);
+        if (elementToUpdate.isPresent()) {
+            DirectoryElementEntity elementEntity = elementToUpdate.get();
+            elementEntity.updateModificationAttributes(lastModifiedBy, lastModificationDate);
+            if (!elementEntity.getReferences().isEmpty()) {
+                notifySharedElementHasChanged(elementEntity, lastModifiedBy);
+            } else {
+                notifyDirectoryHasChanged(elementEntity.getParentId(), lastModifiedBy, elementEntity.getName());
+            }
         }
     }
 
