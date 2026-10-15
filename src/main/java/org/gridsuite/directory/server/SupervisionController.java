@@ -6,12 +6,12 @@
  */
 package org.gridsuite.directory.server;
 
+import co.elastic.clients.transport.rest5_client.low_level.Rest5Client;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.apache.http.HttpHost;
-import org.elasticsearch.client.RestClient;
+import org.apache.hc.core5.http.HttpHost;
 import org.gridsuite.directory.server.dto.ElementAttributes;
 import org.gridsuite.directory.server.services.DirectoryElementInfosService;
 import org.gridsuite.directory.server.services.SupervisionService;
@@ -34,9 +34,9 @@ public class SupervisionController {
 
     private final DirectoryElementInfosService directoryElementInfosService;
 
-    private final RestClient restClient;
+    private final Rest5Client restClient;
 
-    public SupervisionController(SupervisionService service, DirectoryElementInfosService directoryElementInfosService, RestClient restClient) {
+    public SupervisionController(SupervisionService service, DirectoryElementInfosService directoryElementInfosService, Rest5Client restClient) {
         this.service = service;
         this.directoryElementInfosService = directoryElementInfosService;
         this.restClient = restClient;
