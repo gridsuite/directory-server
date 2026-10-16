@@ -53,6 +53,8 @@ public class ElementAttributes {
 
     private DirectoryElementStatus status;
 
+    private Boolean writePermission;
+
     // Uses of the current element as a reference (shared element)
     // Empty means that the element is not referenced
     @Builder.Default
@@ -81,9 +83,16 @@ public class ElementAttributes {
         return attributes;
     }
 
+    public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity, Boolean writePermission) {
+        ElementAttributes attributes = toElementAttributes(entity, 0L);
+        attributes.setReferences(toReferencesAttributes(entity));
+        attributes.setWritePermission(writePermission);
+        return attributes;
+    }
+
     public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
         ElementAttributes attributes = toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount,
-                entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus());
+                entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus(), null);
         attributes.setReferences(toReferencesAttributes(entity));
         return attributes;
     }
@@ -95,25 +104,26 @@ public class ElementAttributes {
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
         return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(),
                 subDirectoriesCount, entity.getDescription(), entity.getCreationDate(),
-                entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus());
+                entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus(), null);
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
         return toElementAttributes(null, rootDirectoryAttributes.getElementName(), DIRECTORY,
                 rootDirectoryAttributes.getOwner(), 0L, null, rootDirectoryAttributes.getCreationDate(),
-                rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy(), DirectoryElementStatus.CREATED);
+                rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy(), DirectoryElementStatus.CREATED, true);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull String userId, long subdirectoriesCount, String elementDescription,
                                                         Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
         return toElementAttributes(elementUuid, elementName, elementType, userId, subdirectoriesCount, elementDescription,
-                creationDate, lastModificationDate, lastModifiedBy, DirectoryElementStatus.CREATED);
+                creationDate, lastModificationDate, lastModifiedBy, DirectoryElementStatus.CREATED, null);
     }
 
     public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
                                                         @NonNull String userId, long subdirectoriesCount, String elementDescription,
-                                                        Instant creationDate, Instant lastModificationDate, String lastModifiedBy, DirectoryElementStatus status) {
+                                                        Instant creationDate, Instant lastModificationDate, String lastModifiedBy, DirectoryElementStatus status,
+                                                        Boolean writePermission) {
         return ElementAttributes.builder()
             .elementUuid(elementUuid)
             .elementName(elementName)
@@ -125,6 +135,7 @@ public class ElementAttributes {
             .lastModificationDate(lastModificationDate)
             .lastModifiedBy(lastModifiedBy)
             .status(status)
+            .writePermission(writePermission)
             .references(List.of())
             .build();
     }

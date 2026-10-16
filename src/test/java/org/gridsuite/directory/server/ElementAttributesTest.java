@@ -152,6 +152,7 @@ class ElementAttributesTest {
                 toJsonString("lastModificationDate", elementAttributes.getLastModificationDate()),
                 toJsonString("lastModifiedBy", elementAttributes.getLastModifiedBy()),
                 toJsonString("status", elementAttributes.getStatus().name()),
+                toJsonString("writePermission", elementAttributes.getWritePermission()),
                 toJsonString(elementAttributes.getReferences())
             )
             .filter(Objects::nonNull)
