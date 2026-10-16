@@ -25,7 +25,7 @@ import java.util.UUID;
 @Builder
 @Embeddable
 public class ReferenceEmbeddable {
-    @Column(name = "reference_id")
+    @Column(name = "reference_id", unique = true)
     private UUID referenceId;
 
     @Embedded

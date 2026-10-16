@@ -12,5 +12,6 @@ package org.gridsuite.directory.server;
 enum NotificationType {
     DELETE_DIRECTORY,
     ADD_DIRECTORY,
-    UPDATE_DIRECTORY
+    UPDATE_DIRECTORY,
+    UPDATE_SHARED_ELEMENT
 }

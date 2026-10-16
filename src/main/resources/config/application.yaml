@@ -10,6 +10,8 @@ spring:
       bindings:
         publishDirectoryUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}directory.update
+        publishElementSharedUpdate-out-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.shared.update
         consumeStudyUpdate-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
           group: directoryStudyUpdateGroup
@@ -19,7 +21,7 @@ spring:
         consumeCaseExportFinished-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.export.finished
           group: directoryElementUpdateGroup
-      output-bindings: publishDirectoryUpdate-out-0
+      output-bindings: publishDirectoryUpdate-out-0;publishElementSharedUpdate-out-0
 
 powsybl-ws:
   database:
