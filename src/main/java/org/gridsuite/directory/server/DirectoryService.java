@@ -291,13 +291,12 @@ public class DirectoryService {
             return descendents
                 .stream()
                 .filter(e -> (types.isEmpty() || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
-                .map(ElementAttributes::toElementAttributesWithReferences)
-                .peek(element -> {
-                    if (element.getType().equals(DIRECTORY)) {
-                        boolean subDirectoryHasWritePermission = permissionService.hasWritePermission(userId, List.of(element.getElementUuid()));
-                        element.setWritePermission(subDirectoryHasWritePermission);
+                .map(entity -> {
+                    if (entity.getType().equals(DIRECTORY)) {
+                        boolean subDirectoryHasWritePermission = permissionService.hasWritePermission(userId, List.of(entity.getId()));
+                        return ElementAttributes.toElementAttributesWithReferences(entity, subDirectoryHasWritePermission);
                     } else {
-                        element.setWritePermission(hasWritePermission);
+                        return ElementAttributes.toElementAttributesWithReferences(entity, hasWritePermission);
                     }
                 })
                 .toList();
