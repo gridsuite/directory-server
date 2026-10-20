@@ -2487,8 +2487,7 @@ class DirectoryTest {
         SQLStatementCountValidator.reset();
         mockMvc.perform(delete(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
                 .header("userId", userId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(List.of(referenceAttributes1.getReferenceId(), referenceAttributes2.getReferenceId()))))
+                .param("ids", referenceAttributes1.getReferenceId().toString(), referenceAttributes2.getReferenceId().toString()))
             .andExpect(status().isOk());
 
         // check that the reference is created

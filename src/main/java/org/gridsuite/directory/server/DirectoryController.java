@@ -310,7 +310,8 @@ public class DirectoryController {
         @ApiResponse(responseCode = "403", description = "Not authorized to update this element")
     })
     public ResponseEntity<Void> deleteElementReferences(@PathVariable("elementUuid") UUID elementUuid,
-                                                       @RequestBody List<UUID> referenceUuids,
+                                                       @Parameter(description = "references UUIDs")
+                                                       @RequestParam("ids") List<UUID> referenceUuids,
                                                        @RequestHeader("userId") String userId) {
         service.deleteElementReferences(elementUuid, referenceUuids, userId);
         return ResponseEntity.ok().build();
