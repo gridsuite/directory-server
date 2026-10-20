@@ -379,16 +379,22 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
-        Optional<DirectoryElementEntity> elementToUpdate = repositoryService.getElementEntity(elementUuid);
-        if (elementToUpdate.isPresent()) {
-            DirectoryElementEntity elementEntity = elementToUpdate.get();
-            elementEntity.updateModificationAttributes(lastModifiedBy, lastModificationDate);
-            if (!elementEntity.getReferences().isEmpty()) {
-                notifySharedElementHasChanged(elementEntity, lastModifiedBy);
-            } else {
-                notifyDirectoryHasChanged(elementEntity.getParentId(), lastModifiedBy, elementEntity.getName());
-            }
+    public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy, boolean onlyMetadata) {
+        DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
+        if (onlyMetadata) {
+            notifyDirectoryHasChanged(elementToUpdate.getParentId() == null ? elementUuid : elementToUpdate.getParentId(), lastModifiedBy, elementToUpdate.getName());
+        } else {
+            elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
+        }
+        if (!elementToUpdate.getReferences().isEmpty()) {
+            notifySharedElementHasChanged(elementToUpdate, onlyMetadata, lastModifiedBy);
+        }
+    }
+
+    private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, boolean onlyMetadata, String userId) {
+        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
+        if (referencesByType.values().stream().anyMatch(not(List::isEmpty))) {
+            notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, onlyMetadata, userId);
         }
     }
 
@@ -760,13 +766,6 @@ public class DirectoryService {
         );
     }
 
-    private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
-        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
-        if (referencesByType.values().stream().anyMatch(not(List::isEmpty))) {
-            notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, userId);
-        }
-    }
-
     /**
      * Retrieves the permission settings for a directory, organized by permission type.
      * Returns exactly one PermissionDTO for each permission type (READ, WRITE, MANAGE).
@@ -821,11 +820,5 @@ public class DirectoryService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         directoriesToNotify.forEach(uuid -> notifyDirectoryHasChanged(uuid, userId));
-    }
-
-    public void handleSharedElementUpdate(UUID elementUuid, String userId) {
-        DirectoryElementEntity directoryElementEntity = directoryElementRepository.findById(elementUuid)
-                .orElseThrow(() -> DirectoryException.createElementNotFound(ELEMENT, elementUuid));
-        notifyDirectoryHasChanged(directoryElementEntity.getParentId(), userId);
     }
 }

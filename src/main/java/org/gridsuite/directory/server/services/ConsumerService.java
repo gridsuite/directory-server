@@ -55,11 +55,15 @@ public class ConsumerService {
             String elementUpdatedUuidStr = message.getHeaders().get(HEADER_ELEMENT_UUID, String.class);
             String modifiedBy = message.getHeaders().get(HEADER_MODIFIED_BY, String.class);
             String modificationDateStr = message.getHeaders().get(HEADER_MODIFICATION_DATE, String.class);
+            boolean onlyMetadata = false;
+            if (message.getHeaders().containsKey(HEADER_ONLY_METADATA)) {
+                onlyMetadata = message.getHeaders().get(HEADER_ONLY_METADATA, Boolean.class);
+            }
 
             UUID elementUpdatedUuid = UUID.fromString(elementUpdatedUuidStr);
             Instant modificationDate = Instant.parse(modificationDateStr);
 
-            directoryService.elementUpdatedNotification(elementUpdatedUuid, modificationDate, modifiedBy);
+            directoryService.elementUpdatedNotification(elementUpdatedUuid, modificationDate, modifiedBy, onlyMetadata);
         };
     }
 
@@ -75,17 +79,6 @@ public class ConsumerService {
             // UPDATE_TYPE_STUDY_CREATION_FINISHED is the update type used when study insertion or duplication is finished, and when a study import fails
             if (UPDATE_TYPE_STUDY_CREATION_FINISHED.equals(updateType) && studyUuidHeader != null) {
                 directoryService.studyCreatedNotification(UUID.fromString(studyUuidHeader), error, userId);
-            }
-        };
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeSharedElementUpdate() {
-        return message -> {
-            String elementUpdatedUuidStr = message.getHeaders().get(HEADER_ELEMENT_UUID, String.class);
-            String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-            if (elementUpdatedUuidStr != null) {
-                directoryService.handleSharedElementUpdate(UUID.fromString(elementUpdatedUuidStr), userId);
             }
         };
     }

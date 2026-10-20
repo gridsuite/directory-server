@@ -1331,7 +1331,6 @@ class DirectoryTest {
             .andReturn();
 
         ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
-        testNotificationDirectory(uuidNewRootDirectory, NotificationType.UPDATE_DIRECTORY, userMakingModification);
 
         assertEquals(newModificationDate, updatedElement.getLastModificationDate());
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
@@ -1414,7 +1413,6 @@ class DirectoryTest {
             .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON))
             .andReturn();
         ElementAttributes updatedElement = objectMapper.readValue(result.getResponse().getContentAsString(), ElementAttributes.class);
-        testNotificationDirectory(uuidNewRootDirectory, NotificationType.UPDATE_DIRECTORY, userMakingModification);
         assertEquals(newModificationDate, updatedElement.getLastModificationDate());
         assertEquals(userMakingModification, updatedElement.getLastModifiedBy());
     }

@@ -43,6 +43,7 @@ public class NotificationService {
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_IS_DIRECTORY_MOVING = "isDirectoryMoving";
     public static final String UPDATE_TYPE_ELEMENT_DELETE = "deleteElement";
+    public static final String HEADER_ONLY_METADATA = "onlyMetadata";
     public static final String HEADER_EXPORT_UUID = "exportUuid";
     public static final String CASE_EXPORT_FINISHED = "caseExportFinished";
     private static final String CATEGORY_BROKER_OUTPUT = DirectoryService.class.getName() + ".output-broker-messages";
@@ -111,10 +112,11 @@ public class NotificationService {
      *                       modifications directory-server has no visibility on; study-server has to resolve
      *                       which nodes ultimately contain them)
      */
-    public void emitSharedElementChanged(UUID elementUuid, Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, String userId) {
+    public void emitSharedElementChanged(UUID elementUuid, Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>> referencesByType, Boolean onlyMetadata, String userId) {
         MessageBuilder<Map<ReferenceAttributes.ReferenceType, List<ReferenceAttributes>>> messageBuilder = MessageBuilder.withPayload(referencesByType)
             .setHeader(HEADER_USER_ID, userId)
             .setHeader(HEADER_ELEMENT_UUID, elementUuid)
+            .setHeader(HEADER_ONLY_METADATA, onlyMetadata)
             .setHeader(HEADER_NOTIFICATION_TYPE, NotificationType.UPDATE_SHARED_ELEMENT);
         sendSharedElementUpdateMessage(messageBuilder.build());
     }
