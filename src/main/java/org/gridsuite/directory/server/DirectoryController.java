@@ -303,7 +303,7 @@ public class DirectoryController {
     }
 
     @DeleteMapping(value = "/elements/{elementUuid}/references")
-    @Operation(summary = "Delete one or several references to an element")
+    @Operation(summary = "Delete one or several references from an element")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "References were successfully deleted"),
         @ApiResponse(responseCode = "404", description = "The element was not found"),
