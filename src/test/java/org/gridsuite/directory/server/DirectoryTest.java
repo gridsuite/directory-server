@@ -61,6 +61,7 @@ import org.springframework.util.CollectionUtils;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.vladmihalcea.sql.SQLStatementCountValidator.*;
@@ -2423,6 +2424,44 @@ class DirectoryTest {
         assertNotNull(mess);
         assertEquals(exportUuid, mess.getHeaders().get(HEADER_EXPORT_UUID));
         output.clear();
+    }
+
+    @Test
+    void testConsumeElementUpdate() throws Exception {
+
+        // Insert a root directory
+        String directoryName = "newDir";
+        ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory(directoryName, USER_ID);
+
+        // create modifRoot
+        String modifRootName = "modifRoot";
+        List<ReferenceAttributes> referenceAttributesList = List.of(createElementReference(STUDY_NODE), createElementReference(STUDY_NODE));
+        ElementAttributes rootModifAttributes = toElementAttributesWithReferences(null, modifRootName,
+                MODIFICATION, referenceAttributesList, USER_ID);
+        insertAndCheckSubElementInRootDir(newRootDirectory.getElementUuid(), rootModifAttributes);
+
+        Consumer<Message<String>> consumer = consumeService.consumeElementUpdate();
+        consumer.accept(MessageBuilder.withPayload("")
+                .setHeader(HEADER_ELEMENT_UUID, rootModifAttributes.getElementUuid().toString())
+                .setHeader(HEADER_ONLY_METADATA, true)
+                .setHeader(HEADER_MODIFIED_BY, USER_ID)
+                .build());
+
+        // update directory notification
+        var mess = output.receive(TIMEOUT, directoryUpdateDestination);
+        assertNotNull(mess);
+        assertEquals(List.of(modifRootName), mess.getHeaders().get(HEADER_ELEMENT_NAMES));
+        assertEquals("[{\"uuid\":\"" + newRootDirectory.getElementUuid() + "\",\"isRoot\":true}]", mess.getHeaders().get(HEADER_DIRECTORIES_INFOS));
+        assertEquals(NotificationType.UPDATE_DIRECTORY, mess.getHeaders().get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(USER_ID, mess.getHeaders().get(HEADER_USER_ID));
+
+        // update shared element notification
+        mess = output.receive(TIMEOUT, elementSharedUpdateDestination);
+        assertNotNull(mess);
+        assertEquals(rootModifAttributes.getElementUuid(), mess.getHeaders().get(HEADER_ELEMENT_UUID));
+        assertEquals(true, mess.getHeaders().get(HEADER_ONLY_METADATA));
+        assertEquals(NotificationType.UPDATE_SHARED_ELEMENT, mess.getHeaders().get(HEADER_NOTIFICATION_TYPE));
+        assertEquals(USER_ID, mess.getHeaders().get(HEADER_USER_ID));
     }
 
     @Test

@@ -379,11 +379,22 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy) {
+    public void elementUpdatedNotification(UUID elementUuid, Instant lastModificationDate, String lastModifiedBy, boolean onlyMetadata) {
         DirectoryElementEntity elementToUpdate = getDirectoryElementEntity(elementUuid);
-        elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
+        if (onlyMetadata) {
+            notifyDirectoryHasChanged(elementToUpdate.getParentId() == null ? elementUuid : elementToUpdate.getParentId(), lastModifiedBy, elementToUpdate.getName());
+        } else {
+            elementToUpdate.updateModificationAttributes(lastModifiedBy, lastModificationDate);
+        }
         if (!elementToUpdate.getReferences().isEmpty()) {
-            notifySharedElementHasChanged(elementToUpdate, lastModifiedBy);
+            notifySharedElementHasChanged(elementToUpdate, onlyMetadata, lastModifiedBy);
+        }
+    }
+
+    private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, boolean onlyMetadata, String userId) {
+        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
+        if (referencesByType.values().stream().anyMatch(not(List::isEmpty))) {
+            notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, onlyMetadata, userId);
         }
     }
 
@@ -753,13 +764,6 @@ public class DirectoryService {
             isDirectoryMoving,
             NotificationType.DELETE_DIRECTORY
         );
-    }
-
-    private void notifySharedElementHasChanged(DirectoryElementEntity sharedElement, String userId) {
-        Map<ReferenceType, List<ReferenceAttributes>> referencesByType = ElementAttributes.toReferencesAttributesByType(sharedElement);
-        if (referencesByType.values().stream().anyMatch(not(List::isEmpty))) {
-            notificationService.emitSharedElementChanged(sharedElement.getId(), referencesByType, userId);
-        }
     }
 
     /**
