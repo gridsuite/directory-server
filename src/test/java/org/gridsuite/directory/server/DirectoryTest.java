@@ -1615,6 +1615,7 @@ class DirectoryTest {
     }
 
     private void checkRootDirectoriesList(String userId, List<String> elementTypes, List<ElementAttributes> list) throws Exception {
+        list.forEach(element -> element.setWritePermission(true));
         var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
         String response = mockMvc.perform(get("/v1/root-directories" + types)
                                             .header("userId", userId)
@@ -1863,6 +1864,7 @@ class DirectoryTest {
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, boolean recursive, List<ElementAttributes> expectedList) throws Exception {
         String recurs = "?recursive=" + (recursive ? "true" : "false");
         String elementTypes = !CollectionUtils.isEmpty(types) ? "&elementTypes=" + String.join(",", types) : "";
+        expectedList.forEach(elementAttributes -> elementAttributes.setWritePermission(true));
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + recurs + elementTypes)
                 .header("userId", userId)
                 .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
@@ -2359,7 +2361,7 @@ class DirectoryTest {
         checkDirectoryContent(uuidNewRootDirectory, USER_ID, List.of(MODIFICATION), true, List.of(leafModifAttributes, rootModifAttributes, subModifAttributes, subModifAttributes2));
 
         // SQLStatementCountValidator ignore native queries
-        assertRequestsCount(9, 0, 0, 0);
+        assertRequestsCount(10, 0, 0, 0);
     }
 
     private ReferenceAttributes createElementReference(ReferenceType referenceType) {
