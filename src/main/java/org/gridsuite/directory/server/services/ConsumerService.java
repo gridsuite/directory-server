@@ -21,7 +21,7 @@ import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 
 import static org.gridsuite.directory.server.NotificationService.*;
@@ -54,12 +54,21 @@ public class ConsumerService {
         return message -> {
             String elementUpdatedUuidStr = message.getHeaders().get(HEADER_ELEMENT_UUID, String.class);
             String modifiedBy = message.getHeaders().get(HEADER_MODIFIED_BY, String.class);
-            String modificationDateStr = message.getHeaders().get(HEADER_MODIFICATION_DATE, String.class);
+            boolean onlyMetadata = false;
+            if (message.getHeaders().containsKey(HEADER_ONLY_METADATA)) {
+                onlyMetadata = Boolean.TRUE.equals(message.getHeaders().get(HEADER_ONLY_METADATA, Boolean.class));
+            }
+            Instant modificationDate = null;
+            if (message.getHeaders().containsKey(HEADER_MODIFICATION_DATE)) {
+                String modificationDateStr = message.getHeaders().get(HEADER_MODIFICATION_DATE, String.class);
+                if (modificationDateStr != null) {
+                    modificationDate = Instant.parse(modificationDateStr);
+                }
+            }
 
             UUID elementUpdatedUuid = UUID.fromString(elementUpdatedUuidStr);
-            Instant modificationDate = Instant.parse(modificationDateStr);
 
-            directoryService.elementUpdatedNotification(elementUpdatedUuid, modificationDate, modifiedBy);
+            directoryService.elementUpdatedNotification(elementUpdatedUuid, modificationDate, modifiedBy, onlyMetadata);
         };
     }
 
