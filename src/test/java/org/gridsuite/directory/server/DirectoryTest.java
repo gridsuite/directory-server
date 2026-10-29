@@ -1634,7 +1634,7 @@ class DirectoryTest {
     }
 
     private void checkRootDirectoriesList(String userId, List<String> elementTypes, List<ElementAttributes> list) throws Exception {
-        var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
+        var types = CollectionUtils.isEmpty(elementTypes) ? "" : "?elementTypes=" + String.join(",", elementTypes);
         String response = mockMvc.perform(get("/v1/root-directories" + types)
                                             .header("userId", userId)
                                             .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
@@ -1880,7 +1880,7 @@ class DirectoryTest {
     }
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, boolean recursive, List<ElementAttributes> expectedList) throws Exception {
-        String recurs = "?recursive=" + (recursive ? "true" : "false");
+        String recurs = "?recursive=" + recursive;
         String elementTypes = !CollectionUtils.isEmpty(types) ? "&elementTypes=" + String.join(",", types) : "";
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + recurs + elementTypes)
                 .header("userId", userId)
