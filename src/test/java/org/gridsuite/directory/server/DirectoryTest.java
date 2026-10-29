@@ -389,6 +389,25 @@ class DirectoryTest {
     }
 
     @Test
+    void testGetParentId() throws Exception {
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirParentId", USER_ID);
+        UUID elementUuid = UUID.randomUUID();
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(elementUuid, "elementName", TYPE_01, USER_ID, "description"));
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/" + elementUuid + "/parentId"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertEquals(rootDirUuid, objectMapper.readValue(result.getResponse().getContentAsString(), UUID.class));
+
+        // a root directory has no parent
+        mockMvc.perform(get("/v1/elements/" + rootDirUuid + "/parentId"))
+                .andExpect(status().isNotFound());
+        // unknown element
+        mockMvc.perform(get("/v1/elements/" + UUID.randomUUID() + "/parentId"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     public void testGetPaths() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
