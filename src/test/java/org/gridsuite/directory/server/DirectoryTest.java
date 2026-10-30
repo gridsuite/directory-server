@@ -2523,6 +2523,22 @@ class DirectoryTest {
         checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
+        // create a reference to the element with the same id is forbidden
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(referenceAttributes)))
+            .andExpect(status().isForbidden());
+
+        // recreate a reference to the element with the same id
+        mockMvc.perform(post(String.format("/v1/elements/%s/references?recreate=true", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(referenceAttributes)))
+            .andExpect(status().isOk());
+        checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
         // delete the reference to the element
         mockMvc.perform(delete(String.format("/v1/elements/%s/references/%s", elementAttributes.getElementUuid(), referenceAttributes.getReferenceId()))
                 .header("userId", userId))

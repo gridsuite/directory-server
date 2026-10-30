@@ -343,8 +343,16 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void createElementReference(UUID elementUuid, ReferenceAttributes referenceAttributes, String userId) {
+    public void createElementReference(UUID elementUuid, ReferenceAttributes referenceAttributes, boolean recreate, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
+        Optional<ReferenceEmbeddable> reference = directoryElementEntity.getReference(referenceAttributes.getReferenceId());
+        if (reference.isPresent()) {
+            if (recreate) {
+                directoryElementEntity.removeReference(referenceAttributes.getReferenceId());
+            } else {
+                throw DirectoryException.of(DIRECTORY_REFERENCE_ALREADY_EXISTS, "Reference '%s' already exists for element '%s'", referenceAttributes.getReferenceId(), elementUuid);
+            }
+        }
         directoryElementEntity.addReference(createReferenceEntity(referenceAttributes));
         notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
