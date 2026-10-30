@@ -411,4 +411,13 @@ public class DirectoryController {
         service.updateElementsStatus(elementsUuids, status, userId);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping(value = "/elements/{elementUuid}/parentId")
+    @Operation(summary = "Get the parent directory uuid of an element")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The parent directory uuid"),
+        @ApiResponse(responseCode = "404", description = "The element was not found or has no parent (root directory)")})
+    public ResponseEntity<UUID> getParentId(@PathVariable("elementUuid") UUID elementUuid) {
+        UUID parentUuid = repositoryService.getParentUuid(elementUuid);
+        return parentUuid != null ? ResponseEntity.ok(parentUuid) : ResponseEntity.notFound().build();
+    }
 }
