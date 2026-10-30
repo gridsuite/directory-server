@@ -389,6 +389,25 @@ class DirectoryTest {
     }
 
     @Test
+    void testGetParentId() throws Exception {
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirParentId", USER_ID);
+        UUID elementUuid = UUID.randomUUID();
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(elementUuid, "elementName", TYPE_01, USER_ID, "description"));
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/" + elementUuid + "/parentId"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertEquals(rootDirUuid, objectMapper.readValue(result.getResponse().getContentAsString(), UUID.class));
+
+        // a root directory has no parent
+        mockMvc.perform(get("/v1/elements/" + rootDirUuid + "/parentId"))
+                .andExpect(status().isNotFound());
+        // unknown element
+        mockMvc.perform(get("/v1/elements/" + UUID.randomUUID() + "/parentId"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     public void testGetPaths() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
@@ -1615,7 +1634,7 @@ class DirectoryTest {
     }
 
     private void checkRootDirectoriesList(String userId, List<String> elementTypes, List<ElementAttributes> list) throws Exception {
-        var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
+        var types = CollectionUtils.isEmpty(elementTypes) ? "" : "?elementTypes=" + String.join(",", elementTypes);
         String response = mockMvc.perform(get("/v1/root-directories" + types)
                                             .header("userId", userId)
                                             .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
@@ -1861,8 +1880,8 @@ class DirectoryTest {
     }
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, boolean recursive, List<ElementAttributes> expectedList) throws Exception {
-        String recurs = "?recursive=" + (recursive ? "true" : "false");
-        String elementTypes = !CollectionUtils.isEmpty(types) ? "&elementTypes=" + String.join(",", types) : "";
+        String recurs = "?recursive=" + recursive;
+        String elementTypes = CollectionUtils.isEmpty(types) ? "" : "&elementTypes=" + String.join(",", types);
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + recurs + elementTypes)
                 .header("userId", userId)
                 .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
