@@ -297,8 +297,9 @@ public class DirectoryController {
     })
     public ResponseEntity<Void> createElementReference(@PathVariable("elementUuid") UUID elementUuid,
                                                        @RequestBody ReferenceAttributes referenceAttributes,
+                                                       @RequestParam(value = "recreate", required = false, defaultValue = "false") boolean recreate,
                                                        @RequestHeader("userId") String userId) {
-        service.createElementReference(elementUuid, referenceAttributes, userId);
+        service.createElementReference(elementUuid, referenceAttributes, recreate, userId);
         return ResponseEntity.ok().build();
     }
 

@@ -2353,24 +2353,22 @@ class DirectoryTest {
         // create rootDir
         UUID uuidNewRootDirectory = retrieveInsertAndCheckRootDirectory("rootDir", USER_ID).getElementUuid();
 
-        List<ReferenceAttributes> referenceAttributesList = List.of(createElementReference(STUDY_NODE), createElementReference(STUDY_NODE));
-
         // create modifRoot
-        ElementAttributes rootModifAttributes = toElementAttributesWithReferences(null, "modifRoot", MODIFICATION, referenceAttributesList, USER_ID);
+        ElementAttributes rootModifAttributes = toElementAttributesWithReferences(null, "modifRoot", MODIFICATION, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, rootModifAttributes);
         // create subDir
-        ElementAttributes subDirAttributes = toElementAttributesWithReferences(null, "subDir", DIRECTORY, referenceAttributesList, USER_ID);
+        ElementAttributes subDirAttributes = toElementAttributesWithReferences(null, "subDir", DIRECTORY, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subDirAttributes);
         // create modifSub, modifSub2
-        ElementAttributes subModifAttributes = toElementAttributesWithReferences(null, "modifSub", MODIFICATION, referenceAttributesList, USER_ID);
+        ElementAttributes subModifAttributes = toElementAttributesWithReferences(null, "modifSub", MODIFICATION, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), subModifAttributes);
-        ElementAttributes subModifAttributes2 = toElementAttributesWithReferences(null, "modifSub2", MODIFICATION, referenceAttributesList, USER_ID);
+        ElementAttributes subModifAttributes2 = toElementAttributesWithReferences(null, "modifSub2", MODIFICATION, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), subModifAttributes2);
         // create lastDir
-        ElementAttributes lastDirAttributes = toElementAttributesWithReferences(null, "lastDir", DIRECTORY, referenceAttributesList, USER_ID);
+        ElementAttributes lastDirAttributes = toElementAttributesWithReferences(null, "lastDir", DIRECTORY, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), lastDirAttributes);
         // create modifLeaf
-        ElementAttributes leafModifAttributes = toElementAttributesWithReferences(null, "modifLeaf", MODIFICATION, referenceAttributesList, USER_ID);
+        ElementAttributes leafModifAttributes = toElementAttributesWithReferences(null, "modifLeaf", MODIFICATION, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElement(lastDirAttributes.getElementUuid(), leafModifAttributes);
 
         // 4 modifications expected starting recursively from rootDir (in random order)
@@ -2379,6 +2377,10 @@ class DirectoryTest {
 
         // SQLStatementCountValidator ignore native queries
         assertRequestsCount(9, 0, 0, 0);
+    }
+
+    private List<ReferenceAttributes> createElementReferencesAttributes() {
+        return List.of(createElementReference(STUDY_NODE), createElementReference(STUDY_NODE));
     }
 
     private ReferenceAttributes createElementReference(ReferenceType referenceType) {
@@ -2539,6 +2541,22 @@ class DirectoryTest {
 
         // check that the reference is created
         elementAttributes.setReferences(List.of(referenceAttributes));
+        checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        // create a reference to the element with the same id is forbidden
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(referenceAttributes)))
+            .andExpect(status().isForbidden());
+
+        // recreate a reference to the element with the same id
+        mockMvc.perform(post(String.format("/v1/elements/%s/references?recreate=true", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(referenceAttributes)))
+            .andExpect(status().isOk());
         checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 
