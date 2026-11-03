@@ -23,7 +23,9 @@ public enum DirectoryBusinessErrorCode implements BusinessErrorCode {
     DIRECTORY_ELEMENT_NAME_CONFLICT("directory.elementNameConflict"),
     DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED("directory.moveInDescendantNotAllowed"),
     DIRECTORY_SOME_ELEMENTS_ARE_MISSING("directory.someElementsAreMissing"),
-    DIRECTORY_ELEMENT_NOT_FOUND("directory.elementNotFound");
+    DIRECTORY_ELEMENT_NOT_FOUND("directory.elementNotFound"),
+    DIRECTORY_REFERENCE_ALREADY_EXISTS("directory.referenceAlreadyExists");
+
     private final String code;
 
     DirectoryBusinessErrorCode(String code) {
