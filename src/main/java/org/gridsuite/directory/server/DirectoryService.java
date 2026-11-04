@@ -269,8 +269,7 @@ public class DirectoryService {
 
     @Transactional(readOnly = true)
     public List<ElementAttributes> getDirectoryElements(UUID directoryUuid, List<String> types, Boolean recursive, String userId) {
-        boolean hasReadPermission = permissionService.hasReadPermissions(userId, List.of(directoryUuid));
-        if (!hasReadPermission) {
+        if (!permissionService.hasReadPermissions(userId, List.of(directoryUuid))) {
             return List.of();
         }
         ElementAttributes elementAttributes = getElement(directoryUuid);
