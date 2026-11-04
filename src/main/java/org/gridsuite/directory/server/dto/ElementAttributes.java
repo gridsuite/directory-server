@@ -90,9 +90,9 @@ public class ElementAttributes {
         return attributes;
     }
 
-    public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
+    public static ElementAttributes toElementAttributesWithReferences(@NonNull DirectoryElementEntity entity, long subDirectoriesCount, Boolean writePermission) {
         ElementAttributes attributes = toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(), subDirectoriesCount,
-                entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus(), null);
+                entity.getDescription(), entity.getCreationDate(), entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus(), writePermission);
         attributes.setReferences(toReferencesAttributes(entity));
         return attributes;
     }
@@ -102,9 +102,13 @@ public class ElementAttributes {
     }
 
     public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount) {
+        return toElementAttributes(entity, subDirectoriesCount, null);
+    }
+
+    public static ElementAttributes toElementAttributes(@NonNull DirectoryElementEntity entity, long subDirectoriesCount, Boolean writePermission) {
         return toElementAttributes(entity.getId(), entity.getName(), entity.getType(), entity.getOwner(),
                 subDirectoriesCount, entity.getDescription(), entity.getCreationDate(),
-                entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus(), null);
+                entity.getLastModificationDate(), entity.getLastModifiedBy(), entity.getStatus(), writePermission);
     }
 
     public static ElementAttributes toElementAttributes(@NonNull RootDirectoryAttributes rootDirectoryAttributes) {
