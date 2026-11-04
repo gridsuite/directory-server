@@ -126,6 +126,13 @@ public class PermissionService {
         );
     }
 
+    public boolean hasWritePermission(String userId, List<UUID> elementUuids) {
+        return roleService.isUserExploreAdmin() || directoryElementRepository.findAllByIdIn(elementUuids).stream().allMatch(element ->
+                //If it's a directory we check its own write permission else we check the permission on the element parent directory
+                hasPermission(List.of(element.getType().equals(DIRECTORY) ? element.getId() : element.getParentId()), WRITE, userId)
+        );
+    }
+
     public void validateReadAccess(UUID directoryUuid, String userId) {
         if (!hasReadPermissions(userId, List.of(directoryUuid))) {
             throw DirectoryException.of(DIRECTORY_PERMISSION_DENIED, "User '%s' is not allowed to view directory '%s'", userId, directoryUuid);
