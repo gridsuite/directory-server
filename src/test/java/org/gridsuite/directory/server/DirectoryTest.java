@@ -389,6 +389,25 @@ class DirectoryTest {
     }
 
     @Test
+    void testGetParentId() throws Exception {
+        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirParentId", USER_ID);
+        UUID elementUuid = UUID.randomUUID();
+        insertAndCheckSubElementInRootDir(rootDirUuid, toElementAttributes(elementUuid, "elementName", TYPE_01, USER_ID, "description"));
+
+        MvcResult result = mockMvc.perform(get("/v1/elements/" + elementUuid + "/parentId"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertEquals(rootDirUuid, objectMapper.readValue(result.getResponse().getContentAsString(), UUID.class));
+
+        // a root directory has no parent
+        mockMvc.perform(get("/v1/elements/" + rootDirUuid + "/parentId"))
+                .andExpect(status().isNotFound());
+        // unknown element
+        mockMvc.perform(get("/v1/elements/" + UUID.randomUUID() + "/parentId"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     public void testGetPaths() throws Exception {
         // Insert a root directory
         UUID rootDirUuid = insertAndCheckRootDirectory("rootDir1", "Doe");
@@ -1615,7 +1634,7 @@ class DirectoryTest {
     }
 
     private void checkRootDirectoriesList(String userId, List<String> elementTypes, List<ElementAttributes> list) throws Exception {
-        var types = !CollectionUtils.isEmpty(elementTypes) ? "?elementTypes=" + elementTypes.stream().collect(Collectors.joining(",")) : "";
+        var types = CollectionUtils.isEmpty(elementTypes) ? "" : "?elementTypes=" + String.join(",", elementTypes);
         String response = mockMvc.perform(get("/v1/root-directories" + types)
                                             .header("userId", userId)
                                             .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
@@ -1861,8 +1880,8 @@ class DirectoryTest {
     }
 
     private void checkDirectoryContent(UUID parentDirectoryUuid, String userId, List<String> types, boolean recursive, List<ElementAttributes> expectedList) throws Exception {
-        String recurs = "?recursive=" + (recursive ? "true" : "false");
-        String elementTypes = !CollectionUtils.isEmpty(types) ? "&elementTypes=" + String.join(",", types) : "";
+        String recurs = "?recursive=" + recursive;
+        String elementTypes = CollectionUtils.isEmpty(types) ? "" : "&elementTypes=" + String.join(",", types);
         String response = mockMvc.perform(get("/v1/directories/" + parentDirectoryUuid + "/elements" + recurs + elementTypes)
                 .header("userId", userId)
                 .header(HEADER_USER_ROLES, userId.equals(ADMIN_USER) ? ADMIN_ROLE : NO_ADMIN_ROLE))
@@ -2334,24 +2353,22 @@ class DirectoryTest {
         // create rootDir
         UUID uuidNewRootDirectory = retrieveInsertAndCheckRootDirectory("rootDir", USER_ID).getElementUuid();
 
-        List<ReferenceAttributes> referenceAttributesList = List.of(createElementReference(STUDY_NODE), createElementReference(STUDY_NODE));
-
         // create modifRoot
-        ElementAttributes rootModifAttributes = toElementAttributesWithReferences(null, "modifRoot", MODIFICATION, referenceAttributesList, USER_ID);
+        ElementAttributes rootModifAttributes = toElementAttributesWithReferences(null, "modifRoot", MODIFICATION, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, rootModifAttributes);
         // create subDir
-        ElementAttributes subDirAttributes = toElementAttributesWithReferences(null, "subDir", DIRECTORY, referenceAttributesList, USER_ID);
+        ElementAttributes subDirAttributes = toElementAttributesWithReferences(null, "subDir", DIRECTORY, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElementInRootDir(uuidNewRootDirectory, subDirAttributes);
         // create modifSub, modifSub2
-        ElementAttributes subModifAttributes = toElementAttributesWithReferences(null, "modifSub", MODIFICATION, referenceAttributesList, USER_ID);
+        ElementAttributes subModifAttributes = toElementAttributesWithReferences(null, "modifSub", MODIFICATION, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), subModifAttributes);
-        ElementAttributes subModifAttributes2 = toElementAttributesWithReferences(null, "modifSub2", MODIFICATION, referenceAttributesList, USER_ID);
+        ElementAttributes subModifAttributes2 = toElementAttributesWithReferences(null, "modifSub2", MODIFICATION, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), subModifAttributes2);
         // create lastDir
-        ElementAttributes lastDirAttributes = toElementAttributesWithReferences(null, "lastDir", DIRECTORY, referenceAttributesList, USER_ID);
+        ElementAttributes lastDirAttributes = toElementAttributesWithReferences(null, "lastDir", DIRECTORY, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElement(subDirAttributes.getElementUuid(), lastDirAttributes);
         // create modifLeaf
-        ElementAttributes leafModifAttributes = toElementAttributesWithReferences(null, "modifLeaf", MODIFICATION, referenceAttributesList, USER_ID);
+        ElementAttributes leafModifAttributes = toElementAttributesWithReferences(null, "modifLeaf", MODIFICATION, createElementReferencesAttributes(), USER_ID);
         insertAndCheckSubElement(lastDirAttributes.getElementUuid(), leafModifAttributes);
 
         // 4 modifications expected starting recursively from rootDir (in random order)
@@ -2360,6 +2377,10 @@ class DirectoryTest {
 
         // SQLStatementCountValidator ignore native queries
         assertRequestsCount(9, 0, 0, 0);
+    }
+
+    private List<ReferenceAttributes> createElementReferencesAttributes() {
+        return List.of(createElementReference(STUDY_NODE), createElementReference(STUDY_NODE));
     }
 
     private ReferenceAttributes createElementReference(ReferenceType referenceType) {
@@ -2519,6 +2540,22 @@ class DirectoryTest {
             .andExpect(status().isOk());
 
         elementAttributes.setReferences(List.of(referenceAttributes1, referenceAttributes2));
+        checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
+        testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
+
+        // create a reference to the element with an existing id is forbidden
+        mockMvc.perform(post(String.format("/v1/elements/%s/references", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(List.of(referenceAttributes1))))
+            .andExpect(status().isForbidden());
+
+        // recreate a reference to the element with an existing id
+        mockMvc.perform(post(String.format("/v1/elements/%s/references?recreate=true", elementAttributes.getElementUuid()))
+                .header("userId", userId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(List.of(referenceAttributes1))))
+            .andExpect(status().isOk());
         checkDirectoryContent(rootAttributes.getElementUuid(), "userId", List.of(elementAttributes));
         testNotificationDirectory(rootAttributes.getElementUuid(), NotificationType.UPDATE_DIRECTORY, userId);
 

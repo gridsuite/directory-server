@@ -45,7 +45,8 @@ public class DirectoryExceptionHandler
                  DIRECTORY_CHILD_PERMISSION_DENIED,
                  DIRECTORY_ELEMENT_NAME_BLANK,
                  DIRECTORY_NOT_DIRECTORY,
-                 DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED -> HttpStatus.FORBIDDEN;
+                 DIRECTORY_MOVE_IN_DESCENDANT_NOT_ALLOWED,
+                 DIRECTORY_REFERENCE_ALREADY_EXISTS -> HttpStatus.FORBIDDEN;
         };
     }
 
