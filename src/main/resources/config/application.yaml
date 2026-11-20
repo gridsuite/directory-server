@@ -1,6 +1,9 @@
 spring:
   application:
     name: directory-server
+  http:
+    converters:
+      preferred-json-mapper: jackson2
 
   cloud:
     function:
