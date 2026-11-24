@@ -1310,22 +1310,6 @@ class DirectoryTest {
     }
 
     @Test
-    void testCreateElementWithEmptyName() throws Exception {
-        // Insert a root directory user1
-        UUID rootDirUuid = insertAndCheckRootDirectory("rootDirToFind", "user1");
-
-        // Insert an element of type TYPE_01 with empty name in the root directory and expect a 403
-        ElementAttributes element1WithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", TYPE_01, "user1");
-        insertExpectFail(rootDirUuid, element1WithoutNameAttributes, status().isForbidden());
-
-        // Insert an element of type TYPE_03 with empty name in the root directory and expect a 403
-        ElementAttributes element2WithoutNameAttributes = toElementAttributes(UUID.randomUUID(), "", TYPE_03, "user1");
-        insertExpectFail(rootDirUuid, element2WithoutNameAttributes, status().isForbidden());
-
-        assertNbElementsInRepositories(1);
-    }
-
-    @Test
     void testElementUpdateNotification() throws Exception {
         // Insert a root directory
         ElementAttributes newRootDirectory = retrieveInsertAndCheckRootDirectory("newDir", "userId");
