@@ -104,14 +104,14 @@ public class ElementAttributes {
                 rootDirectoryAttributes.getLastModificationDate(), rootDirectoryAttributes.getLastModifiedBy(), DirectoryElementStatus.CREATED);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+    public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, @NonNull String elementType,
                                                         @NonNull String userId, long subdirectoriesCount, String elementDescription,
                                                         Instant creationDate, Instant lastModificationDate, String lastModifiedBy) {
         return toElementAttributes(elementUuid, elementName, elementType, userId, subdirectoriesCount, elementDescription,
                 creationDate, lastModificationDate, lastModifiedBy, DirectoryElementStatus.CREATED);
     }
 
-    public static ElementAttributes toElementAttributes(UUID elementUuid, @NonNull String elementName, @NonNull String elementType,
+    public static ElementAttributes toElementAttributes(UUID elementUuid, String elementName, @NonNull String elementType,
                                                         @NonNull String userId, long subdirectoriesCount, String elementDescription,
                                                         Instant creationDate, Instant lastModificationDate, String lastModifiedBy, DirectoryElementStatus status) {
         return ElementAttributes.builder()
