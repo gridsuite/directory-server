@@ -12,11 +12,19 @@ It provides the following capabilities:
 
 - **Manage root directories and sub-directories**: create, rename, delete, and move directories in a tree structure.
 - **Manage directory elements**: insert, update, duplicate, move, and delete elements of any type (study, filter, contingency list, …) referenced by their UUID.
-- **Enforce access permissions**: each directory carries READ / WRITE / MANAGE permission sets. Only users (or user groups) with the appropriate permission can browse or modify a directory and its contents.
+- **Enforce access permissions**: each directory carries READ / WRITE / MANAGE permission sets (see [Permission Levels](#permission-levels) below). Only users (or user groups) with the appropriate permission can browse or modify a directory and its contents.
 - **Resolve element paths**: retrieve the full ancestor path of any element up to the root directory.
 - **Search elements** full-text across the tree using an Elasticsearch index.
 - **Update element status**: mark elements (and all their descendants) as `CREATED` or `DELETING`.
 - **Notify** other microservices via RabbitMQ whenever the directory tree changes (element added, renamed, moved, deleted).
+
+### Permission Levels
+
+Permissions are hierarchical: each level includes the rights granted by the levels below it.
+
+- **READ**: allows browsing the directory and its content.
+- **WRITE**: includes READ, and additionally allows modifying the directory's content (create, rename, move, duplicate, delete elements).
+- **MANAGE**: includes WRITE, and additionally allows granting or revoking READ / WRITE / MANAGE permissions to other users or user groups on that directory. The directory **owner** is automatically granted MANAGE permission.
 
 ---
 
