@@ -27,7 +27,7 @@ public class RestClientConfig {
             convertersBuilder.configureMessageConvertersList(messageConverters -> {
                 for (int i = 0; i < messageConverters.size(); i++) {
                     final HttpMessageConverter<?> httpMessageConverter = messageConverters.get(i);
-                    if (httpMessageConverter  instanceof MappingJackson2HttpMessageConverter) {
+                    if (httpMessageConverter instanceof MappingJackson2HttpMessageConverter) {
                         messageConverters.set(i, mappingJackson2HttpMessageConverter());
                     }
                 }
