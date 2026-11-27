@@ -78,13 +78,15 @@ public class NotificationService {
 
         MessageBuilder<String> messageBuilder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_ELEMENT_NAMES, elementNames)
                 .setHeader(HEADER_DIRECTORIES_INFOS, mapper.writeValueAsString(directoryInfos)) // exception could be thrown here
                 .setHeader(HEADER_IS_PUBLIC_DIRECTORY, true) // null may only come from borked REST request
                 .setHeader(HEADER_NOTIFICATION_TYPE, notificationType)
                 .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_DIRECTORIES)
                 .setHeader(HEADER_IS_DIRECTORY_MOVING, isDirectoryMoving)
                 .setHeader(HEADER_ERROR, error);
+        if (elementNames != null) {
+            messageBuilder.setHeader(HEADER_ELEMENT_NAMES, elementNames);
+        }
         sendUpdateMessage(messageBuilder.build());
     }
 

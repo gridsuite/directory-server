@@ -98,8 +98,8 @@ public class DirectoryService {
     }
 
     private ElementAttributes createElementWithNotif(ElementAttributes elementAttributes, UUID parentDirectoryUuid, String userId, boolean generateNewName) {
-        if (elementAttributes.getElementName().isBlank()) {
-            throw DirectoryException.of(DIRECTORY_ELEMENT_NAME_BLANK, "Element name must not be blank");
+        if (elementAttributes.getType().equals(DIRECTORY) && elementAttributes.getElementName().isBlank()) {
+            throw DirectoryException.of(DIRECTORY_ELEMENT_NAME_BLANK, "Directory name must not be blank");
         }
         assertDirectoryExist(parentDirectoryUuid);
         DirectoryElementEntity elementEntity = insertElement(elementAttributes, parentDirectoryUuid, userId, generateNewName);

@@ -108,9 +108,7 @@ class ElementAttributesTest {
         assertThrows(NullPointerException.class, () -> toElementAttributes((RootDirectoryAttributes) null));
         assertThrows(NullPointerException.class, () -> toElementAttributes(null, 1));
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, "userId", null));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, null, DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"));
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", null, "userId", 1L, "description", creationDate, creationDate, "userId"));
-        assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, null, DIRECTORY, "userId", 1L, "description", creationDate, creationDate, "userId"));
         assertThrows(NullPointerException.class, () -> toElementAttributes(ELEMENT_UUID, "name", DIRECTORY, null, 1L, "description", creationDate, creationDate, "userId"));
     }
 
