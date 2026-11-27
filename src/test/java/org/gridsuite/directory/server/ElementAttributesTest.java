@@ -98,7 +98,7 @@ class ElementAttributesTest {
                 lastModificationDate, lastModificationDate, "userId",
                 List.of(new ReferenceEmbeddable(UUID.randomUUID(), new ReferenceContainerEmbeddable(UUID.randomUUID(), UUID.randomUUID()), ReferenceType.STUDY_NODE.name())),
                 DirectoryElementStatus.CREATED),
-            1L));
+            1L, true));
 
         verifyElementAttributes(toElementAttributes(new DirectoryElementEntity(ELEMENT_UUID, ELEMENT_UUID, "name", DIRECTORY, "userId", "description", lastModificationDate, lastModificationDate,
                 "userId", List.of(), DirectoryElementStatus.CREATED), 1L));
@@ -152,6 +152,7 @@ class ElementAttributesTest {
                 toJsonString("lastModificationDate", elementAttributes.getLastModificationDate()),
                 toJsonString("lastModifiedBy", elementAttributes.getLastModifiedBy()),
                 toJsonString("status", elementAttributes.getStatus().name()),
+                toJsonString("writePermission", elementAttributes.getWritePermission()),
                 toJsonString(elementAttributes.getReferences())
             )
             .filter(Objects::nonNull)

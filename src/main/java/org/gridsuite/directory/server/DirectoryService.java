@@ -246,7 +246,7 @@ public class DirectoryService {
                 } else {
                     //and then we create the rest of the path
                     parentDirectoryUuid = createElementWithNotif(
-                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, CREATED),
+                        toElementAttributes(UUID.randomUUID(), s, DIRECTORY, userId, 0L, null, now, now, userId, CREATED, true),
                         parentDirectoryUuid,
                         userId, false).getElementUuid();
                 }
@@ -286,10 +286,18 @@ public class DirectoryService {
             }
             // Need to load references for all descendents (no N+1 -> only one query)
             List<DirectoryElementEntity> descendents = directoryElementRepository.findAllWithReferencesByIdIn(descendentsUuids);
+            Boolean hasWritePermission = permissionService.hasWritePermission(userId, List.of(directoryUuid));
             return descendents
                 .stream()
                 .filter(e -> (types.isEmpty() || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
-                .map(ElementAttributes::toElementAttributesWithReferences)
+                .map(entity -> {
+                    if (entity.getType().equals(DIRECTORY)) {
+                        boolean subDirectoryHasWritePermission = permissionService.hasWritePermission(userId, List.of(entity.getId()));
+                        return ElementAttributes.toElementAttributesWithReferences(entity, subDirectoryHasWritePermission);
+                    } else {
+                        return ElementAttributes.toElementAttributesWithReferences(entity, hasWritePermission);
+                    }
+                })
                 .toList();
         } else {
             return getAllDirectoryElementsStream(directoryUuid, types, userId).toList();
@@ -302,12 +310,26 @@ public class DirectoryService {
     }
 
     private Stream<ElementAttributes> getAllDirectoryElementsStream(UUID directoryUuid, List<String> types, String userId) {
+        boolean hasWritePermission = directoryUuid != null && permissionService.hasWritePermission(userId, List.of(directoryUuid));
         List<DirectoryElementEntity> directoryElements = repositoryService.findAllByParentId(directoryUuid);
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements, userId);
         return directoryElements
             .stream()
-            .filter(e -> (e.getType().equals(DIRECTORY) || types.isEmpty() || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
-            .map(e -> toElementAttributesWithReferences(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)));
+            .filter(e -> (e.getType().equals(DIRECTORY) || types.isEmpty()
+                    || types.contains(e.getType())) && permissionService.hasReadPermissions(userId, List.of(e.getId())))
+            .map(e ->
+                    toElementAttributesWithPermission(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L),
+                            hasWritePermission, userId));
+    }
+
+    private ElementAttributes toElementAttributesWithPermission(DirectoryElementEntity directoryElementEntity,
+                                                                Long subdirectoriesCounts, boolean initialWritePermission,
+                                                                String userId) {
+        boolean hasWritePermission = initialWritePermission;
+        if (DIRECTORY.equals(directoryElementEntity.getType())) {
+            hasWritePermission = permissionService.hasWritePermission(userId, List.of(directoryElementEntity.getId()));
+        }
+        return toElementAttributesWithReferences(directoryElementEntity, subdirectoriesCounts, hasWritePermission);
     }
 
     public List<ElementAttributes> getRootDirectories(List<String> types, String userId) {
@@ -319,7 +341,9 @@ public class DirectoryService {
         }
         Map<UUID, Long> subdirectoriesCountsMap = getSubDirectoriesCountsMap(types, directoryElements, userId);
         return directoryElements.stream()
-            .map(e -> toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L)))
+            .map(e ->
+                    toElementAttributes(e, subdirectoriesCountsMap.getOrDefault(e.getId(), 0L),
+                            permissionService.hasWritePermission(userId, List.of(e.getId()))))
             .toList();
     }
 
@@ -800,7 +824,12 @@ public class DirectoryService {
 
         String owner = getElement(directoryUuid).getOwner();
         permissionService.updateDirectoryPermissions(directoryUuid, permissions, owner);
-
+        UUID parentUuid = repositoryService.getParentUuid(directoryUuid);
+        // need to notified parent because if read permission is removed,
+        // content should be hidden from not permitted users
+        if (parentUuid != null) {
+            notifyDirectoryHasChanged(parentUuid, userId);
+        }
         notifyDirectoryHasChanged(directoryUuid, userId);
     }
 
