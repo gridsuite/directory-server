@@ -367,17 +367,19 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void createElementReference(UUID elementUuid, ReferenceAttributes referenceAttributes, boolean recreate, String userId) {
+    public void createElementReferences(UUID elementUuid, List<ReferenceAttributes> referencesAttributes, boolean recreate, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
-        Optional<ReferenceEmbeddable> reference = directoryElementEntity.getReference(referenceAttributes.getReferenceId());
-        if (reference.isPresent()) {
-            if (recreate) {
-                directoryElementEntity.removeReference(referenceAttributes.getReferenceId());
-            } else {
-                throw DirectoryException.of(DIRECTORY_REFERENCE_ALREADY_EXISTS, "Reference '%s' already exists for element '%s'", referenceAttributes.getReferenceId(), elementUuid);
+        for (ReferenceAttributes referenceAttributes : referencesAttributes) {
+            Optional<ReferenceEmbeddable> reference = directoryElementEntity.getReference(referenceAttributes.getReferenceId());
+            if (reference.isPresent()) {
+                if (recreate) {
+                    directoryElementEntity.removeReference(referenceAttributes.getReferenceId());
+                } else {
+                    throw DirectoryException.of(DIRECTORY_REFERENCE_ALREADY_EXISTS, "Reference '%s' already exists for element '%s'", referenceAttributes.getReferenceId(), elementUuid);
+                }
             }
+            directoryElementEntity.addReference(createReferenceEntity(referenceAttributes));
         }
-        directoryElementEntity.addReference(createReferenceEntity(referenceAttributes));
         notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 
@@ -394,19 +396,21 @@ public class DirectoryService {
     }
 
     @Transactional
-    public void updateElementReference(@NonNull UUID elementId, @NonNull UUID referenceId, @NonNull ReferenceAttributes referenceAttributes, String userId) {
+    public void updateElementReferences(@NonNull UUID elementId, @NonNull List<ReferenceAttributes> referencesAttributes, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementId);
-        ReferenceEmbeddable reference = directoryElementEntity.getReference(referenceId)
-            .orElseThrow(() -> DirectoryException.createElementNotFound(REFERENCE, referenceAttributes.getReferenceId()));
-        reference.setReferenceContainer(createReferencePathEntity(referenceAttributes.getReferenceContainer()));
-        reference.setReferenceType(referenceAttributes.getReferenceType().name());
+        referencesAttributes.forEach(referenceAttributes -> {
+            ReferenceEmbeddable reference = directoryElementEntity.getReference(referenceAttributes.getReferenceId())
+                .orElseThrow(() -> DirectoryException.createElementNotFound(REFERENCE, referenceAttributes.getReferenceId()));
+            reference.setReferenceContainer(createReferencePathEntity(referenceAttributes.getReferenceContainer()));
+            reference.setReferenceType(referenceAttributes.getReferenceType().name());
+        });
         notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementId : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 
     @Transactional
-    public void deleteElementReference(UUID elementUuid, UUID referenceUuid, String userId) {
+    public void deleteElementReferences(UUID elementUuid, List<UUID> referenceUuids, String userId) {
         DirectoryElementEntity directoryElementEntity = getDirectoryElementEntity(elementUuid);
-        directoryElementEntity.removeReference(referenceUuid);
+        referenceUuids.forEach(directoryElementEntity::removeReference);
         notifyDirectoryHasChanged(directoryElementEntity.getParentId() == null ? elementUuid : directoryElementEntity.getParentId(), userId, directoryElementEntity.getName());
     }
 
